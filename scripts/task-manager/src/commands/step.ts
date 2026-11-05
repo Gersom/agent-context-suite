@@ -13,7 +13,7 @@ import { normalizeTitle } from "../query/find.ts";
 import { relFile } from "../query/format.ts";
 import { requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
-import { findPart } from "../write/handoff.ts";
+import { findPart, invalidPlanLineMessage, invalidPlanLines } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
 import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
 import { headerLabels } from "../write/samples.ts";
@@ -69,12 +69,17 @@ export const step: Command = {
     const want = !undo;
     const targets = [...new Set(ctx.args.map((arg) => resolveStep(arg, steps)))];
     const toggled = targets.filter((i) => steps[i].done !== want);
-    const notes = targets.filter((i) => steps[i].done === want).map((i) => `El paso ${i + 1} ya estaba ${want ? "hecho" : "pendiente"}: «${steps[i].text}».`);
+    // Textos que dependen del avance. Con labels de la tarea se elige el idioma de los que se generan.
+    const lang = detectLanguage([task.label, ...headerLabels(docs)]).lang;
+    const S = STRINGS[lang];
+    const notes = [
+      ...targets.filter((i) => steps[i].done === want).map((i) => `El paso ${i + 1} ya estaba ${want ? "hecho" : "pendiente"}: «${steps[i].text}».`),
+      // Avisa (no bloquea): `close` y `pause` rechazarían esas líneas.
+      ...invalidPlanLines(handoff.text, subsections).map((invalid) => invalidPlanLineMessage(invalid, lang)),
+    ];
 
     const edits: Edit[] = toggled.map((i) => replaceRange(steps[i].markRange!, want ? "x" : " "));
 
-    // Textos que dependen del avance. Con labels de la tarea se elige el idioma de los que se generan.
-    const S = STRINGS[detectLanguage([task.label, ...headerLabels(docs)]).lang];
     const pendingBefore = steps.filter((s) => !s.done).map((s) => s.text);
     const pendingAfter = steps.filter((s, i) => (toggled.includes(i) ? !want : !s.done)).map((s) => s.text);
     const before = generated(S, pendingBefore);

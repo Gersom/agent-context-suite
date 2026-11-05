@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { checkCurrentTask } from "../../src/checks/handoff.ts";
+import { checkCurrentPlanLines, checkCurrentTask } from "../../src/checks/handoff.ts";
 import { HANDOFF, HANDOFF_IDLE, lineOf, TEMPLATE_HANDOFF } from "../fixtures.ts";
 import { brief, makeCtx, PATHS } from "../helpers.ts";
 
@@ -95,5 +95,40 @@ describe("current-no-plan", () => {
       "- **Plan:**\n  - [ ] Algo\n- **Por qué se pausó:** otra prioridad.",
     );
     expect(checkCurrentTask(makeCtx({ handoff })).map((f) => f.code)).toEqual(["current-no-plan"]);
+  });
+});
+
+describe("current-plan-line", () => {
+  test("plan válido (pasos y línea de modo): sin hallazgos", () => {
+    expect(checkCurrentPlanLines(makeCtx())).toEqual([]);
+  });
+
+  test("sin tarea en curso o sin handoff.md: sin hallazgos", () => {
+    expect(checkCurrentPlanLines(makeCtx({ handoff: HANDOFF_IDLE }))).toEqual([]);
+    expect(checkCurrentPlanLines(makeCtx({ handoff: null }))).toEqual([]);
+  });
+
+  test("una línea de texto en el plan: aviso en esa línea, con el formato válido", () => {
+    const handoff = HANDOFF.replace("- [ ] Paso 2 — Completar los casos", "Una nota suelta.\n- [ ] Paso 2 — Completar los casos");
+    const findings = checkCurrentPlanLines(makeCtx({ handoff }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-plan-line", file: FILE, line: lineOf(handoff, "Una nota suelta.") }]);
+    expect(findings[0].message).toContain("«Una nota suelta.»");
+    expect(findings[0].message).toContain("`- [ ] Paso N — texto`");
+    expect(findings[0].message).toContain("`**Modo de ejecución acordado:** <texto>`");
+  });
+
+  test("un hallazgo por línea inválida", () => {
+    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** todos los pasos seguidos", "Primera nota.\nSegunda nota.");
+    expect(checkCurrentPlanLines(makeCtx({ handoff })).map((f) => f.line)).toEqual([lineOf(handoff, "Primera nota."), lineOf(handoff, "Segunda nota.")]);
+  });
+
+  test("«Ninguno», «No aplica» y la línea de modo en inglés son válidos; los comentarios no cuentan", () => {
+    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** todos los pasos seguidos", "No aplica.\n**Agreed execution mode:** all in a row\n<!-- nota\nen dos líneas -->");
+    expect(checkCurrentPlanLines(makeCtx({ handoff }))).toEqual([]);
+  });
+
+  test("el texto ajeno fuera del plan no cuenta", () => {
+    const handoff = HANDOFF.replace("El paso 2 y el cierre.", "Una nota cualquiera.");
+    expect(checkCurrentPlanLines(makeCtx({ handoff }))).toEqual([]);
   });
 });

@@ -159,6 +159,15 @@ describe("pause", () => {
       }
     });
 
+    test("texto suelto en el plan: el error cita la línea y el formato válido", async () => {
+      const p = await started();
+      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("**Modo de ejecución acordado:** uno a la vez", "Una nota suelta en el plan."));
+      const { code, err } = await exec([...PAUSE, "--apply"], p);
+      expect(code).toBe(1);
+      expect(err).toContain("«Una nota suelta en el plan.»");
+      expect(err).toContain("formato válido: pasos `- [ ] Paso N — texto` o `- [x] Paso N — texto`, y la línea de modo `**Modo de ejecución acordado:** <texto>`");
+    });
+
     test("carpeta de otro operador: se niega", async () => {
       const p = project({ folders: ["gersom", "ana"], ...IDLE, folderContents: { ana: IDLE.contents } });
       expect((await exec([...PAUSE, "--operator", "ana", "--apply"], p)).err).toContain("«ana» no es la tuya");

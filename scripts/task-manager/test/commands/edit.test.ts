@@ -378,6 +378,40 @@ describe("edit — handoff.md", () => {
     );
   });
 
+  describe("avisa de líneas del plan de la tarea en curso que `close` rechazaría (sin bloquear)", () => {
+    const LOOSE = HANDOFF_FULL.replace("- [ ] Paso 2 — Probar", "Una nota suelta.\n- [ ] Paso 2 — Probar");
+
+    test("en curso: el cambio se escribe, exit 0, y el aviso cita la línea y el formato válido", async () => {
+      const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": LOOSE } });
+      const line = LOOSE.split("\n").indexOf("Una nota suelta.") + 1;
+      const { code, out } = await exec(["edit", "12", "--next", "Correr los tests", "--apply"], p);
+      expect(code).toBe(0);
+      expect(handoff(p)).toContain("### Próximo paso concreto\n\nCorrer los tests");
+      expect(out).toContain(`Aviso: El plan tiene una línea que no es un paso ni el modo de ejecución (línea ${line}): «Una nota suelta.»`);
+      expect(out).toContain("Formato válido: pasos `- [ ] Paso N — texto`");
+    });
+
+    test("--apply: el número de línea es el del archivo ya editado, aunque la edición desplace líneas", async () => {
+      const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": LOOSE } });
+      const { out } = await exec(["edit", "12", "--description", "a\n\nb\n\nc", "--apply"], p);
+      const line = handoff(p).split("\n").indexOf("Una nota suelta.") + 1;
+      expect(out).toContain(`(línea ${line}): «Una nota suelta.»`);
+    });
+
+    test("--json: aparece en `notice`", async () => {
+      const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": LOOSE } });
+      const json = JSON.parse((await exec(["edit", "12", "--next", "Correr los tests", "--json", "--apply"], p)).out);
+      expect(json.notice).toContain("«Una nota suelta.»");
+    });
+
+    test("editar una pausada no lo menciona; un plan válido tampoco", async () => {
+      const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": LOOSE } });
+      expect((await exec(["edit", "8", "--next", "Otro", "--apply"], p)).out).not.toContain("Aviso");
+      const valid = project({ folders: ["gersom"], ...FULL });
+      expect((await exec(["edit", "12", "--next", "Otro", "--apply"], valid)).out).not.toContain("Aviso");
+    });
+  });
+
   test("en curso: una línea con `#` o con checkbox se rechaza (crearía subsecciones o pasos del plan)", async () => {
     const p = project({ folders: ["gersom"], ...FULL });
     const before = snapshot(p.root);

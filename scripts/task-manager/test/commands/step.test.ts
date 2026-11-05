@@ -132,6 +132,38 @@ describe("step", () => {
     expect(json.notes[1]).toContain("`edit 1 --next`");
   });
 
+  describe("avisa de líneas del plan que `close` rechazaría (sin bloquear)", () => {
+    /** Proyecto empezado con una nota suelta entre los pasos del plan. */
+    async function withLooseLine(): Promise<Project> {
+      const p = await started();
+      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("- [ ] Paso 2 — Probar", "Una nota suelta.\n- [ ] Paso 2 — Probar"));
+      return p;
+    }
+
+    test("el paso se marca igual, con exit 0, y el aviso cita la línea y el formato válido", async () => {
+      const p = await withLooseLine();
+      const line = handoff(p).split("\n").indexOf("Una nota suelta.") + 1;
+      const { code, out } = await exec(["step", "1", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain(`Aviso: El plan tiene una línea que no es un paso ni el modo de ejecución (línea ${line}): «Una nota suelta.»`);
+      expect(out).toContain("Formato válido: pasos `- [ ] Paso N — texto` o `- [x] Paso N — texto`, y la línea de modo `**Modo de ejecución acordado:** <texto>`");
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir");
+    });
+
+    test("--json: aparece en `notes`", async () => {
+      const p = await withLooseLine();
+      const json = JSON.parse((await exec(["step", "1", "--json", "--apply"], p)).out);
+      expect(json.applied).toBe(true);
+      expect(json.notes).toHaveLength(1);
+      expect(json.notes[0]).toContain("«Una nota suelta.»");
+    });
+
+    test("un plan válido no avisa", async () => {
+      const p = await started();
+      expect((await exec(["step", "1", "--apply"], p)).out).not.toContain("Aviso");
+    });
+  });
+
   test("conserva los comentarios HTML del principio de la subsección y el resto del archivo", async () => {
     const p = await started();
     const text = handoff(p).replace("### Qué falta\n\n", "### Qué falta\n\n<!-- Lo que falta de ESTA tarea. -->\n\n");

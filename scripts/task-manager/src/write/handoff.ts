@@ -2,12 +2,12 @@
 // (`step`, `pause`, `resume`): las subsecciones se reconocen por su título en español o inglés, y lo
 // que no se reconoce se rechaza con un error en vez de reescribirse o perderse.
 
-import { stripComments } from "../../../_shared/parse/markdown.ts";
+import { commentSpans, stripComments } from "../../../_shared/parse/markdown.ts";
 import type { ParsedHandoff, PlanStep, Section, Subsection } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
 import { normalizeTitle } from "../query/find.ts";
 import type { Doc } from "../workspace/docs.ts";
-import { NONE_RE, STRINGS, type Strings } from "./language.ts";
+import { detectLanguage, type Lang, NONE_RE, STRINGS, type Strings } from "./language.ts";
 
 /** Las partes con nombre de una tarea en curso (subsecciones) o pausada (campos). */
 export type HandoffPart = "plan" | "missing" | "decisions" | "next" | "why" | "waits" | "mode";
@@ -88,6 +88,80 @@ const CHECKBOX_RE = /^\s*[-*]\s+\[[ xX]\]\s+/;
 const CHECKBOX_ANY_RE = /^\s*[-*]\s+\[[ xX]\]\s+/m;
 const MODE_RE = /^\*\*(.+?):\*\*\s*(.*)$/;
 
+/** Qué es una línea del cuerpo de la subsección «Plan»: un paso, la línea de modo, un «nada» o texto que `close` y `pause` rechazan. */
+export type PlanLine = { kind: "step" } | { kind: "mode"; value: string | null } | { kind: "none" } | { kind: "invalid" };
+
+/** Clasifica una línea (ya sin sangría ni comentarios) del cuerpo de «Plan». */
+export function classifyPlanLine(line: string): PlanLine {
+  if (CHECKBOX_RE.test(line)) return { kind: "step" };
+  const field = line.match(MODE_RE);
+  if (field && partOf(field[1]) === "mode") return { kind: "mode", value: field[2].trim() || null };
+  if (NONE_RE.test(line) || /^no aplica\.?$/i.test(line)) return { kind: "none" };
+  return { kind: "invalid" };
+}
+
+/**
+ * El formato que acepta el plan, para citarlo en un mensaje: los pasos y la línea de modo con la
+ * etiqueta del idioma (`Modo de ejecución acordado` / `Agreed execution mode`).
+ */
+export function planFormat(lang: Lang): string {
+  const step = lang === "en" ? "Step N — text" : "Paso N — texto";
+  const text = lang === "en" ? "<text>" : "<texto>";
+  return `pasos \`- [ ] ${step}\` o \`- [x] ${step}\`, y la línea de modo \`**${STRINGS[lang].mode}:** ${text}\``;
+}
+
+/** Una línea del plan que `close` y `pause` rechazan. */
+export interface InvalidPlanLine {
+  /** La línea sin sangría. */
+  text: string;
+  /** Su número de línea en el archivo (1-based); `null` si la subsección no trae posiciones. */
+  line: number | null;
+}
+
+/** Las subsecciones que se leen como el plan: la titulada «Plan» o, sin título conocido, la que trae checkboxes. */
+function planSubsections(subsections: Subsection[]): Subsection[] {
+  return subsections.filter((sub) => (partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null)) === "plan");
+}
+
+/**
+ * Las líneas del plan de «Tarea en progreso» que `close` y `pause` rechazarían (ni paso, ni línea de
+ * modo, ni «ninguno»/«no aplica»), con su número de línea. Pura: no valida nada más del handoff.
+ * @param text handoff.md completo, el mismo que se parseó (para ubicar las líneas)
+ */
+export function invalidPlanLines(text: string, subsections: Subsection[]): InvalidPlanLine[] {
+  return planSubsections(subsections).flatMap((sub): InvalidPlanLine[] => {
+    if (!sub.range) {
+      return sub.body
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l && classifyPlanLine(l).kind === "invalid")
+        .map((l) => ({ text: l, line: null }));
+    }
+    // Los comentarios se vacían sin quitar sus saltos de línea, para que cada línea conserve su número.
+    const raw = text.slice(sub.range.start, sub.range.end);
+    let clean = "";
+    let at = 0;
+    for (const [from, to] of commentSpans(raw)) {
+      clean += raw.slice(at, from) + raw.slice(from, to).replace(/[^\n]/g, "");
+      at = to;
+    }
+    clean += raw.slice(at);
+    const found: InvalidPlanLine[] = [];
+    clean.split("\n").forEach((l, i) => {
+      const line = l.trim();
+      // La línea 0 es el `### Plan`.
+      if (i > 0 && line && classifyPlanLine(line).kind === "invalid") found.push({ text: line, line: sub.range!.startLine + i });
+    });
+    return found;
+  });
+}
+
+/** Aviso (no bloquea) para `step`, `edit` y docs-check: una línea del plan que `close` rechazaría, con el formato válido. */
+export function invalidPlanLineMessage(invalid: InvalidPlanLine, lang: Lang): string {
+  const where = invalid.line === null ? "" : ` (línea ${invalid.line})`;
+  return `El plan tiene una línea que no es un paso ni el modo de ejecución${where}: «${invalid.text.slice(0, 60)}»; \`close\` y \`pause\` la rechazarían. Formato válido: ${planFormat(lang)}.`;
+}
+
 /** Separa el texto previo a las subsecciones en descripción y campos `- **Campo:** valor` (con sus líneas de continuación). */
 function splitPreamble(text: string): { description: string | null; extras: string[] } {
   const extras: string[] = [];
@@ -139,10 +213,12 @@ export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): Cur
       throw manual("hay checkboxes fuera de la subsección del plan");
     }
     for (const line of plan.body.split("\n").map((l) => l.trim()).filter(Boolean)) {
-      const field = line.match(MODE_RE);
-      if (CHECKBOX_RE.test(line)) planLines!.push(line);
-      else if (field && partOf(field[1]) === "mode") mode = field[2].trim() || null;
-      else if (!NONE_RE.test(line) && !/^no aplica\.?$/i.test(line)) throw manual(`el plan tiene texto que no es un paso ni el modo de ejecución («${line.slice(0, 60)}»)`);
+      const kind = classifyPlanLine(line);
+      if (kind.kind === "step") planLines!.push(line);
+      else if (kind.kind === "mode") mode = kind.value;
+      else if (kind.kind === "invalid") {
+        throw manual(`el plan tiene texto que no es un paso ni el modo de ejecución («${line.slice(0, 60)}»); formato válido: ${planFormat(detectLanguage([task.label]).lang)}`);
+      }
     }
   } else if (steps.length) {
     throw manual("hay checkboxes fuera de la subsección del plan");

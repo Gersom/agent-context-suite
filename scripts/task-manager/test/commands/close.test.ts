@@ -407,6 +407,18 @@ describe("errores: no se escribe nada", () => {
     expect(snapshot(p.root)).toEqual(before);
   });
 
+  test("texto suelto en el plan: se niega y el error cita la línea y el formato válido", async () => {
+    const p = await started();
+    writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("### Qué falta", "Una nota suelta en el plan.\n\n### Qué falta"));
+    const before = snapshot(p.root);
+    const { code, err } = await exec([...DONE, "--apply"], p);
+    expect(code).toBe(1);
+    expect(err).toContain("No puedo cerrar la Tarea 1");
+    expect(err).toContain("«Una nota suelta en el plan.»");
+    expect(err).toContain("formato válido: pasos `- [ ] Paso N — texto` o `- [x] Paso N — texto`, y la línea de modo `**Modo de ejecución acordado:** <texto>`");
+    expect(snapshot(p.root)).toEqual(before);
+  });
+
   test("sin tarea en curso: error claro; repetir el cierre no duplica la entrada", async () => {
     const p = await started();
     expect((await exec([...DONE, "--apply"], p)).code).toBe(0);

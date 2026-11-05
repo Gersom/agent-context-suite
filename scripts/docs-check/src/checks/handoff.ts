@@ -1,6 +1,9 @@
-// Tarea en progreso de handoff.md: que la línea `Tarea N — título` se reconozca y que traiga un plan.
+// Tarea en progreso de handoff.md: que la línea `Tarea N — título` se reconozca, que traiga un plan y
+// que ese plan solo tenga lo que `close` y `pause` aceptan.
 
 import { isPlaceholder, stripComments } from "../../../_shared/parse/markdown.ts";
+import { detectLanguage } from "../../../task-manager/src/write/language.ts";
+import { invalidPlanLineMessage, invalidPlanLines } from "../../../task-manager/src/write/handoff.ts";
 import type { Check, Finding } from "../types.ts";
 
 // «Sin tarea en curso» en los idiomas conocidos (el texto de la plantilla está traducido).
@@ -39,4 +42,19 @@ export const checkCurrentTask: Check = ({ docs }) => {
     });
   }
   return findings;
+};
+
+/** Líneas del plan de la tarea en curso que `close` y `pause` rechazarían (ni paso, ni línea de modo). */
+export const checkCurrentPlanLines: Check = ({ docs }) => {
+  const { handoff } = docs;
+  if (!handoff.exists || !handoff.parsed.inProgress.task) return [];
+  const { task, subsections } = handoff.parsed.inProgress;
+  const lang = detectLanguage([task.label]).lang;
+  return invalidPlanLines(handoff.text, subsections).map((invalid) => ({
+    severity: "warning",
+    code: "current-plan-line",
+    file: handoff.file,
+    line: invalid.line ?? task.range?.startLine ?? 1,
+    message: invalidPlanLineMessage(invalid, lang),
+  }));
 };
