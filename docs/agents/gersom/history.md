@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
+
+- Skill 2.4.0 (minor): modos de ejecución con letras en la regla 2b, changelog 2.4 y fixture de docs-check sincronizado. Sin tag ni push.
+
 ## 2026-11-05 — ✅ Tarea 149 — Skill: que el agente pregunte el modo con letras al presentar el plan
 
 - La regla 2b ofrece los cuatro modos como letras en el idioma del operador (extremo pide confirmación aparte), en la suite y en la plantilla de la skill.

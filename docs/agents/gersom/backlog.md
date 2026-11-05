@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
-
-- **Descripción:** Subir la versión de la skill a 2.3.2 (plugin.json, SKILL.md y marcador de versión de rules.md) con su entrada en docs/changelog/2.3.md: la etiqueta del modo fija en inglés (Agreed execution mode) y los valores guided, step-by-step, auto y extreme en la plantilla del handoff; para proyectos ya generados, sin cambios que aplicar.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** solo cuando el operador lo indique.
-- **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
-- **Agregada:** 2026-11-05.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 
