@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 142 — board: unificar con task-manager las regex y funciones duplicadas
+
+- Refactor: parseo de campos compartido entre board y task-manager en _shared/parse/text-fields.ts; wrapText reemplaza wrapWords; CurrentTask sin subsections.
+
 ## 2026-11-05 — ❌ Tarea 139 — Marca (verificar) por paso dentro del modo auto
 
 - No hace falta por ahora: el modo auto ya para en los pasos que solo puede hacer el operador y en las acciones irreversibles o externas, step-by-step cubre revisar todo, y para un punto de control puntual basta pedirlo en el chat o dividir la tarea. Retomarla solo si, usando auto en tareas reales, aparece un caso concreto que lo pida.

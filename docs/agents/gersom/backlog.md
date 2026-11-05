@@ -57,18 +57,9 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 142 — board: unificar con task-manager las regex y funciones duplicadas
-
-- **Descripción:** Subir a scripts/_shared/parse lo que hoy está duplicado entre task-tracker/src/model/model.ts y task-manager: NONE_RE (ya divergió: task-manager acepta n/a), DESCRIPTION_LABEL_RE, FIELD_START_RE y la lectura de la descripción (currentDescription vs splitPreamble). Quitar también wrapText o wrapWords, que hacen casi lo mismo, y el campo CurrentTask.subsections, que ya nadie usa.
-- **Decisiones/temas a definir antes de empezar:** Si wrapText reemplaza a wrapWords o al revés (wrapText parte por grafemas y respeta saltos de línea).
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 134 (hallazgos 1 y 7). Riesgo: que board y task-manager traten distinto el mismo texto. Los tests de ambos scripts tienen que seguir pasando sin cambios de lógica.
-- **Agregada:** 2026-11-05.
-
 ### Tarea 143 — board: robustecer la descripción y las decisiones ante contenido raro
 
-- **Descripción:** Que la descripción y las decisiones de EN PROGRESO y PAUSADAS no muestren contenido que no les corresponde: una línea --- al final de la sección, checkboxes fuera de ### Plan (salen también en Estado), placeholders de plantilla como [Placeholder], un ESC crudo dentro del texto y markdown a medio cerrar (**negrita que cruza una línea). Agregar los tests que faltan: N/A, --- al final, ANSI y placeholders.
+- **Descripción:** Que la descripción y las decisiones de EN PROGRESO y PAUSADAS no muestren contenido que no les corresponde: una línea --- al final de la sección, checkboxes fuera de ### Plan (salen también en Estado), placeholders de plantilla (texto entre corchetes sin completar), un ESC crudo dentro del texto y markdown a medio cerrar (negrita que cruza una línea). Agregar los tests que faltan: N/A, --- al final, ANSI y placeholders.
 - **Decisiones/temas a definir antes de empezar:** Si los placeholders se ocultan o se muestran con aviso (hoy ya hay un aviso de placeholders sin completar).
 - **Bloqueos:** Ninguno.
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
