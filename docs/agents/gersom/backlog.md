@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 133
+**Próximo número de tarea:** 134
 
 ---
 
@@ -64,6 +64,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Parte del issue #1 (https://github.com/Gersom/agent-context-suite/issues/1): bun install -g github:Gersom/agent-context-suite instala el código fuente sin dist/ y bun deja esa copia en su caché; si ya se instaló así, se limpia con bun pm cache rm.
 - **Agregada:** 2026-10-31.
+
+### Tarea 133 — Revisar el issue #3 (modo de ejecución del plan), decidir mejoras y crear tareas
+
+- **Descripción:** Revisar el issue #3 (https://github.com/Gersom/agent-context-suite/issues/3): modo de ejecución del plan como dato estructurado (comando task mode) y validación temprana de líneas de plan inválidas. Decidir con el operador qué mejoras se hacen y crear las tareas nuevas correspondientes.
+- **Decisiones/temas a definir antes de empezar:** Qué puntos del issue se implementan y en qué orden (detección temprana, comando task mode, modo auto o marca de verificación por paso, campo ejecuta); si se hace el modo auto o la alternativa de dos modos con marca por paso; si se crea la etiqueta ux.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** El issue propone cuatro puntos con esta prioridad: 1) detección temprana de líneas de plan inválidas en check, step, edit y mensaje de close con el formato válido; 2) comando task mode con paso-a-paso y seguido; 3) auto o marca de verificación por paso, con criterios de parada en rules.md; 4) campo ejecuta (operador o agente). Hoy la herramienta ya guarda el modo con start --mode, y la preferencia de ejecución también puede ir en preferences.md.
+- **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
