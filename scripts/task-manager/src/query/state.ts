@@ -255,7 +255,7 @@ export function buildState(docs: Docs): TaskState {
         number: inProgress.task.number,
         title: inProgress.task.title,
         line: inProgress.task.range?.startLine ?? null,
-        plan: planProgress(inProgress.steps),
+        plan: planProgress(inProgress.planSteps),
         nextConcreteStep: nextConcreteStep(inProgress),
       }
     : null;

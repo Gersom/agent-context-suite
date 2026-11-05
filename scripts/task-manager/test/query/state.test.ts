@@ -39,11 +39,12 @@ describe("tarea en curso", () => {
   });
 
   test("sin subsecciones de detalle (solo plan o placeholders): sin próximo paso concreto", () => {
-    expect(nextConcreteStep({ task: null, steps: [], subsections: [] })).toBeNull();
+    expect(nextConcreteStep({ task: null, steps: [], planSteps: [], subsections: [] })).toBeNull();
     expect(
       nextConcreteStep({
         task: null,
         steps: [],
+        planSteps: [],
         subsections: [
           { title: "Plan", body: "- [ ] Paso 1 — a" },
           { title: "Próximo paso", body: "[Placeholder]" },

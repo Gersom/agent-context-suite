@@ -13,7 +13,7 @@ export const checkCurrentTask: Check = ({ docs }) => {
   const { handoff } = docs;
   const section = handoff.parsed.sections["in-progress"];
   if (!handoff.exists || !section) return [];
-  const { task, steps } = handoff.parsed.inProgress;
+  const { task, planSteps: steps } = handoff.parsed.inProgress;
   const findings: Finding[] = [];
 
   if (task) {

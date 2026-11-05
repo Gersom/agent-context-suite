@@ -39,6 +39,15 @@ describe("step", () => {
     expect(snapshot(p.root)).toEqual(before);
   });
 
+  test("numera solo los pasos del plan: un checkbox suelto fuera de él no cuenta (como en el board y en state)", async () => {
+    const p = await started();
+    const file = join(p.agents, "gersom", "handoff.md");
+    writeFileSync(file, handoff(p).replace("### Próximo paso concreto", "- [ ] extra suelto\n\n### Próximo paso concreto"));
+    const { out } = await exec(["step", "1", "--apply"], p);
+    expect(out).toContain("Plan 1/4");
+    expect(handoff(p)).toContain("- [ ] extra suelto");
+  });
+
   test("marca el paso por número y pone al día «Qué falta» y «Próximo paso concreto» (que seguían con el texto de start)", async () => {
     const p = await started();
     const { code, out } = await exec(["step", "1", "--apply"], p);

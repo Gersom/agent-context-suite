@@ -62,7 +62,7 @@ export const step: Command = {
 
     const docs = ctx.docs();
     const handoff = requireDoc(docs.handoff, "handoff.md");
-    const { task, steps, subsections } = handoff.parsed.inProgress;
+    const { task, planSteps: steps, subsections } = handoff.parsed.inProgress;
     if (!task) throw new CliError("No hay tarea en curso: «Tarea en progreso» dice «Sin tarea en curso». No se escribió nada.");
     if (!steps.length) throw new CliError(`La Tarea ${task.number} no tiene plan (checkboxes) en «Tarea en progreso»: no hay pasos que marcar. No se escribió nada.`);
 

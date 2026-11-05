@@ -204,6 +204,14 @@ describe("buildModel", () => {
     });
   });
 
+  test("pausadas: el plan es el del campo Plan, sin los checkboxes de «Qué falta»", () => {
+    const [paused] = buildModel({
+      handoffText: `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Plan:**\n  - [x] Paso 1 — A\n  - [ ] Paso 2 — B\n- **Qué falta:**\n  - [ ] otra cosa\n  - [ ] y otra\n`,
+      backlogText: null,
+    }).paused;
+    expect(paused.plan).toMatchObject({ done: 1, total: 2 });
+  });
+
   test("pausadas: los placeholders y las reglas `---` de sus campos no se muestran", () => {
     const [paused] = buildModel({
       handoffText: `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Descripción:** [Placeholder: qué es]\n- **Decisiones a medio camino:** Usar A.\n  ---\n- **Por qué se pausó:** [Placeholder: motivo]\n- **Qué espera para retomarse:** N/A\n`,

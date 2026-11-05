@@ -125,7 +125,10 @@ export interface Subsection {
 
 export interface InProgress {
   task: CurrentTaskLine | null;
+  /** Todos los checkboxes del cuerpo, estén donde estén (para detectar los que están fuera del plan). */
   steps: PlanStep[];
+  /** Los pasos del plan: los checkboxes de su subsección o, sin ninguna, todos los del cuerpo. */
+  planSteps: PlanStep[];
   subsections: Subsection[];
 }
 

@@ -1,8 +1,9 @@
 // Interpretación de handoff.md: tarea en progreso (con su plan y subsecciones) y tareas pausadas.
 
-import type { CurrentTaskLine, InProgress, ParsedHandoff, ParsedPausedTask, PlanStep, Task } from "../types.ts";
+import type { CurrentTaskLine, InProgress, ParsedHandoff, ParsedPausedTask, PlanStep, Range, Subsection, Task } from "../types.ts";
 import { parseBlocks } from "./blocks.ts";
 import { isPlaceholder } from "./markdown.ts";
+import { partOf, planSubsections } from "./plan-mode.ts";
 import { BodyPos, LineIndex } from "./positions.ts";
 import { findSections, HANDOFF_SECTIONS, sectionPos } from "./sections.ts";
 
@@ -37,7 +38,7 @@ export function parseInProgress(body: string, pos?: BodyPos): InProgress {
     }
   }
 
-  const steps = parseSteps(body, pos);
+  const allSteps = parseSteps(body, pos);
 
   const subsections: { title: string; lines: string[]; startLine: number }[] = [];
   let sub: { title: string; lines: string[]; startLine: number } | null = null;
@@ -51,15 +52,22 @@ export function parseInProgress(body: string, pos?: BodyPos): InProgress {
     }
   });
 
-  return {
-    task,
-    steps,
-    subsections: subsections.map((s, n) => {
-      const subsection = { title: s.title, body: s.lines.join("\n").trim() };
-      if (!pos) return subsection;
-      return { ...subsection, range: pos.blockLines(s.startLine, n + 1 < subsections.length ? subsections[n + 1].startLine : lines.length) };
-    }),
-  };
+  const parsed = subsections.map((s, n) => {
+    const subsection: Subsection = { title: s.title, body: s.lines.join("\n").trim() };
+    if (!pos) return subsection;
+    return { ...subsection, range: pos.blockLines(s.startLine, n + 1 < subsections.length ? subsections[n + 1].startLine : lines.length) };
+  });
+
+  // Los pasos son los checkboxes de la subsección del plan; si no hay ninguna (checkboxes sueltos), los de todo el cuerpo.
+  const plans = planSubsections(parsed);
+  const planSteps = plans.length ? (pos ? stepsWithin(allSteps, plans.map((p) => p.range)) : plans.flatMap((p) => parseSteps(p.body))) : allSteps;
+
+  return { task, steps: allSteps, planSteps, subsections: parsed };
+}
+
+/** Los pasos cuya línea cae dentro de alguno de los `ranges` (los `undefined` no cuentan). */
+function stepsWithin(steps: PlanStep[], ranges: (Range | undefined)[]): PlanStep[] {
+  return steps.filter(({ range }) => range && ranges.some((r) => r && range.start >= r.start && range.end <= r.end));
 }
 
 /**
@@ -95,8 +103,12 @@ export function parsePausedTask(task: Task, index?: LineIndex): ParsedPausedTask
   };
   // El bloque se vuelve a leer del original (los comentarios quedan siempre dentro de un bloque).
   const pos = index && task.range && new BodyPos(index.text.slice(task.range.start, task.range.end), task.range.start, index);
-  const steps = pos ? parseSteps(pos.text, pos) : parseSteps(task.body);
-  return { ...task, steps, fields: task.fields.filter((f) => !isPlanField(f.value)) };
+  const allSteps = pos ? parseSteps(pos.text, pos) : parseSteps(task.body);
+  // El plan es el campo `Plan` (por su etiqueta o, si no la reconoce, el campo que solo trae checkboxes): los checkboxes de otros campos («Qué falta»...) no son pasos.
+  const labeled = task.fields.filter((f) => partOf(f.label) === "plan" && /\[[ xX]\]/.test(f.value));
+  const planFields = labeled.length ? labeled : task.fields.filter((f) => isPlanField(f.value) && (partOf(f.label) ?? "plan") === "plan");
+  const steps = !planFields.length ? allSteps : pos ? stepsWithin(allSteps, planFields.map((f) => f.range)) : planFields.flatMap((f) => parseSteps(f.value));
+  return { ...task, steps, fields: task.fields.filter((f) => !isPlanField(f.value) || !planFields.includes(f)) };
 }
 
 /** handoff.md completo. */

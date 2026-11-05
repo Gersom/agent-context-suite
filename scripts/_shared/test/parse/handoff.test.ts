@@ -24,6 +24,49 @@ describe("parseHandoff", () => {
     expect(paused[0].fields.some((f) => f.value.includes("[x]"))).toBe(false);
   });
 
+  describe("pasos del plan: solo los del plan, no los checkboxes de otras partes", () => {
+    const doc = (inProgress: string[], paused: string[] = []) =>
+      [
+        "<!-- agent-context-skill:section=in-progress -->",
+        "## Tarea en progreso",
+        "",
+        ...inProgress,
+        "",
+        "<!-- agent-context-skill:section=paused -->",
+        "## Tareas pausadas",
+        "",
+        ...paused,
+        "",
+      ].join("\n");
+
+    test("en curso: `planSteps` es el de la subsección del plan; `steps` sigue siendo todos los checkboxes", () => {
+      const { inProgress } = parseHandoff(
+        doc(["Tarea 7 — Algo", "", "- [ ] suelto", "", "### Plan", "", "- [x] Paso 1 — A", "- [ ] Paso 2 — B", "", "### Qué falta", "", "- [ ] otra cosa"]),
+      );
+      expect(inProgress.steps).toHaveLength(4);
+      expect(inProgress.planSteps.map((s) => s.text)).toEqual(["Paso 1 — A", "Paso 2 — B"]);
+      expect(inProgress.planSteps.every((s) => s.range && s.markRange)).toBe(true);
+    });
+
+    test("en curso sin subsección del plan: `planSteps` son todos los checkboxes", () => {
+      const { inProgress } = parseHandoff(doc(["Tarea 7 — Algo", "", "- [x] a", "- [ ] b"]));
+      expect(inProgress.planSteps.map((s) => s.text)).toEqual(["a", "b"]);
+    });
+
+    test("pausada: solo cuentan los checkboxes del campo Plan, no los de «Qué falta»", () => {
+      const { paused } = parseHandoff(
+        doc(
+          ["Sin tarea en curso"],
+          ["### Tarea 8 — Algo", "", "- **Plan:**", "  - [x] Paso 1 — A", "  - [ ] Paso 2 — B", "- **Qué falta:**", "  - [ ] otra cosa", "  - [ ] y otra", "- **Por qué se pausó:** prioridad."],
+        ),
+      );
+      expect(paused[0].steps.map((s) => s.text)).toEqual(["Paso 1 — A", "Paso 2 — B"]);
+      expect(paused[0].steps.every((s) => s.range && s.markRange)).toBe(true);
+      // «Qué falta» no es el plan: se conserva como campo, no se pierde en silencio.
+      expect(paused[0].fields.map((f) => f.label)).toEqual(["Qué falta", "Por qué se pausó"]);
+    });
+  });
+
   test("pausada sin plan, y campo con texto además de checkboxes que se conserva", () => {
     const text = [
       "<!-- agent-context-skill:section=in-progress -->",
@@ -202,7 +245,7 @@ describe("parseHandoff: posiciones en el texto original", () => {
 
   test("archivo vacío: sin tarea, sin pausadas, sin secciones", () => {
     const parsed = parseHandoff("");
-    expect(parsed.inProgress).toEqual({ task: null, steps: [], subsections: [] });
+    expect(parsed.inProgress).toEqual({ task: null, steps: [], planSteps: [], subsections: [] });
     expect(parsed.paused).toEqual([]);
     expect(parsed.sections).toEqual({});
     expect(parsed.missing).toEqual(["in-progress", "paused"]);

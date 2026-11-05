@@ -3,10 +3,10 @@
 // conteos y avisos).
 
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
-import { parseHandoff, parseSteps } from "../../../_shared/parse/handoff.ts";
+import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { isPlaceholder } from "../../../_shared/parse/markdown.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
-import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf, planSubsections } from "../../../_shared/parse/plan-mode.ts";
+import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf } from "../../../_shared/parse/plan-mode.ts";
 import { classifyPreamble, DESCRIPTION_LABEL_RE, NONE_RE } from "../../../_shared/parse/text-fields.ts";
 import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
@@ -123,12 +123,12 @@ export function buildModel({
  * la línea `Tarea N — título` y la primera subsección, sin sus campos `- **Campo:** valor`) y sus
  * decisiones. Las demás subsecciones («Qué falta», «Próximo paso concreto»...) no se exponen.
  */
-function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress, handoffText: string, section: Section | undefined): CurrentTask {
+function buildCurrent(task: CurrentTaskLine, { planSteps, subsections }: InProgress, handoffText: string, section: Section | undefined): CurrentTask {
   const decisions = subsections.find((s) => partOf(s.title) === "decisions");
   return {
     ...task,
     // Solo cuentan los checkboxes de la subsección del plan: los de otras partes no son pasos.
-    plan: buildPlan(planSteps(steps, subsections)),
+    plan: buildPlan(planSteps),
     mode: executionMode(handoffText, subsections),
     description: currentDescription(task, subsections, handoffText, section),
     decisions: decisionsText(decisions?.body),
@@ -198,12 +198,6 @@ function pausedField(fields: Field[], part: HandoffPart): string | null {
 function executionMode(handoffText: string, subsections: Subsection[]): ExecutionMode | null {
   const value = modeLines(handoffText, subsections).at(-1)?.value;
   return value != null && isExecutionMode(value) ? value : null;
-}
-
-/** Pasos de la subsección del plan; si no hay ninguna (checkboxes sueltos), los de todo el cuerpo. */
-function planSteps(allSteps: PlanStep[], subsections: Subsection[]): PlanStep[] {
-  const plans = planSubsections(subsections);
-  return plans.length ? plans.flatMap((sub) => parseSteps(sub.body)) : allSteps;
 }
 
 /** Avance de un plan: pasos hechos, total y el primer paso pendiente (el actual); los pasos que son un placeholder de la plantilla no cuentan. */
