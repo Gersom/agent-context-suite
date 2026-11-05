@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 140 — Skill: plantilla del handoff en inglés con la etiqueta del modo fija
+
+- Fijada en la skill la etiqueta inglesa de la línea de modo (Agreed execution mode) y los valores en inglés (guided, step-by-step, auto, extreme) en template-architecture.md; el placeholder de la plantilla del handoff pasó a esos valores.
+- Sincronizado el snapshot de la plantilla en los fixtures de docs-check. Sin revisión independiente (cambio de texto). La versión y el changelog quedan para la Tarea 141.
+- Commits: 6851b66 en la skill y 65f344a en la suite.
+
 ## 2026-11-04 — ✅ Tarea 136 — Comando task mode (guided | step-by-step | auto | extreme)
 
 - Nuevo comando acsuite task mode <guided|step-by-step|auto|extreme> que guarda el modo de ejecución del plan como dato estructurado (extreme exige --confirm). Reemplaza o inserta la línea de modo en cualquier idioma; el texto legado sigue siendo válido. start --mode se restringió a los cuatro valores.

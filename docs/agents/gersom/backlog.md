@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 141
+**Próximo número de tarea:** 142
 
 ---
 
@@ -75,14 +75,14 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Los valores en el archivo van en inglés; la traducción y el emoji son solo de presentación.
 - **Agregada:** 2026-11-04.
 
-### Tarea 140 — Skill: plantilla del handoff en inglés con la etiqueta del modo fija
+### Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
 
-- **Descripción:** Verificar cómo genera la skill el handoff en proyectos en inglés y fijar la etiqueta de la línea de modo («Agreed execution mode»), porque la suite solo reconoce esa etiqueta y sus prefijos; una traducción distinta quedaría como línea inválida en close, pause y check.
-- **Decisiones/temas a definir antes de empezar:** Si la skill lleva una plantilla en inglés o una tabla de etiquetas fijas; y actualizar la plantilla (hoy placeholder «todos los pasos seguidos / uno a la vez») a los valores guided, step-by-step, auto y extreme.
-- **Bloqueos:** `[Resuelto el 2026-11-04]` — era `[dependencia]` depende de la Tarea 136 (comando task mode y valores del modo).
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Surgió al revisar la Tarea 136: partOf (scripts/task-manager/src/write/handoff.ts) acepta la etiqueta de STRINGS en es y en. La plantilla vive en skill/template/agents/handoff.md:35, repo de la skill. Va después de la 136.
-- **Agregada:** 2026-11-04.
+- **Descripción:** Subir la versión de la skill a 2.3.2 (plugin.json, SKILL.md y marcador de versión de rules.md) con su entrada en docs/changelog/2.3.md: la etiqueta del modo fija en inglés (Agreed execution mode) y los valores guided, step-by-step, auto y extreme en la plantilla del handoff; para proyectos ya generados, sin cambios que aplicar.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** solo cuando el operador lo indique.
+- **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
+- **Agregada:** 2026-11-05.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
