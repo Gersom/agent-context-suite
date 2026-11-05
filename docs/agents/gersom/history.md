@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 143 — board: robustecer la descripción y las decisiones ante contenido raro
+
+- El board oculta ---, placeholders y secuencias de control; solo cuenta como pasos los checkboxes de Plan; plainText más robusto.
+
 ## 2026-11-05 — ✅ Tarea 146 — task-manager: unificar parsePreamble y FIELD_LINE_RE con text-fields.ts
 
 - Refactor: parsePreamble reescrito sobre classifyPreamble (con offsets y maskComments) y matchFieldLine compartido con group.ts.

@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 147
+**Próximo número de tarea:** 148
 
 ---
 
@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 143 — board: robustecer la descripción y las decisiones ante contenido raro
-
-- **Descripción:** Que la descripción y las decisiones de EN PROGRESO y PAUSADAS no muestren contenido que no les corresponde: una línea --- al final de la sección, checkboxes fuera de ### Plan (salen también en Estado), placeholders de plantilla (texto entre corchetes sin completar), un ESC crudo dentro del texto y markdown a medio cerrar (negrita que cruza una línea). Agregar los tests que faltan: N/A, --- al final, ANSI y placeholders.
-- **Decisiones/temas a definir antes de empezar:** Si los placeholders se ocultan o se muestran con aviso (hoy ya hay un aviso de placeholders sin completar).
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 134 (hallazgos 2, 3, 5 y 6). Son formatos que acsuite task no genera; solo ocurren con un handoff editado a mano.
-- **Agregada:** 2026-11-05.
-
 ### Tarea 144 — task-manager: avisos de edit y error de close más útiles
 
 - **Descripción:** Mejorar los mensajes sobre el plan: que edit emita un aviso por cada línea inválida (hoy los junta en un solo notice y repite el formato), que el error de close y pause cite el número de línea, y que check y step avisen también de las subsecciones desconocidas (por ejemplo ### Notas) que close rechaza.
@@ -82,6 +73,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** Ninguno.
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Salió de la revisión independiente de la Tarea 136. Es un handoff malformado y poco probable: close y pause lo siguen aceptando.
+- **Agregada:** 2026-11-05.
+
+### Tarea 147 — Unificar qué checkboxes cuentan como pasos del plan entre el board y task-manager
+
+- **Descripción:** Hoy el board cuenta como pasos solo los checkboxes de ### Plan (o todos si no hay subsección), pero task-manager (step, state) usa todo el cuerpo de la tarea en progreso, y en PAUSADAS parsePausedTask cuenta los checkboxes de todos los campos (Qué falta, etc.). Definir una única regla en _shared y aplicarla en ambos, incluidas las pausadas.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 143 (hallazgos 2 y 7). Puede cambiar los números de paso de acsuite task step en handoffs con checkboxes fuera del plan.
 - **Agregada:** 2026-11-05.
 
 <!-- agent-context-skill:section=blocked -->
