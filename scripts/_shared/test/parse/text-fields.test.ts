@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { classifyPreamble, DESCRIPTION_LABEL_RE, FIELD_START_RE, NONE_RE } from "../../parse/text-fields.ts";
+import { classifyPreamble, DESCRIPTION_LABEL_RE, FIELD_START_RE, matchFieldLine, NONE_RE } from "../../parse/text-fields.ts";
 
 describe("NONE_RE", () => {
   test.each(["Ninguno", "Ninguna.", "ningunos", "NINGUNAS.", "None", "none.", "N/A", "n/a."])("«%s» significa nada", (value) => {
@@ -67,5 +67,30 @@ describe("classifyPreamble", () => {
     expect(kinds(text)).toEqual(["text:Origen: la Tarea 3", "text:  continúa", "text:Texto"]);
     expect(kinds(text, { looseOrigin: true })).toEqual(["field:Origen: la Tarea 3", "continuation:  continúa", "text:Texto"]);
     expect(kinds("**Origin:** x\nTexto", { looseOrigin: true })).toEqual(["field:**Origin:** x", "text:Texto"]);
+  });
+
+  test("cada línea trae su offset", () => {
+    const text = "Uno\n- **A:** x\n  y";
+    expect(classifyPreamble(text).map((l) => text.slice(l.offset, l.offset + l.text.length))).toEqual(["Uno", "- **A:** x", "  y"]);
+  });
+
+  test("maskComments conserva las posiciones: el comentario queda en blanco, no se quita", () => {
+    const text = "<!-- nota -->Texto\n- **A:** x <!-- oculto -->\n<!--\n  multilínea\n-->\n  sigue";
+    const lines = classifyPreamble(text, { maskComments: true });
+    expect(lines.map((l) => l.kind)).toEqual(["text", "field", "text", "text", "text", "continuation"]);
+    expect(lines.map((l) => l.text.length)).toEqual(text.split("\n").map((l) => l.length));
+    expect(lines.map((l) => l.offset)).toEqual([0, 19, 46, 51, 64, 68]);
+    expect(lines[0].text.trim()).toBe("Texto");
+  });
+});
+
+describe("matchFieldLine", () => {
+  test("separa el prefijo, la etiqueta y el valor", () => {
+    expect(matchFieldLine("- **Resumen:** texto  ")).toEqual({ prefix: "- **Resumen:** ", label: "Resumen", value: "texto  " });
+    expect(matchFieldLine("* **Resumen**:")).toEqual({ prefix: "* **Resumen**:", label: "Resumen", value: "" });
+  });
+  test("lo que no abre un campo da null", () => {
+    expect(matchFieldLine("Resumen: texto")).toBeNull();
+    expect(matchFieldLine("  - **A:** x")).toBeNull();
   });
 });

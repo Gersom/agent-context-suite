@@ -9,6 +9,7 @@
 
 import { parseBlocks } from "../../../_shared/parse/blocks.ts";
 import { commentSpans } from "../../../_shared/parse/markdown.ts";
+import { matchFieldLine } from "../../../_shared/parse/text-fields.ts";
 import type { Group, ParsedBacklog, Task } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
 import { WHERE } from "../commands/block.ts";
@@ -26,8 +27,6 @@ export const MIN_GROUP_TASKS = 2;
 
 // La lista de números va entre paréntesis al final del header de la referencia: `(Tareas 14, 15)`.
 const REFERENCE_LIST_RE = /\(([^)]*\d[^)]*)\)\s*$/;
-// Una línea de campo `- **Etiqueta:** valor`: lo que va antes del valor, la etiqueta y el valor.
-const FIELD_LINE_RE = /^([-*]\s+\*\*(.+?)(?::\*\*|\*\*:)\s*)(.*)$/;
 
 /** Dónde está una tarea que debería estar agrupada y no lo está; en curso, pausada y cerrada reutilizan las etiquetas de `block`. */
 export const NOT_GROUPED: Record<Exclude<Place, "grouped">, string> = {
@@ -180,7 +179,7 @@ export function groupLabels(backlog: Doc<ParsedBacklog>, S: Strings): Pick<Strin
       labels.tasks = list[1].match(/^\D*/)![0].trim() || S.tasks;
       listed = true;
     }
-    const label = reference.body.split("\n").map((line) => line.match(FIELD_LINE_RE)?.[2].trim()).find((found) => found && words.has(found.toLowerCase()));
+    const label = reference.body.split("\n").map((line) => matchFieldLine(line)?.label.trim()).find((found) => found && words.has(found.toLowerCase()));
     if (label) {
       labels.summary = label;
       break;
@@ -398,10 +397,10 @@ function summaryLine(backlog: Doc<ParsedBacklog>, reference: Group, S: Strings):
   let lineStart = range.start + lines[0].length + 1; // tras el header
   for (const line of lines.slice(1)) {
     if (!found) {
-      const match = line.match(FIELD_LINE_RE);
-      if (match && wanted.has(match[2].trim().toLowerCase())) {
-        const spaced = match[3] !== "" || /\s$/.test(match[1]);
-        found = { lineStart, start: lineStart + (spaced ? match[1].length : match[1].trimEnd().length), pad: spaced ? "" : " ", end: lineStart + line.length, value: match[3].trim() };
+      const match = matchFieldLine(line);
+      if (match && wanted.has(match.label.trim().toLowerCase())) {
+        const spaced = match.value !== "" || /\s$/.test(match.prefix);
+        found = { lineStart, start: lineStart + (spaced ? match.prefix.length : match.prefix.trimEnd().length), pad: spaced ? "" : " ", end: lineStart + line.length, value: match.value.trim() };
       }
     } else if (/^\s+\S/.test(line)) {
       found.end = lineStart + line.length;

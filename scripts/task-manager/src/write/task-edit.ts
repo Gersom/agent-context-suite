@@ -5,7 +5,7 @@
 // archivo (`Doc.text`) y los rangos del parser: devuelven ediciones, no leen ni escriben nada.
 
 import { commentSpans } from "../../../_shared/parse/markdown.ts";
-import { FIELD_START_RE } from "../../../_shared/parse/text-fields.ts";
+import { classifyPreamble, FIELD_START_RE } from "../../../_shared/parse/text-fields.ts";
 import { blockInfo, LEADING_TAG_RE } from "../../../_shared/tasks/block-info.ts";
 import type { Field } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
@@ -278,29 +278,21 @@ export interface Preamble {
  */
 export function parsePreamble(text: string, region: Span): Preamble {
   const slice = text.slice(region.start, region.end);
-  let masked = slice;
   const comments = commentSpans(slice);
-  for (const [from, to] of comments) masked = masked.slice(0, from) + masked.slice(from, to).replace(/[^\n]/g, " ") + masked.slice(to);
 
   const fields: Preamble["fields"] = [];
   let first = -1;
   let last = -1;
-  let inField = false;
-  let offset = 0;
-  for (const line of masked.split("\n")) {
+  for (const { kind, text: line, offset } of classifyPreamble(slice, { maskComments: true })) {
     const end = offset + line.trimEnd().length;
-    const field = line.match(FIELD_START_RE);
-    if (field) {
-      fields.push({ label: field[1].trim(), span: { start: region.start + offset, end: region.start + end } });
-      inField = true;
-    } else if (inField && /^\s+\S/.test(line)) {
+    if (kind === "field") {
+      fields.push({ label: line.match(FIELD_START_RE)![1].trim(), span: { start: region.start + offset, end: region.start + end } });
+    } else if (kind === "continuation") {
       fields[fields.length - 1].span.end = region.start + end;
     } else if (line.trim()) {
-      inField = false;
       if (first === -1) first = offset;
       last = end;
     }
-    offset += line.length + 1;
   }
   if (first === -1) return { description: null, fields };
 
