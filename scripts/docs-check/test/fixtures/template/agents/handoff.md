@@ -32,7 +32,9 @@ Estado "en caliente": en qué se está ahora. **Se actualiza editando solo lo qu
 - [ ] Paso 2 — [placeholder]
 - [ ] Documentar cierre de tarea
 
-**Modo de ejecución acordado:** [todos los pasos seguidos / uno a la vez con confirmación]
+**Modo de ejecución acordado:** [guided / step-by-step / auto / extreme]
+
+<!-- Dejar un solo valor, siempre en inglés (también en proyectos en otro idioma): guided, step-by-step, auto o extreme. La etiqueta en inglés es `Agreed execution mode` (ver template-architecture.md). -->
 
 ### Qué falta
 
