@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-04 — ✅ Tarea 132 — README: advertir que el paquete se instala desde npm, no desde GitHub
+
+- Agregada al README, en «Recomendado: instalarla de forma global», la advertencia de instalar desde npm y no desde GitHub (sin dist/ no se crea acsuite), con el enlace a npm y cómo limpiar la caché de Bun (bun pm cache rm).
+- Commit: el de esta tarea en la suite.
+
 ## 2026-11-04 — ✅ Tarea 131 — Revisar las referencias de la skill a la suite
 
 - Revisadas las referencias de la skill a la suite (comandos acsuite, instalación, bloque de rules.md): estaban vigentes; no hace falta nombrar los comandos group-*.

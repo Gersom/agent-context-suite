@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 132 — README: advertir que el paquete se instala desde npm, no desde GitHub
-
-- **Descripción:** Agregar al README una advertencia de no instalar el paquete desde GitHub (el repo no incluye dist/ y no se crea el comando acsuite) sino desde npm, con el enlace https://www.npmjs.com/package/agent-context-suite.
-- **Decisiones/temas a definir antes de empezar:** Dónde va la advertencia dentro de la sección de instalación.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Parte del issue #1 (https://github.com/Gersom/agent-context-suite/issues/1): bun install -g github:Gersom/agent-context-suite instala el código fuente sin dist/ y bun deja esa copia en su caché; si ya se instaló así, se limpia con bun pm cache rm.
-- **Agregada:** 2026-10-31.
-
 ### Tarea 133 — Revisar el issue #3 (modo de ejecución del plan), decidir mejoras y crear tareas
 
 - **Descripción:** Revisar el issue #3 (https://github.com/Gersom/agent-context-suite/issues/3): modo de ejecución del plan como dato estructurado (comando task mode) y validación temprana de líneas de plan inválidas. Decidir con el operador qué mejoras se hacen y crear las tareas nuevas correspondientes.
