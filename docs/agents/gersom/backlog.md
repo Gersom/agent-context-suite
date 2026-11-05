@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 148
+**Próximo número de tarea:** 149
 
 ---
 
@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 144 — task-manager: avisos de edit y error de close más útiles
-
-- **Descripción:** Mejorar los mensajes sobre el plan: que edit emita un aviso por cada línea inválida (hoy los junta en un solo notice y repite el formato), que el error de close y pause cite el número de línea, y que check y step avisen también de las subsecciones desconocidas (por ejemplo ### Notas) que close rechaza.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 135 (hallazgos 2, 3 y 4). Hoy close y pause usan classifyPlanLine y no invalidPlanLines: quedan dos recorridos del plan que pueden desfasarse.
-- **Agregada:** 2026-11-05.
-
 ### Tarea 145 — task mode: manejar varias líneas de modo en el plan
 
 - **Descripción:** Cuando el plan tiene dos o más líneas de modo, task mode reemplaza solo la última y no puede limpiar las demás (queda el aviso current-mode en la primera). Hacer que reemplace la primera y borre las otras, o que no dé por idéntico el valor si hay más de una línea.
@@ -73,6 +64,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** Ninguno.
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Salió de la revisión independiente de la Tarea 136. Es un handoff malformado y poco probable: close y pause lo siguen aceptando.
+- **Agregada:** 2026-11-05.
+
+### Tarea 148 — Avisar de todo lo que close y pause rechazan en Tarea en progreso
+
+- **Descripción:** step, edit y check solo avisan de líneas inválidas del plan y de subsecciones con título desconocido. Falta avisar también de subsecciones repetidas (dos Qué falta), de una subsección con checkboxes que se toma como segundo plan y de checkboxes fuera del plan, que hoy hacen fallar close y pause sin aviso previo.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 144. Puede reutilizar las comprobaciones de inspectCurrent para no duplicar reglas.
 - **Agregada:** 2026-11-05.
 
 <!-- agent-context-skill:section=blocked -->

@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 144 — task-manager: avisos de edit y error de close más útiles
+
+- edit avisa una línea por aviso (formato solo en el primero), close y pause citan el número de línea y step/check avisan de subsecciones desconocidas.
+
 ## 2026-11-05 — ✅ Tarea 147 — Unificar qué checkboxes cuentan como pasos del plan entre el board y task-manager
 
 - Regla única de pasos del plan (planSteps) para board, state, step y docs-check; en pausadas, solo los checkboxes del campo Plan.
