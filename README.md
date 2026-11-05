@@ -25,6 +25,8 @@ npm install -g agent-context-suite@latest
 
 Para actualizarla, ejecuta el mismo comando.
 
+> **Instálala desde npm, no desde GitHub.** No uses `bun install -g github:Gersom/agent-context-suite`: el repo no incluye `dist/`, así que no se crea el comando `acsuite`. Usa siempre el paquete de [npm](https://www.npmjs.com/package/agent-context-suite). Si ya la instalaste desde GitHub con Bun, limpia esa copia con `bun pm cache rm` y vuelve a instalar desde npm.
+
 ### Alternativa: usarla sin instalar nada
 
 Con `npx` o `bunx` se descarga, se ejecuta y termina, sin dejar instalado el comando `acsuite`, así que cada vez se escribe completo:
