@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 137 — rules.md: criterios de parada de auto y comportamiento de guided y extreme
+
+- Nueva sección «Modos de ejecución del plan» en las reglas específicas de rules.md: comportamiento de guided, step-by-step, auto y extreme, con las paradas de auto, la regla del plan como contrato y el registro con acsuite task mode. La pregunta (b) de la regla 2 ofrece ahora los cuatro modos.
+- Sin revisión independiente (cambio de texto). Commit en la suite: 5e2917d.
+
 ## 2026-11-05 — ✅ Tarea 140 — Skill: plantilla del handoff en inglés con la etiqueta del modo fija
 
 - Fijada en la skill la etiqueta inglesa de la línea de modo (Agreed execution mode) y los valores en inglés (guided, step-by-step, auto, extreme) en template-architecture.md; el placeholder de la plantilla del handoff pasó a esos valores.

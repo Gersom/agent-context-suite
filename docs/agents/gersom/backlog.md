@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
 - **Agregada:** 2026-11-04.
 
-### Tarea 137 — rules.md: criterios de parada de auto y comportamiento de guided y extreme
-
-- **Descripción:** Escribir en rules.md el comportamiento de los cuatro modos. auto: el agente para siempre ante decisiones de producto o diseño, acciones difíciles de revertir (borrar, push, publicar), pasos que solo puede hacer el operador y fallos inesperados. guided: ejecuta el operador y el agente da la instrucción, espera el resultado, diagnostica y avanza cuando el operador confirma. extreme (entra solo con confirmación explícita del operador): el agente hace todo y espera solo al final para cerrar o corregir; las dudas de producto no paran, toma la opción por defecto y la lista aparte en el resumen. El plan aprobado es el contrato: las acciones irreversibles o externas (borrar, push, publicar, editar fuera del repo) solo se hacen si un paso del plan las nombra de forma concreta (ej. «pushear a origin/main»); una acción así que surge sin estar en el plan obliga a parar y pedir agregar el paso.
-- **Decisiones/temas a definir antes de empezar:** rules.md es de todos los operadores: confirmar que no es solo preferencia de Gersom.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Puntos 3 y 4 adaptados tras el debate.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
 
 - **Descripción:** El board muestra el modo del plan en español con emoji: ✏️ Guiado, 📋 Paso a paso, 🤖 Auto y Extremo (emoji a definir).
@@ -83,6 +74,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** solo cuando el operador lo indique.
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
+
+### Tarea 139 — Marca (verificar) por paso dentro del modo auto
+
+- **Descripción:** Opcional: permitir marcar pasos del plan con (verificar) para que en modo auto el agente pare ahí además de los criterios de rules.md.
+- **Decisiones/temas a definir antes de empezar:** Si hace falta: se evalúa tras usar los tres modos.
+- **Bloqueos:** `[Resuelto el 2026-11-05]` — era `[dependencia]` depende de la Tarea 136 (modo auto) y de la Tarea 137 (criterios de parada).
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Alternativa descartada por ahora porque se pisaba con el modo; solo tiene sentido dentro de auto.
+- **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
@@ -112,15 +112,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
-
-### Tarea 139 — Marca (verificar) por paso dentro del modo auto
-
-- **Descripción:** Opcional: permitir marcar pasos del plan con (verificar) para que en modo auto el agente pare ahí además de los criterios de rules.md.
-- **Decisiones/temas a definir antes de empezar:** Si hace falta: se evalúa tras usar los tres modos.
-- **Bloqueos:** [dependencia] depende de la Tarea 136 (modo auto) y de la Tarea 137 (criterios de parada).
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Alternativa descartada por ahora porque se pisaba con el modo; solo tiene sentido dentro de auto.
-- **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
