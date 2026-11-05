@@ -4,7 +4,7 @@
 
 import { commentSpans, stripComments } from "../../../_shared/parse/markdown.ts";
 import type { ParsedHandoff, PlanStep, Section, Subsection } from "../../../_shared/types.ts";
-import { CliError } from "../cli/errors.ts";
+import { CliError, UsageError } from "../cli/errors.ts";
 import { normalizeTitle } from "../query/find.ts";
 import type { Doc } from "../workspace/docs.ts";
 import { detectLanguage, type Lang, NONE_RE, STRINGS, type Strings } from "./language.ts";
@@ -121,6 +121,84 @@ export interface InvalidPlanLine {
 /** Las subsecciones que se leen como el plan: la titulada «Plan» o, sin título conocido, la que trae checkboxes. */
 function planSubsections(subsections: Subsection[]): Subsection[] {
   return subsections.filter((sub) => (partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null)) === "plan");
+}
+
+/** La subsección del plan de la tarea en curso (la primera si hubiera varias; `inspectCurrent` rechaza las repetidas), si la hay. */
+export function findPlan(subsections: Subsection[]): Subsection | undefined {
+  return planSubsections(subsections)[0];
+}
+
+/** Los modos de ejecución del plan, siempre en inglés (también en proyectos en español). Cualquier otro texto de un handoff ya escrito es legado. */
+export const EXECUTION_MODES = ["guided", "step-by-step", "auto", "extreme"] as const;
+export type ExecutionMode = (typeof EXECUTION_MODES)[number];
+
+/** El modo que ya requiere confirmación explícita del operador (`--confirm`). */
+const CONFIRMED_MODE: ExecutionMode = "extreme";
+
+/** `value` es exactamente uno de los cuatro modos (los demás textos son legado). */
+export function isExecutionMode(value: string): value is ExecutionMode {
+  return (EXECUTION_MODES as readonly string[]).includes(value);
+}
+
+/**
+ * Interpreta el modo que pide el operador (argumento de `mode` o `start --mode`).
+ * @param confirmed se pasó `--confirm`; solo `extreme` lo exige (con los demás se ignora)
+ * @throws UsageError no es uno de los cuatro modos, o es `extreme` sin `--confirm`
+ */
+export function parseExecutionMode(raw: string, confirmed: boolean): ExecutionMode {
+  const value = raw.trim();
+  if (!isExecutionMode(value)) {
+    throw new UsageError(`«${value}» no es un modo de ejecución válido: usa ${EXECUTION_MODES.map((mode) => `\`${mode}\``).join(", ")}.`);
+  }
+  if (value === CONFIRMED_MODE && !confirmed) {
+    throw new UsageError(
+      `El modo \`${CONFIRMED_MODE}\` exige --confirm: antes, el agente debe confirmar con el operador en el chat que quiere ese modo (la herramienta no puede comprobarlo); luego repite el comando con --confirm. No se escribió nada.`,
+    );
+  }
+  return value;
+}
+
+/** Una línea de modo de ejecución del plan, con su posición. */
+export interface ModeLine {
+  /** Valor tal como está escrito; `null` si la línea no trae ninguno. */
+  value: string | null;
+  /** Desde el primer hasta el último carácter de la línea (sin sangría ni comentarios al final), en offsets del texto LF. */
+  start: number;
+  end: number;
+  /** Su número de línea en el archivo (1-based). */
+  line: number;
+}
+
+/**
+ * Las líneas de modo de ejecución del plan (con la etiqueta en cualquier idioma conocido), en orden.
+ * Ignora lo que está dentro de comentarios HTML. Las subsecciones sin posiciones no se miran.
+ * @param text handoff.md completo, el mismo que se parseó
+ */
+export function modeLines(text: string, subsections: Subsection[]): ModeLine[] {
+  return planSubsections(subsections).flatMap((sub): ModeLine[] => {
+    if (!sub.range) return [];
+    // Los comentarios se vacían con espacios (sin tocar los saltos de línea): los offsets y las líneas se conservan.
+    const raw = text.slice(sub.range.start, sub.range.end);
+    let clean = "";
+    let at = 0;
+    for (const [from, to] of commentSpans(raw)) {
+      clean += raw.slice(at, from) + raw.slice(from, to).replace(/[^\n]/g, " ");
+      at = to;
+    }
+    clean += raw.slice(at);
+    const found: ModeLine[] = [];
+    let offset = sub.range.start;
+    clean.split("\n").forEach((l, i) => {
+      const line = l.trim();
+      const kind = i > 0 && line ? classifyPlanLine(line) : null;
+      if (kind?.kind === "mode") {
+        const start = offset + (l.length - l.trimStart().length);
+        found.push({ value: kind.value, start, end: start + line.length, line: sub.range!.startLine + i });
+      }
+      offset += l.length + 1;
+    });
+    return found;
+  });
 }
 
 /**

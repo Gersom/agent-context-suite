@@ -3,7 +3,7 @@
 
 import { isPlaceholder, stripComments } from "../../../_shared/parse/markdown.ts";
 import { detectLanguage } from "../../../task-manager/src/write/language.ts";
-import { invalidPlanLineMessage, invalidPlanLines } from "../../../task-manager/src/write/handoff.ts";
+import { EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLines, isExecutionMode, modeLines } from "../../../task-manager/src/write/handoff.ts";
 import type { Check, Finding } from "../types.ts";
 
 // «Sin tarea en curso» en los idiomas conocidos (el texto de la plantilla está traducido).
@@ -57,4 +57,20 @@ export const checkCurrentPlanLines: Check = ({ docs }) => {
     line: invalid.line ?? task.range?.startLine ?? 1,
     message: invalidPlanLineMessage(invalid, lang),
   }));
+};
+
+/** La línea de modo de ejecución de la tarea en curso con un valor que no es uno de los cuatro modos (texto de antes de `task mode`). */
+export const checkCurrentMode: Check = ({ docs }) => {
+  const { handoff } = docs;
+  if (!handoff.exists || !handoff.parsed.inProgress.task) return [];
+  const { task, subsections } = handoff.parsed.inProgress;
+  return modeLines(handoff.text, subsections)
+    .filter((mode) => mode.value === null || !isExecutionMode(mode.value))
+    .map((mode) => ({
+      severity: "warning",
+      code: "current-mode",
+      file: handoff.file,
+      line: mode.line,
+      message: `El modo de ejecución de la Tarea ${task.number} ${mode.value === null ? "está vacío" : `dice «${mode.value.slice(0, 60)}»`}, que no es uno de los modos válidos (${EXECUTION_MODES.join(", ")}): fíjalo con \`acsuite task mode <valor>\`.`,
+    }));
 };

@@ -112,7 +112,7 @@ describe("start <N>", () => {
 
   test("con plan por stdin y modo: un paso por línea, el paso de cierre al final y el modo", async () => {
     const p = project({ folders: ["gersom"], ...IDLE });
-    await exec(["start", "T-3", "--plan", "-", "--mode", "uno a la vez, con confirmación", "--apply"], p, {
+    await exec(["start", "T-3", "--plan", "-", "--mode", "step-by-step", "--apply"], p, {
       stdin: "Paso 1 — Escribir\n- [ ] Paso 2 — Probar\n\nPaso 3 — Cerrar\n",
     });
     const handoff = read(p, "gersom", "handoff.md");
@@ -125,7 +125,7 @@ describe("start <N>", () => {
         "- [ ] Paso 3 — Cerrar",
         "- [ ] Documentar cierre de tarea",
         "",
-        "**Modo de ejecución acordado:** uno a la vez, con confirmación",
+        "**Modo de ejecución acordado:** step-by-step",
         "",
         "### Qué falta",
         "",
@@ -255,8 +255,29 @@ describe("start <N>", () => {
 
     test("--mode sin --plan, o un plan sin pasos", async () => {
       const p = project({ folders: ["gersom"], ...IDLE });
-      expect((await exec(["start", "1", "--mode", "seguidos", "--apply"], p)).err).toContain("--mode solo tiene sentido con --plan");
+      expect((await exec(["start", "1", "--mode", "auto", "--apply"], p)).err).toContain("--mode solo tiene sentido con --plan");
       expect((await exec(["start", "1", "--plan", "-", "--apply"], p, { stdin: "- [ ] \n\n" })).err).toContain("--plan no trae ningún paso");
+    });
+
+    test("--mode solo acepta los cuatro modos; `extreme` exige --confirm", async () => {
+      const p = project({ folders: ["gersom"], ...IDLE });
+      const before = snapshot(p.root);
+      const free = await exec(["start", "1", "--plan", "-", "--mode", "uno a la vez", "--apply"], p, { stdin: "Paso 1" });
+      expect(free.code).toBe(2);
+      expect(free.err).toContain("«uno a la vez» no es un modo de ejecución válido");
+      expect(free.err).toContain("guided");
+      const extreme = await exec(["start", "1", "--plan", "-", "--mode", "extreme", "--apply"], p, { stdin: "Paso 1" });
+      expect(extreme.code).toBe(2);
+      expect(extreme.err).toContain("exige --confirm");
+      expect(snapshot(p.root)).toEqual(before);
+      expect((await exec(["start", "1", "--plan", "-", "--mode", "extreme", "--confirm", "--apply"], p, { stdin: "Paso 1" })).code).toBe(0);
+      expect(read(p, "gersom", "handoff.md")).toContain("**Modo de ejecución acordado:** extreme\n");
+    });
+
+    test("--confirm con otro modo se ignora", async () => {
+      const p = project({ folders: ["gersom"], ...IDLE });
+      expect((await exec(["start", "1", "--plan", "-", "--mode", "guided", "--confirm", "--apply"], p, { stdin: "Paso 1" })).code).toBe(0);
+      expect(read(p, "gersom", "handoff.md")).toContain("**Modo de ejecución acordado:** guided\n");
     });
 
     test("«Tarea en progreso» con contenido que no es una tarea: no lo sobrescribe", async () => {
@@ -399,9 +420,9 @@ describe("start --team", () => {
 
   test("con plan y modo", async () => {
     const p = project({ folders: ["gersom"], ...IDLE });
-    await exec(["start", "--team", "Revisar el copy", "--plan", "Paso 1 — leer", "--mode", "seguidos", "--apply"], p);
+    await exec(["start", "--team", "Revisar el copy", "--plan", "Paso 1 — leer", "--mode", "auto", "--apply"], p);
     const handoff = read(p, "gersom", "handoff.md");
-    expect(handoff).toContain("Tarea 20 — Revisar el copy del onboarding\n\nCUERPO-TEAM-1\n\n- **Origen:** team-backlog\n\n### Plan\n\n- [ ] Paso 1 — leer\n- [ ] Documentar cierre de tarea\n\n**Modo de ejecución acordado:** seguidos\n");
+    expect(handoff).toContain("Tarea 20 — Revisar el copy del onboarding\n\nCUERPO-TEAM-1\n\n- **Origen:** team-backlog\n\n### Plan\n\n- [ ] Paso 1 — leer\n- [ ] Documentar cierre de tarea\n\n**Modo de ejecución acordado:** auto\n");
   });
 
   test("la única libre del team-backlog: la sección queda con «Ninguna.»", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { checkCurrentPlanLines, checkCurrentTask } from "../../src/checks/handoff.ts";
+import { checkCurrentMode, checkCurrentPlanLines, checkCurrentTask } from "../../src/checks/handoff.ts";
 import { HANDOFF, HANDOFF_IDLE, lineOf, TEMPLATE_HANDOFF } from "../fixtures.ts";
 import { brief, makeCtx, PATHS } from "../helpers.ts";
 
@@ -118,17 +118,55 @@ describe("current-plan-line", () => {
   });
 
   test("un hallazgo por línea inválida", () => {
-    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** todos los pasos seguidos", "Primera nota.\nSegunda nota.");
+    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** auto", "Primera nota.\nSegunda nota.");
     expect(checkCurrentPlanLines(makeCtx({ handoff })).map((f) => f.line)).toEqual([lineOf(handoff, "Primera nota."), lineOf(handoff, "Segunda nota.")]);
   });
 
   test("«Ninguno», «No aplica» y la línea de modo en inglés son válidos; los comentarios no cuentan", () => {
-    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** todos los pasos seguidos", "No aplica.\n**Agreed execution mode:** all in a row\n<!-- nota\nen dos líneas -->");
+    const handoff = HANDOFF.replace("**Modo de ejecución acordado:** auto", "No aplica.\n**Agreed execution mode:** all in a row\n<!-- nota\nen dos líneas -->");
     expect(checkCurrentPlanLines(makeCtx({ handoff }))).toEqual([]);
   });
 
   test("el texto ajeno fuera del plan no cuenta", () => {
     const handoff = HANDOFF.replace("El paso 2 y el cierre.", "Una nota cualquiera.");
     expect(checkCurrentPlanLines(makeCtx({ handoff }))).toEqual([]);
+  });
+});
+
+describe("current-mode", () => {
+  const withMode = (line: string) => HANDOFF.replace("**Modo de ejecución acordado:** auto", line);
+
+  test("uno de los cuatro modos, en cualquier idioma de la etiqueta: sin hallazgos", () => {
+    for (const mode of ["guided", "step-by-step", "auto", "extreme"]) {
+      expect(checkCurrentMode(makeCtx({ handoff: withMode(`**Modo de ejecución acordado:** ${mode}`) }))).toEqual([]);
+      expect(checkCurrentMode(makeCtx({ handoff: withMode(`**Agreed execution mode:** ${mode}`) }))).toEqual([]);
+    }
+  });
+
+  test("texto libre de antes: aviso en esa línea, que manda a `acsuite task mode`", () => {
+    const handoff = withMode("**Modo de ejecución acordado:** todos los pasos seguidos");
+    const findings = checkCurrentMode(makeCtx({ handoff }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-mode", file: FILE, line: lineOf(handoff, "**Modo de ejecución acordado:**") }]);
+    expect(findings[0].message).toContain("«todos los pasos seguidos»");
+    expect(findings[0].message).toContain("`acsuite task mode <valor>`");
+  });
+
+  test("el placeholder de la plantilla y una línea sin valor también avisan", () => {
+    for (const value of ["[todos los pasos seguidos / uno a la vez con confirmación]", ""]) {
+      const handoff = withMode(`**Modo de ejecución acordado:** ${value}`);
+      expect(checkCurrentMode(makeCtx({ handoff })).map((f) => f.code)).toEqual(["current-mode"]);
+    }
+  });
+
+  test("sin línea de modo, sin tarea en curso o sin handoff.md: sin hallazgos", () => {
+    expect(checkCurrentMode(makeCtx({ handoff: withMode("") }))).toEqual([]);
+    expect(checkCurrentMode(makeCtx({ handoff: HANDOFF_IDLE }))).toEqual([]);
+    expect(checkCurrentMode(makeCtx({ handoff: null }))).toEqual([]);
+  });
+
+  test("una línea de modo dentro de un comentario o fuera del plan no cuenta", () => {
+    expect(checkCurrentMode(makeCtx({ handoff: withMode("<!-- **Modo de ejecución acordado:** a mano -->") }))).toEqual([]);
+    const outside = HANDOFF.replace("El paso 2 y el cierre.", "**Modo de ejecución acordado:** a mano");
+    expect(checkCurrentMode(makeCtx({ handoff: outside }))).toEqual([]);
   });
 });

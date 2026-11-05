@@ -1,6 +1,6 @@
 # task-manager
 
-Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
+Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `mode`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
 
 Es **opcional** y es una herramienta de este repo, no parte de la skill: no se copia a los repos destino (principio 4 de [`docs/philosophy.md`](../../docs/philosophy.md)). Sin ella, los archivos se editan a mano igual.
 
@@ -52,6 +52,7 @@ bun run task <comando> --agents D:/proyectos/mi-app --operator ana
 | `add` `*` | Agrega una tarea a tu `backlog.md` (con el siguiente número) o, con `--team`, al `team-backlog.md`. |
 | `start <N>` `*` | Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el `handoff.md`. Con `--team "<título>"`, la toma del `team-backlog.md`. |
 | `step <N \| texto>...` `*` | Marca (o con `--undo` desmarca) pasos del plan de la tarea en curso y pone al día «Qué falta» y «Próximo paso concreto». |
+| `mode <guided\|step-by-step\|auto\|extreme>` `*` | Registra el modo de ejecución acordado del plan de la tarea en curso. |
 | `pause` `*` | Pasa la tarea en curso a «Tareas pausadas» y deja «Sin tarea en curso». |
 | `resume <N>` `*` | Inverso de `pause`: la pausada vuelve a «Tarea en progreso». |
 | `block <N>` `*` | Bloquea una tarea libre del backlog (`Bloqueos` + la mueve a «bloqueadas / pospuestas»). |
@@ -198,15 +199,15 @@ Agrega una tarea al final de «Tareas libres» (o de «bloqueadas / pospuestas»
 ### `start`
 
 ```sh
-bun run task start 24 [--plan -] [--mode "uno a la vez"] [--force] [--apply]
-bun run task start --team "Migrar el CI" [--plan -] [--mode ...] [--force] [--apply]
+bun run task start 24 [--plan -] [--mode guided] [--force] [--apply]
+bun run task start --team "Migrar el CI" [--plan -] [--mode <modo> [--confirm]] [--force] [--apply]
 ```
 
 Empieza una tarea, **en una sola operación** sobre todos los archivos (o ninguno):
 
 - Exige que **no haya otra tarea en curso** (si la hay, error que sugiere pausarla con `pause`) y que la elegida esté en «libres». Una **bloqueada** da error salvo con `--force` (queda constancia en la salida); una **pausada** (se retoma con `resume`) o **cerrada**, error claro; una **agrupada**, error que indica sacarla antes con `acsuite task group-eject N` (ver «Grupos»). Repetir el mismo `start --apply` falla limpio: ya hay una tarea en curso.
 - Saca su bloque de `backlog.md` sin dejar huecos ni líneas en blanco dobles; si era la última, la sección queda con «Ninguna.» (`None.` en inglés).
-- Reescribe el cuerpo de «Tarea en progreso» de `handoff.md` según su plantilla, sin tocar el resto del archivo ni las anclas: la línea `Tarea N — título` antes de la primera subsección `###`, un párrafo con la descripción, **Plan** (solo con `--plan`: una línea por paso; se agrega siempre el último paso «Documentar cierre de tarea»; con `--mode`, la línea «Modo de ejecución acordado»), **Qué falta**, **Decisiones a medio camino** (con lo que la tarea traía en «decisiones», si no era «Ninguno») y **Próximo paso concreto** (el primer paso del plan, o «Empezar la tarea.»), en ese orden. Los campos de la tarea que el handoff no tiene dónde poner (`Detalles`, `Desbloquea`...) se copian tal cual, en líneas `- **Campo:** valor` tras la descripción, para que no se pierdan al sacarla del backlog.
+- Reescribe el cuerpo de «Tarea en progreso» de `handoff.md` según su plantilla, sin tocar el resto del archivo ni las anclas: la línea `Tarea N — título` antes de la primera subsección `###`, un párrafo con la descripción, **Plan** (solo con `--plan`: una línea por paso; se agrega siempre el último paso «Documentar cierre de tarea»; con `--mode`, la línea «Modo de ejecución acordado»; `--mode` solo acepta `guided`, `step-by-step`, `auto` o `extreme`, y `extreme` exige además `--confirm`, como en `mode`), **Qué falta**, **Decisiones a medio camino** (con lo que la tarea traía en «decisiones», si no era «Ninguno») y **Próximo paso concreto** (el primer paso del plan, o «Empezar la tarea.»), en ese orden. Los campos de la tarea que el handoff no tiene dónde poner (`Detalles`, `Desbloquea`...) se copian tal cual, en líneas `- **Campo:** valor` tras la descripción, para que no se pierdan al sacarla del backlog.
 - Con `--team`: la tarea sale de `team-backlog.md` (por título, o una parte única), recibe el siguiente número de tu secuencia (el contador pasa a N+1) y el handoff lleva la línea `- **Origen:** team-backlog`. Los tres archivos cambian juntos.
 - La rama y el commit no son asunto del script.
 
@@ -223,6 +224,21 @@ Marca pasos del «Plan» de la tarea en curso (Regla 7 de `rules.md`: el handoff
 - `step` solo marca y desmarca pasos. Para cambiar un texto a mano («Qué falta», «Decisiones a medio camino», «Próximo paso concreto») se usa `edit` (ver la sección `edit`).
 - Las subsecciones se reconocen por su título en español o inglés. Sin plan (sin checkboxes) no hay pasos que marcar.
 - **Aviso de formato:** `step` no bloquea por el contenido del plan, pero si «Plan» tiene una línea que `close` y `pause` rechazarían (texto que no es un paso ni la línea de modo) imprime un `Aviso:` por línea, con su número de línea y el formato válido (ver «Formato del plan» en `close`); con `--json` va en `notes`. El paso se marca igual y el exit code no cambia. `docs-check` lo detecta también (`current-plan-line`).
+
+### `mode`
+
+```sh
+bun run task mode <guided|step-by-step|auto|extreme> [--confirm] [--json] [--apply]
+```
+
+Registra el **modo de ejecución acordado** del plan de la tarea en curso como la línea `**Modo de ejecución acordado:** <modo>` (`**Agreed execution mode:** <modo>` en inglés) al final de la subsección «Plan»:
+
+- **Valores:** `guided`, `step-by-step`, `auto` y `extreme`, siempre en inglés (también en proyectos en español). Cualquier otro valor es un error de uso. Qué significa cada modo no lo define el script.
+- **`extreme` exige `--confirm`.** La herramienta no puede comprobar que el operador lo haya pedido: el agente debe confirmarlo antes con el operador en el chat y recién entonces repetir el comando con `--confirm`. Sin él, error de uso (código 2) y no escribe nada. Con los otros modos `--confirm` se ignora sin error.
+- **Reemplaza o agrega:** si el plan ya tiene una línea de modo la reemplaza (también la de antes con texto libre, como «uno a la vez», y la que tiene la etiqueta de otro idioma, que no se duplica); si no, la agrega al final del plan, con la etiqueta del idioma del proyecto (con aviso, como `add`, si no lo reconoce). Es idempotente: con el mismo valor avisa que no hay nada que cambiar y no escribe.
+- **Solo la tarea en curso y con plan:** sin tarea en curso, o sin plan (checkboxes), es un error que no escribe nada; con contenido de «Tarea en progreso» que no reconoce (ver `pause`), también se niega.
+- **Legado:** un texto libre ya escrito en un handoff sigue siendo válido para `close`, `pause` y `resume`; `mode` lo reemplaza y `docs-check` lo señala (`current-mode`).
+- `--json` informa `task`, `mode`, `previous`, `unchanged` y `notice`, además de los campos comunes de los comandos que escriben.
 
 ### `pause`
 

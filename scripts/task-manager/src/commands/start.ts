@@ -24,7 +24,7 @@ import { relFile } from "../query/format.ts";
 import { type Doc, requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
 import { singleLine, textFlag } from "../write/flags.ts";
-import { requireFreeInProgress } from "../write/handoff.ts";
+import { EXECUTION_MODES, parseExecutionMode, requireFreeInProgress } from "../write/handoff.ts";
 import { detectLanguage, findFieldOfKind, STRINGS } from "../write/language.ts";
 import { reserveNextNumber } from "../write/numbering.ts";
 import { carriedFields, fieldBody, meaningfulField, parsePlan, renderInProgress } from "../write/render.ts";
@@ -57,7 +57,7 @@ interface Source {
 export const start: Command = {
   name: "start",
   summary: "Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el handoff; escribe con --apply",
-  usage: "start <N | T-N> [--plan -] [--mode <texto>] [--force] [--apply]   |   start --team \"<título>\" [--plan -] [--mode <texto>] [--force] [--apply]",
+  usage: `start <N | T-N> [--plan -] [--mode <${EXECUTION_MODES.join("|")}> [--confirm]] [--force] [--apply]   |   start --team "<título>" [--plan -] [--mode <modo> [--confirm]] [--force] [--apply]`,
   writes: true,
   flags: {
     team: { type: "boolean", description: "Tomar la tarea del team-backlog.md (por título): recibe el siguiente número y el handoff lleva `Origen: team-backlog`." },
@@ -67,7 +67,8 @@ export const start: Command = {
       stdin: true,
       description: "Plan: un paso por línea (con `-`, de la entrada estándar). Se agrega siempre el paso final «Documentar cierre de tarea». Sin plan, no se escribe esa subsección.",
     },
-    mode: { type: "string", valueName: "texto", description: "Modo de ejecución acordado del plan (solo con --plan)." },
+    mode: { type: "string", valueName: "modo", description: `Modo de ejecución acordado del plan (solo con --plan): ${EXECUTION_MODES.join(", ")}.` },
+    confirm: { type: "boolean", description: "Obligatorio con `--mode extreme`: el agente ya lo confirmó con el operador en el chat (la herramienta no puede comprobarlo). Con los demás modos se ignora." },
     force: { type: "boolean", description: "Empezar una tarea aunque esté en «bloqueadas / pospuestas» (queda constancia en la salida)." },
   },
   run(ctx) {
@@ -82,9 +83,10 @@ export const start: Command = {
     const planText = textFlag(flags, "plan");
     const plan = planText ? parsePlan(planText) : null;
     if (planText && !plan?.length) throw new UsageError("--plan no trae ningún paso: escribe uno por línea.");
-    const mode = textFlag(flags, "mode");
-    if (mode && !plan) throw new UsageError("--mode solo tiene sentido con --plan.");
-    if (mode) singleLine("mode", mode);
+    const modeText = textFlag(flags, "mode");
+    if (modeText && !plan) throw new UsageError("--mode solo tiene sentido con --plan.");
+    if (modeText) singleLine("mode", modeText);
+    const mode = modeText ? parseExecutionMode(modeText, flags.confirm === true) : undefined;
 
     const docs = ctx.docs();
     const handoff = requireDoc(docs.handoff, "handoff.md");

@@ -52,7 +52,7 @@ Se escribe el parser de los documentos para que el seguimiento los lea.
 - [ ] Paso 2 — Completar los casos
 - [ ] Documentar cierre de tarea
 
-**Modo de ejecución acordado:** todos los pasos seguidos
+**Modo de ejecución acordado:** auto
 
 ### Qué falta
 

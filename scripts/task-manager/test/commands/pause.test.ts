@@ -32,7 +32,7 @@ const PAUSE = ["pause", "--reason", "Prioridad más alta.", "--waiting-for", "Qu
 /** Proyecto con la Tarea 1 en curso, con plan y el paso 1 hecho. */
 async function started(extra: string[] = []): Promise<Project> {
   const p = project({ folders: ["gersom"], ...IDLE });
-  await exec(["start", "1", "--plan", "-", "--mode", "uno a la vez", ...extra, "--apply"], p, { stdin: "Paso 1 — Escribir\nPaso 2 — Probar" });
+  await exec(["start", "1", "--plan", "-", "--mode", "step-by-step", ...extra, "--apply"], p, { stdin: "Paso 1 — Escribir\nPaso 2 — Probar" });
   await exec(["step", "1", "--apply"], p);
   return p;
 }
@@ -72,7 +72,7 @@ describe("pause", () => {
         "  - [x] Paso 1 — Escribir",
         "  - [ ] Paso 2 — Probar",
         "  - [ ] Documentar cierre de tarea",
-        "- **Modo de ejecución acordado:** uno a la vez",
+        "- **Modo de ejecución acordado:** step-by-step",
         "- **Qué falta:** Pasos pendientes:",
         "  - Paso 2 — Probar",
         "  - Documentar cierre de tarea",
@@ -144,7 +144,7 @@ describe("pause", () => {
     test("contenido que no reconozco: subsección con otro título, texto suelto en el plan o checkboxes fuera del plan", async () => {
       const cases: Array<[string, string]> = [
         ["### Próximo paso concreto", "### Cosa que hacer al retomar"],
-        ["**Modo de ejecución acordado:** uno a la vez", "Una nota suelta en el plan."],
+        ["**Modo de ejecución acordado:** step-by-step", "Una nota suelta en el plan."],
         ["### Próximo paso concreto\n\n", "### Próximo paso concreto\n\n- [ ] Paso suelto\n"],
       ];
       for (const [from, to] of cases) {
@@ -161,7 +161,7 @@ describe("pause", () => {
 
     test("texto suelto en el plan: el error cita la línea y el formato válido", async () => {
       const p = await started();
-      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("**Modo de ejecución acordado:** uno a la vez", "Una nota suelta en el plan."));
+      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("**Modo de ejecución acordado:** step-by-step", "Una nota suelta en el plan."));
       const { code, err } = await exec([...PAUSE, "--apply"], p);
       expect(code).toBe(1);
       expect(err).toContain("«Una nota suelta en el plan.»");
@@ -194,10 +194,20 @@ describe("resume", () => {
     expect(handoff(p)).toBe(before);
   });
 
+  test("el modo de un handoff ya escrito (texto libre) sigue valiendo: pause y resume lo conservan", async () => {
+    const p = await started();
+    writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("acordado:** step-by-step", "acordado:** uno a la vez con confirmación"));
+    const before = handoff(p);
+    expect((await exec([...PAUSE, "--apply"], p)).code).toBe(0);
+    expect(handoff(p)).toContain("- **Modo de ejecución acordado:** uno a la vez con confirmación");
+    expect((await exec(["resume", "1", "--apply"], p)).code).toBe(0);
+    expect(handoff(p)).toBe(before);
+  });
+
   test("la evidencia al final de la línea de un paso (checks y commit) sobrevive a pause, resume y step", async () => {
     const p = project({ folders: ["gersom"], ...IDLE });
     const evidence = "Paso 1 — Escribir · bun test 779 pass · commit abc1234";
-    await exec(["start", "1", "--plan", "-", "--mode", "uno a la vez", "--apply"], p, { stdin: `${evidence}\nPaso 2 — Probar` });
+    await exec(["start", "1", "--plan", "-", "--mode", "step-by-step", "--apply"], p, { stdin: `${evidence}\nPaso 2 — Probar` });
     await exec(["step", "escribir", "--apply"], p);
     expect(handoff(p)).toContain(`- [x] ${evidence}`);
     const before = handoff(p);

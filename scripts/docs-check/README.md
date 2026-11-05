@@ -50,6 +50,7 @@ Cada hallazgo lleva archivo, línea (cuando aplica) y un código. **Error:** el 
 | `current-task-line` | aviso | «Tarea en progreso» con contenido pero sin la línea `Tarea N — título`. |
 | `current-no-plan` | aviso | Tarea en curso sin ningún checkbox de plan. |
 | `current-plan-line` | aviso | Una línea del plan de la tarea en curso que no es un paso (`- [ ] Paso N — texto`) ni la línea de modo (`**Modo de ejecución acordado:** <texto>`): `close` y `pause` la rechazarían. Una por línea, con su número de línea. |
+| `current-mode` | aviso | La línea de modo de ejecución de la tarea en curso (`**Modo de ejecución acordado:** <valor>`) trae un valor que no es `guided`, `step-by-step`, `auto` ni `extreme` (texto libre de antes): se fija con `acsuite task mode <valor>`. Sin línea de modo no avisa. |
 | `group-too-small` | error | Grupo con menos de 2 tareas (se desarma con `group-eject`). |
 | `group-missing-container` | error | Referencia en «Tareas libres» sin su contenedor en «Tareas agrupadas». |
 | `group-missing-reference` | error | Contenedor en «Tareas agrupadas» sin su referencia en «Tareas libres». |

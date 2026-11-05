@@ -3,7 +3,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
-import { classifyPlanLine, invalidPlanLineMessage, invalidPlanLines, planFormat } from "../../src/write/handoff.ts";
+import { UsageError } from "../../src/cli/errors.ts";
+import { classifyPlanLine, EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLines, isExecutionMode, modeLines, parseExecutionMode, planFormat } from "../../src/write/handoff.ts";
 
 const handoff = (plan: string) => `<!-- agent-context-skill:section=in-progress -->
 ## Tarea en progreso
@@ -85,5 +86,58 @@ describe("planFormat y mensaje", () => {
     expect(message).toContain("«Una nota suelta.»");
     expect(message).toContain("Formato válido: pasos `- [ ] Paso N — texto`");
     expect(invalidPlanLineMessage({ text: "x", line: null }, "es")).not.toContain("(línea");
+  });
+});
+
+describe("modos de ejecución", () => {
+  test("EXECUTION_MODES son los cuatro, siempre en inglés", () => {
+    expect([...EXECUTION_MODES]).toEqual(["guided", "step-by-step", "auto", "extreme"]);
+    for (const mode of EXECUTION_MODES) expect(isExecutionMode(mode)).toBe(true);
+  });
+
+  test("isExecutionMode: solo el valor exacto; el texto libre de antes es legado", () => {
+    for (const legacy of ["seguidos", "uno a la vez con confirmación", "[todos los pasos seguidos / uno a la vez]", "Auto", "guided ", "", "step by step"]) {
+      expect(isExecutionMode(legacy)).toBe(false);
+    }
+  });
+
+  test("parseExecutionMode: devuelve el modo (sin espacios en los extremos) y ignora --confirm con los demás", () => {
+    expect(parseExecutionMode(" guided ", false)).toBe("guided");
+    expect(parseExecutionMode("step-by-step", true)).toBe("step-by-step");
+    expect(parseExecutionMode("auto", false)).toBe("auto");
+    expect(parseExecutionMode("extreme", true)).toBe("extreme");
+  });
+
+  test("parseExecutionMode: un valor inválido o `extreme` sin confirmar es un error de uso", () => {
+    expect(() => parseExecutionMode("seguidos", false)).toThrow(UsageError);
+    expect(() => parseExecutionMode("seguidos", false)).toThrow("«seguidos» no es un modo de ejecución válido");
+    expect(() => parseExecutionMode("extreme", false)).toThrow(UsageError);
+    expect(() => parseExecutionMode("extreme", false)).toThrow("exige --confirm");
+    expect(() => parseExecutionMode("extreme", false)).toThrow("operador en el chat");
+  });
+});
+
+describe("modeLines", () => {
+  const lines = (text: string) => modeLines(text, parseHandoff(text).inProgress.subsections);
+
+  test("ubica la línea con su offset, valor y número de línea; la etiqueta puede estar en cualquier idioma", () => {
+    for (const label of ["Modo de ejecución acordado", "Agreed execution mode"]) {
+      const text = handoff(`- [ ] Paso 1 — a\n\n**${label}:** seguidos`);
+      const [found] = lines(text);
+      expect(text.slice(found.start, found.end)).toBe(`**${label}:** seguidos`);
+      expect(found).toMatchObject({ value: "seguidos", line: text.split("\n").indexOf(`**${label}:** seguidos`) + 1 });
+    }
+  });
+
+  test("sin valor: `null`; sin línea de modo: lista vacía", () => {
+    expect(lines(handoff("- [ ] Paso 1 — a\n**Modo de ejecución acordado:**")).map((l) => l.value)).toEqual([null]);
+    expect(lines(handoff("- [ ] Paso 1 — a"))).toEqual([]);
+  });
+
+  test("ignora los comentarios, deja fuera lo que los sigue en la línea y no cuenta lo de otras subsecciones", () => {
+    const text = handoff("<!-- **Modo de ejecución acordado:** viejo -->\n  **Modo de ejecución acordado:** auto <!-- ok -->\n- [ ] Paso 1 — a").replace("Todo.", "**Modo de ejecución acordado:** otro");
+    const found = lines(text);
+    expect(found.map((l) => l.value)).toEqual(["auto"]);
+    expect(text.slice(found[0].start, found[0].end)).toBe("**Modo de ejecución acordado:** auto");
   });
 });
