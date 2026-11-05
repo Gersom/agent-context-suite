@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-04 — ✅ Tarea 133 — Revisar el issue #3 (modo de ejecución del plan), decidir mejoras y crear tareas
+
+- Revisado el issue #3 y debatido con el operador: modos de ejecución guided, step-by-step, auto y extreme (valores en inglés en el archivo; el board los muestra en español con emoji), con criterios de parada en rules.md y el plan aprobado como contrato para acciones irreversibles o externas.
+- Descartados por ahora: campo ejecuta por paso y marca (verificar) como mecanismo independiente del modo.
+- Tareas creadas: 135 a 139.
+- Commit: el de cierre de esta tarea.
+
 ## 2026-11-04 — ✅ Tarea 132 — README: advertir que el paquete se instala desde npm, no desde GitHub
 
 - Agregada al README, en «Recomendado: instalarla de forma global», la advertencia de instalar desde npm y no desde GitHub (sin dist/ no se crea acsuite), con el enlace a npm y cómo limpiar la caché de Bun (bun pm cache rm).

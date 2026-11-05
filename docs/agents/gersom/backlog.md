@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 135
+**Próximo número de tarea:** 140
 
 ---
 
@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 133 — Revisar el issue #3 (modo de ejecución del plan), decidir mejoras y crear tareas
-
-- **Descripción:** Revisar el issue #3 (https://github.com/Gersom/agent-context-suite/issues/3): modo de ejecución del plan como dato estructurado (comando task mode) y validación temprana de líneas de plan inválidas. Decidir con el operador qué mejoras se hacen y crear las tareas nuevas correspondientes.
-- **Decisiones/temas a definir antes de empezar:** Qué puntos del issue se implementan y en qué orden (detección temprana, comando task mode, modo auto o marca de verificación por paso, campo ejecuta); si se hace el modo auto o la alternativa de dos modos con marca por paso; si se crea la etiqueta ux.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** El issue propone cuatro puntos con esta prioridad: 1) detección temprana de líneas de plan inválidas en check, step, edit y mensaje de close con el formato válido; 2) comando task mode con paso-a-paso y seguido; 3) auto o marca de verificación por paso, con criterios de parada en rules.md; 4) campo ejecuta (operador o agente). Hoy la herramienta ya guarda el modo con start --mode, y la preferencia de ejecución también puede ir en preferences.md.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 134 — Rediseñar la sección "EN PROGRESO" de acsuite board
 
 - **Descripción:** Cambiar cómo `acsuite board` muestra la tarea en progreso, sin tocar el formato interno de handoff.md: una línea `Estado:` clara en vez de "Qué falta" y "Próximo paso concreto", y la descripción y las decisiones en su propia línea bajo un subtítulo.
@@ -64,6 +55,33 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** Ninguno.
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
+- **Agregada:** 2026-11-04.
+
+### Tarea 135 — Detección temprana de líneas de plan inválidas
+
+- **Descripción:** check, step y edit avisan si el plan de «Tarea en progreso» tiene texto que close va a rechazar, y el error de close muestra el formato válido de la línea de modo.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Punto 1. Fallo real: un agente agregó «Modo: paso a paso; ...», step/edit/check lo aceptaron y close lo rechazó varios pasos después sin decir el formato.
+- **Agregada:** 2026-11-04.
+
+### Tarea 136 — Comando task mode (guided | step-by-step | auto | extreme)
+
+- **Descripción:** Agregar acsuite task mode <guided|step-by-step|auto|extreme> que escribe el modo de ejecución del plan en handoff.md en un formato que la herramienta lee y valida (check lo reconoce), y documentar el formato en la regla 2 de rules.md. Entrar a extreme exige el flag --confirm (recordatorio de que el operador lo confirmó en el chat; la herramienta no puede comprobarlo).
+- **Decisiones/temas a definir antes de empezar:** Formato exacto de la línea de modo en el handoff; cómo convive con start --mode.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Valores en inglés en el archivo; el board los muestra en español con emoji. guided: ejecuta el operador y el agente guía y verifica; step-by-step: el agente espera confirmación tras cada paso; auto: el agente ejecuta seguido y para ante los criterios de rules.md; extreme: el agente hace todo y solo espera al final (cerrar o corregir); las acciones irreversibles o externas las hace solo si un paso del plan las nombra explícitamente.
+- **Agregada:** 2026-11-04.
+
+### Tarea 137 — rules.md: criterios de parada de auto y comportamiento de guided y extreme
+
+- **Descripción:** Escribir en rules.md el comportamiento de los cuatro modos. auto: el agente para siempre ante decisiones de producto o diseño, acciones difíciles de revertir (borrar, push, publicar), pasos que solo puede hacer el operador y fallos inesperados. guided: ejecuta el operador y el agente da la instrucción, espera el resultado, diagnostica y avanza cuando el operador confirma. extreme (entra solo con confirmación explícita del operador): el agente hace todo y espera solo al final para cerrar o corregir; las dudas de producto no paran, toma la opción por defecto y la lista aparte en el resumen. El plan aprobado es el contrato: las acciones irreversibles o externas (borrar, push, publicar, editar fuera del repo) solo se hacen si un paso del plan las nombra de forma concreta (ej. «pushear a origin/main»); una acción así que surge sin estar en el plan obliga a parar y pedir agregar el paso.
+- **Decisiones/temas a definir antes de empezar:** rules.md es de todos los operadores: confirmar que no es solo preferencia de Gersom.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Puntos 3 y 4 adaptados tras el debate.
 - **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,6 +112,24 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
+
+### Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
+
+- **Descripción:** El board muestra el modo del plan en español con emoji: ✏️ Guiado, 📋 Paso a paso, 🤖 Auto y Extremo (emoji a definir).
+- **Decisiones/temas a definir antes de empezar:** Qué emoji usa Extremo.
+- **Bloqueos:** [dependencia] depende de la Tarea 136 (comando task mode y formato del modo).
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Los valores en el archivo van en inglés; la traducción y el emoji son solo de presentación.
+- **Agregada:** 2026-11-04.
+
+### Tarea 139 — Marca (verificar) por paso dentro del modo auto
+
+- **Descripción:** Opcional: permitir marcar pasos del plan con (verificar) para que en modo auto el agente pare ahí además de los criterios de rules.md.
+- **Decisiones/temas a definir antes de empezar:** Si hace falta: se evalúa tras usar los tres modos.
+- **Bloqueos:** [dependencia] depende de la Tarea 136 (modo auto) y de la Tarea 137 (criterios de parada).
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Alternativa descartada por ahora porque se pisaba con el modo; solo tiene sentido dentro de auto.
+- **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
