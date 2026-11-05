@@ -75,15 +75,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Salió de la revisión independiente de la Tarea 136. Es un handoff malformado y poco probable: close y pause lo siguen aceptando.
 - **Agregada:** 2026-11-05.
 
-### Tarea 147 — Unificar qué checkboxes cuentan como pasos del plan entre el board y task-manager
-
-- **Descripción:** Hoy el board cuenta como pasos solo los checkboxes de ### Plan (o todos si no hay subsección), pero task-manager (step, state) usa todo el cuerpo de la tarea en progreso, y en PAUSADAS parsePausedTask cuenta los checkboxes de todos los campos (Qué falta, etc.). Definir una única regla en _shared y aplicarla en ambos, incluidas las pausadas.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 143 (hallazgos 2 y 7). Puede cambiar los números de paso de acsuite task step en handoffs con checkboxes fuera del plan.
-- **Agregada:** 2026-11-05.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 

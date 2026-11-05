@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 147 — Unificar qué checkboxes cuentan como pasos del plan entre el board y task-manager
+
+- Regla única de pasos del plan (planSteps) para board, state, step y docs-check; en pausadas, solo los checkboxes del campo Plan.
+
 ## 2026-11-05 — ✅ Tarea 143 — board: robustecer la descripción y las decisiones ante contenido raro
 
 - El board oculta ---, placeholders y secuencias de control; solo cuenta como pasos los checkboxes de Plan; plainText más robusto.
