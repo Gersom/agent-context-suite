@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 148 — Avisar de todo lo que close y pause rechazan en Tarea en progreso
-
-- **Descripción:** step, edit y check solo avisan de líneas inválidas del plan y de subsecciones con título desconocido. Falta avisar también de subsecciones repetidas (dos Qué falta), de una subsección con checkboxes que se toma como segundo plan y de checkboxes fuera del plan, que hoy hacen fallar close y pause sin aviso previo.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 144. Puede reutilizar las comprobaciones de inspectCurrent para no duplicar reglas.
-- **Agregada:** 2026-11-05.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 

@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 148 — Avisar de todo lo que close y pause rechazan en Tarea en progreso
+
+- structureProblems unifica los problemas de estructura de Tarea en progreso; step, edit y docs-check (current-structure) avisan antes de que close y pause los rechacen.
+
 ## 2026-11-05 — ✅ Tarea 145 — task mode: manejar varias líneas de modo en el plan
 
 - task mode conserva la última línea de modo, borra las anteriores y avisa; se niega si comparte un comentario HTML multilínea.
