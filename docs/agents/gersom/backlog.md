@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
 - **Agregada:** 2026-11-04.
 
-### Tarea 135 — Detección temprana de líneas de plan inválidas
-
-- **Descripción:** check, step y edit avisan si el plan de «Tarea en progreso» tiene texto que close va a rechazar, y el error de close muestra el formato válido de la línea de modo.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Punto 1. Fallo real: un agente agregó «Modo: paso a paso; ...», step/edit/check lo aceptaron y close lo rechazó varios pasos después sin decir el formato.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 136 — Comando task mode (guided | step-by-step | auto | extreme)
 
 - **Descripción:** Agregar acsuite task mode <guided|step-by-step|auto|extreme> que escribe el modo de ejecución del plan en handoff.md en un formato que la herramienta lee y valida (check lo reconoce), y documentar el formato en la regla 2 de rules.md. Entrar a extreme exige el flag --confirm (recordatorio de que el operador lo confirmó en el chat; la herramienta no puede comprobarlo).

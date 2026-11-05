@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-04 — ✅ Tarea 135 — Detección temprana de líneas de plan inválidas
+
+- Detección temprana de líneas inválidas en el plan: la validación de close/pause se extrajo a una función reutilizable; el error de close/pause muestra el formato válido; step y edit avisan sin bloquear; acsuite check tiene el warning current-plan-line. Documentado en los README de task-manager y docs-check.
+- Revisión independiente hecha; corregido el número de línea del aviso tras edit --apply.
+- Commit en la suite: feat(T-135).
+
 ## 2026-11-04 — ✅ Tarea 133 — Revisar el issue #3 (modo de ejecución del plan), decidir mejoras y crear tareas
 
 - Revisado el issue #3 y debatido con el operador: modos de ejecución guided, step-by-step, auto y extreme (valores en inglés en el archivo; el board los muestra en español con emoji), con criterios de parada en rules.md y el plan aprobado como contrato para acciones irreversibles o externas.
