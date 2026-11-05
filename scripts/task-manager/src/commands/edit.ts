@@ -20,7 +20,7 @@ import { requireDoc, type Doc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
 import { BLOCKING_TAGS } from "../write/blocking.ts";
 import { singleLine, textFlag } from "../write/flags.ts";
-import { findPart, invalidPlanLineMessage, invalidPlanLines } from "../write/handoff.ts";
+import { findPart, invalidPlanLineMessages, invalidPlanLines } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
 import { detectLanguage, STRINGS, type FieldKind } from "../write/language.ts";
 import { normalizeText, renderField } from "../write/render.ts";
@@ -63,7 +63,8 @@ interface Plan {
   /** `number` es `null` en las tareas del team-backlog (se identifican por su título). */
   task: { number: number | null; title: string };
   place: Place | TeamPlace;
-  notice: string | null;
+  /** Avisos (no bloquean), uno por línea de salida. */
+  notices: string[];
 }
 
 function textFlagDef(description: string) {
@@ -118,7 +119,8 @@ export const edit: Command = {
         task: plan.task,
         place: plan.place,
         fields: changed,
-        notice: plan.notice,
+        notice: plan.notices.join(" ") || null,
+        notices: plan.notices,
       });
       return;
     }
@@ -128,7 +130,7 @@ export const edit: Command = {
     } else if (result.files.some((file) => file.written)) {
       io.out(`${who} editada (${changed.map((name) => `--${name}`).join(", ")}): ${PLACE_LABEL[plan.place]}, ${relFile(ctx.workspace({ allowFolderless: true }), plan.doc.path)}. Su estado no cambió.`);
     }
-    if (plan.notice) io.out(`Aviso: ${plan.notice}`);
+    for (const notice of plan.notices) io.out(`Aviso: ${notice}`);
   },
 };
 
@@ -219,7 +221,7 @@ function planNumbered(ctx: CommandContext, number: number, given: Given): Plan {
   const names = labelFor(backlogTasks(docs).map((candidate) => candidate.fields), [task.label, ...headerLabels(docs)]);
   const edits = fieldEdits(text, task.fields, values, names.label, backlogPlacement(text, block, task.fields));
   if (given.title !== undefined) edits.unshift(titleEdit(text, block, "numbered", task.title, given.title));
-  return { doc: backlog, edits, task: { number, title: given.title ?? task.title }, place: location.place, notice: names.notice() };
+  return { doc: backlog, edits, task: { number, title: given.title ?? task.title }, place: location.place, notices: names.notice() === null ? [] : [names.notice()!] };
 }
 
 function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given): Plan {
@@ -296,10 +298,10 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
   const edited = [...edits].sort((a, b) => b.start - a.start || b.end - a.end).reduce((acc, e) => acc.slice(0, e.start) + e.text + acc.slice(e.end), text);
   const planNotices =
     location.place === "in-progress"
-      ? invalidPlanLines(edited, parseHandoff(edited).inProgress.subsections).map((invalid) => invalidPlanLineMessage(invalid, detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)]).lang))
+      ? invalidPlanLineMessages(invalidPlanLines(edited, parseHandoff(edited).inProgress.subsections), detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)]).lang)
       : [];
-  const notice = [names.notice(), ...planNotices].filter((part) => part !== null).join(" ");
-  return { doc: handoff, edits, task: { number: location.number, title: given.title ?? title }, place: location.place, notice: notice || null };
+  const notices = [names.notice(), ...planNotices].filter((part) => part !== null);
+  return { doc: handoff, edits, task: { number: location.number, title: given.title ?? title }, place: location.place, notices };
 }
 
 function planTeam(ctx: CommandContext, query: string, given: Given): Plan {
@@ -342,6 +344,6 @@ function planTeam(ctx: CommandContext, query: string, given: Given): Plan {
   if (given.title !== undefined) edits.unshift(titleEdit(text, block, "team", task.title, given.title));
   // El título es la identidad de la tarea del team-backlog: lo que la nombre por título queda huérfano.
   const renamed = given.title !== undefined && given.title !== task.title ? `el título cambió de «${task.title}» a «${given.title}»: revisa las referencias por título (en otras tareas, handoff o history), que ya no apuntan a esta tarea.` : null;
-  const notice = [names.notice(), renamed].filter((part) => part !== null).join(" ");
-  return { doc: team, edits, task: { number: null, title: given.title ?? task.title }, place: location.place, notice: notice || null };
+  const notices = [names.notice(), renamed].filter((part) => part !== null);
+  return { doc: team, edits, task: { number: null, title: given.title ?? task.title }, place: location.place, notices };
 }

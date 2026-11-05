@@ -3,7 +3,7 @@
 
 import { isPlaceholder, stripComments } from "../../../_shared/parse/markdown.ts";
 import { detectLanguage } from "../../../task-manager/src/write/language.ts";
-import { EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLines, isExecutionMode, modeLines } from "../../../task-manager/src/write/handoff.ts";
+import { EXECUTION_MODES, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, unknownSubsectionMessage, unknownSubsections } from "../../../task-manager/src/write/handoff.ts";
 import type { Check, Finding } from "../types.ts";
 
 // «Sin tarea en curso» en los idiomas conocidos (el texto de la plantilla está traducido).
@@ -50,12 +50,28 @@ export const checkCurrentPlanLines: Check = ({ docs }) => {
   if (!handoff.exists || !handoff.parsed.inProgress.task) return [];
   const { task, subsections } = handoff.parsed.inProgress;
   const lang = detectLanguage([task.label]).lang;
-  return invalidPlanLines(handoff.text, subsections).map((invalid) => ({
+  const invalids = invalidPlanLines(handoff.text, subsections);
+  const messages = invalidPlanLineMessages(invalids, lang);
+  return invalids.map((invalid, i) => ({
     severity: "warning",
     code: "current-plan-line",
     file: handoff.file,
     line: invalid.line ?? task.range?.startLine ?? 1,
-    message: invalidPlanLineMessage(invalid, lang),
+    message: messages[i],
+  }));
+};
+
+/** Subsecciones de la tarea en curso con un título que `close` y `pause` no reconocen (por ejemplo `### Notas`). */
+export const checkCurrentSubsections: Check = ({ docs }) => {
+  const { handoff } = docs;
+  if (!handoff.exists || !handoff.parsed.inProgress.task) return [];
+  const { task, subsections } = handoff.parsed.inProgress;
+  return unknownSubsections(subsections).map((unknown) => ({
+    severity: "warning",
+    code: "current-subsection",
+    file: handoff.file,
+    line: unknown.line ?? task.range?.startLine ?? 1,
+    message: unknownSubsectionMessage(unknown, detectLanguage([task.label]).lang),
   }));
 };
 

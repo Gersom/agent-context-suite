@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { UsageError } from "../../src/cli/errors.ts";
-import { classifyPlanLine, EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLines, isExecutionMode, modeLines, parseExecutionMode, planFormat } from "../../src/write/handoff.ts";
+import { classifyPlanLine, EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, parseExecutionMode, planFormat, unknownSubsectionMessage, unknownSubsections } from "../../src/write/handoff.ts";
 
 const handoff = (plan: string) => `<!-- agent-context-skill:section=in-progress -->
 ## Tarea en progreso
@@ -86,6 +86,36 @@ describe("planFormat y mensaje", () => {
     expect(message).toContain("«Una nota suelta.»");
     expect(message).toContain("Formato válido: pasos `- [ ] Paso N — texto`");
     expect(invalidPlanLineMessage({ text: "x", line: null }, "es")).not.toContain("(línea");
+    expect(invalidPlanLineMessage({ text: "x", line: 3 }, "es", false)).not.toContain("Formato válido");
+  });
+
+  test("varios avisos: el formato válido solo va en el primero", () => {
+    const [first, second, third] = invalidPlanLineMessages(
+      [
+        { text: "a", line: 1 },
+        { text: "b", line: 2 },
+        { text: "c", line: 3 },
+      ],
+      "es",
+    );
+    expect(first).toContain("Formato válido");
+    expect(second).not.toContain("Formato válido");
+    expect(third).toContain("(línea 3)");
+    expect(invalidPlanLineMessages([], "es")).toEqual([]);
+  });
+
+  test("subsecciones desconocidas: las que close y pause rechazarían, con su línea", () => {
+    const subsections = [
+      { title: "Plan", body: "- [ ] Paso 1 — A" },
+      { title: "Notas", body: "algo", range: { startLine: 9, endLine: 11, start: 0, end: 0 } },
+      { title: "Qué falta", body: "x" },
+      { title: "Por qué se pausó", body: "y" },
+    ];
+    expect(unknownSubsections(subsections)).toEqual([
+      { title: "Notas", line: 9 },
+      { title: "Por qué se pausó", line: null },
+    ]);
+    expect(unknownSubsectionMessage({ title: "Notas", line: 9 })).toContain("«Notas» (línea 9)");
   });
 });
 

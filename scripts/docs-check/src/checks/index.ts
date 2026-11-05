@@ -6,7 +6,7 @@ import { checkAnchors } from "./anchors.ts";
 import { checkDecisionsIndex } from "./decisions.ts";
 import { checkFilesExist, checkOperatorsReadable, checkRootFiles } from "./files.ts";
 import { checkGroups } from "./groups.ts";
-import { checkCurrentMode, checkCurrentPlanLines, checkCurrentTask } from "./handoff.ts";
+import { checkCurrentMode, checkCurrentPlanLines, checkCurrentSubsections, checkCurrentTask } from "./handoff.ts";
 import { checkHistoryEntries } from "./history.ts";
 import { checkLegacyMarkers } from "./legacy-marker.ts";
 import { checkPlaceholders } from "./placeholders.ts";
@@ -30,6 +30,7 @@ export const CHECKS: Check[] = [
   checkGroups,
   checkCurrentTask,
   checkCurrentPlanLines,
+  checkCurrentSubsections,
   checkCurrentMode,
   checkHistoryEntries,
 ];

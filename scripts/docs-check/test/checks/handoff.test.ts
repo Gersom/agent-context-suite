@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { checkCurrentMode, checkCurrentPlanLines, checkCurrentTask } from "../../src/checks/handoff.ts";
+import { checkCurrentMode, checkCurrentPlanLines, checkCurrentSubsections, checkCurrentTask } from "../../src/checks/handoff.ts";
 import { HANDOFF, HANDOFF_IDLE, lineOf, TEMPLATE_HANDOFF } from "../fixtures.ts";
 import { brief, makeCtx, PATHS } from "../helpers.ts";
 
@@ -98,6 +98,21 @@ describe("current-no-plan", () => {
   });
 });
 
+describe("current-subsection", () => {
+  test("subsecciones conocidas, sin tarea o sin handoff.md: sin hallazgos", () => {
+    expect(checkCurrentSubsections(makeCtx())).toEqual([]);
+    expect(checkCurrentSubsections(makeCtx({ handoff: HANDOFF_IDLE }))).toEqual([]);
+    expect(checkCurrentSubsections(makeCtx({ handoff: null }))).toEqual([]);
+  });
+
+  test("una subsección con título desconocido: aviso en su línea", () => {
+    const handoff = HANDOFF.replace("### Qué falta", "### Notas\n\nalgo\n\n### Qué falta");
+    const findings = checkCurrentSubsections(makeCtx({ handoff }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-subsection", file: FILE, line: lineOf(handoff, "### Notas") }]);
+    expect(findings[0].message).toContain("«Notas»");
+  });
+});
+
 describe("current-plan-line", () => {
   test("plan válido (pasos y línea de modo): sin hallazgos", () => {
     expect(checkCurrentPlanLines(makeCtx())).toEqual([]);
@@ -117,9 +132,12 @@ describe("current-plan-line", () => {
     expect(findings[0].message).toContain("`**Modo de ejecución acordado:** <texto>`");
   });
 
-  test("un hallazgo por línea inválida", () => {
+  test("un hallazgo por línea inválida, con el formato válido solo en el primero", () => {
     const handoff = HANDOFF.replace("**Modo de ejecución acordado:** auto", "Primera nota.\nSegunda nota.");
-    expect(checkCurrentPlanLines(makeCtx({ handoff })).map((f) => f.line)).toEqual([lineOf(handoff, "Primera nota."), lineOf(handoff, "Segunda nota.")]);
+    const findings = checkCurrentPlanLines(makeCtx({ handoff }));
+    expect(findings.map((f) => f.line)).toEqual([lineOf(handoff, "Primera nota."), lineOf(handoff, "Segunda nota.")]);
+    expect(findings[0].message).toContain("Formato válido");
+    expect(findings[1].message).not.toContain("Formato válido");
   });
 
   test("«Ninguno», «No aplica» y la línea de modo en inglés son válidos; los comentarios no cuentan", () => {

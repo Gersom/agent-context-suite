@@ -414,7 +414,7 @@ describe("errores: no se escribe nada", () => {
     const { code, err } = await exec([...DONE, "--apply"], p);
     expect(code).toBe(1);
     expect(err).toContain("No puedo cerrar la Tarea 1");
-    expect(err).toContain("«Una nota suelta en el plan.»");
+    expect(err).toContain("«Una nota suelta en el plan.», línea ");
     expect(err).toContain("formato válido: pasos `- [ ] Paso N — texto` o `- [x] Paso N — texto`, y la línea de modo `**Modo de ejecución acordado:** <texto>`");
     expect(snapshot(p.root)).toEqual(before);
   });

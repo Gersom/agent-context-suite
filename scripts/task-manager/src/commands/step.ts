@@ -13,7 +13,7 @@ import { normalizeTitle } from "../query/find.ts";
 import { relFile } from "../query/format.ts";
 import { requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
-import { findPart, invalidPlanLineMessage, invalidPlanLines } from "../write/handoff.ts";
+import { findPart, invalidPlanLineMessages, invalidPlanLines, unknownSubsectionMessage, unknownSubsections } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
 import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
 import { headerLabels } from "../write/samples.ts";
@@ -75,7 +75,8 @@ export const step: Command = {
     const notes = [
       ...targets.filter((i) => steps[i].done === want).map((i) => `El paso ${i + 1} ya estaba ${want ? "hecho" : "pendiente"}: «${steps[i].text}».`),
       // Avisa (no bloquea): `close` y `pause` rechazarían esas líneas.
-      ...invalidPlanLines(handoff.text, subsections).map((invalid) => invalidPlanLineMessage(invalid, lang)),
+      ...invalidPlanLineMessages(invalidPlanLines(handoff.text, subsections), lang),
+      ...unknownSubsections(subsections).map((unknown) => unknownSubsectionMessage(unknown, lang)),
     ];
 
     const edits: Edit[] = toggled.map((i) => replaceRange(steps[i].markRange!, want ? "x" : " "));

@@ -171,6 +171,16 @@ describe("step", () => {
       const p = await started();
       expect((await exec(["step", "1", "--apply"], p)).out).not.toContain("Aviso");
     });
+
+    test("una subsección con título desconocido (`### Notas`) avisa con su línea, sin bloquear", async () => {
+      const p = await started();
+      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("### Qué falta", "### Notas\n\nalgo\n\n### Qué falta"));
+      const line = handoff(p).split("\n").indexOf("### Notas") + 1;
+      const { code, out } = await exec(["step", "1", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain(`Aviso: «Tarea en progreso» tiene la subsección «Notas» (línea ${line})`);
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir");
+    });
   });
 
   test("conserva los comentarios HTML del principio de la subsección y el resto del archivo", async () => {

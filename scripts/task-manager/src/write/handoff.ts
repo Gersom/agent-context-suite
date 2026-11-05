@@ -164,10 +164,44 @@ export function invalidPlanLines(text: string, subsections: Subsection[]): Inval
   });
 }
 
-/** Aviso (no bloquea) para `step`, `edit` y docs-check: una línea del plan que `close` rechazaría, con el formato válido. */
-export function invalidPlanLineMessage(invalid: InvalidPlanLine, lang: Lang): string {
+/**
+ * Aviso (no bloquea) para `step`, `edit` y docs-check: una línea del plan que `close` rechazaría.
+ * @param withFormat agrega el formato válido del plan (con varias líneas, solo el primer aviso lo dice)
+ */
+export function invalidPlanLineMessage(invalid: InvalidPlanLine, lang: Lang, withFormat = true): string {
   const where = invalid.line === null ? "" : ` (línea ${invalid.line})`;
-  return `El plan tiene una línea que no es un paso ni el modo de ejecución${where}: «${invalid.text.slice(0, 60)}»; \`close\` y \`pause\` la rechazarían. Formato válido: ${planFormat(lang)}.`;
+  const message = `El plan tiene una línea que no es un paso ni el modo de ejecución${where}: «${invalid.text.slice(0, 60)}»; \`close\` y \`pause\` la rechazarían.`;
+  return withFormat ? `${message} Formato válido: ${planFormat(lang)}.` : message;
+}
+
+/** Un aviso por línea inválida; el formato válido solo va en el primero. */
+export function invalidPlanLineMessages(invalids: InvalidPlanLine[], lang: Lang): string[] {
+  return invalids.map((invalid, i) => invalidPlanLineMessage(invalid, lang, i === 0));
+}
+
+/** Una subsección de «Tarea en progreso» con un título que `close` y `pause` no reconocen. */
+export interface UnknownSubsection {
+  title: string;
+  /** Su número de línea en el archivo (1-based); `null` si no trae posiciones. */
+  line: number | null;
+}
+
+/** La parte del handoff que es una subsección: por su título o, si trae checkboxes, el plan; `null` si no es ninguna de las que `close` y `pause` aceptan. */
+function acceptedPart(sub: Subsection): HandoffPart | null {
+  const part = partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null);
+  return !part || part === "why" || part === "waits" || part === "mode" ? null : part;
+}
+
+/** Las subsecciones con título desconocido (por ejemplo `### Notas`) que `close` y `pause` rechazarían. */
+export function unknownSubsections(subsections: Subsection[]): UnknownSubsection[] {
+  return subsections.filter((sub) => !acceptedPart(sub)).map((sub) => ({ title: sub.title, line: sub.range?.startLine ?? null }));
+}
+
+/** Aviso (no bloquea) para `step` y docs-check: una subsección que `close` y `pause` rechazarían. */
+export function unknownSubsectionMessage(unknown: UnknownSubsection, lang: Lang = "es"): string {
+  const S = STRINGS[lang];
+  const where = unknown.line === null ? "" : ` (línea ${unknown.line})`;
+  return `«Tarea en progreso» tiene la subsección «${unknown.title.slice(0, 60)}»${where}, que no es una de las conocidas (Plan, ${S.missing}, ${S.decisions}, ${S.next}); \`close\` y \`pause\` la rechazarían.`;
 }
 
 /** Separa el texto previo a las subsecciones en descripción y campos `- **Campo:** valor` (con sus líneas de continuación). */
@@ -200,8 +234,8 @@ export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): Cur
 
   const parts = new Map<HandoffPart, Subsection>();
   for (const sub of subsections) {
-    const part = partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null);
-    if (!part || part === "why" || part === "waits" || part === "mode") throw manual(`la subsección «${sub.title}» no es una de las conocidas (Plan, ${STRINGS.es.missing}, ${STRINGS.es.decisions}, ${STRINGS.es.next})`);
+    const part = acceptedPart(sub);
+    if (!part) throw manual(`la subsección «${sub.title}» no es una de las conocidas (Plan, ${STRINGS.es.missing}, ${STRINGS.es.decisions}, ${STRINGS.es.next})`);
     if (parts.has(part)) throw manual(`la subsección «${sub.title}» está repetida`);
     parts.set(part, sub);
   }
@@ -218,7 +252,9 @@ export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): Cur
       if (kind.kind === "step") planLines!.push(line);
       else if (kind.kind === "mode") mode = kind.value;
       else if (kind.kind === "invalid") {
-        throw manual(`el plan tiene texto que no es un paso ni el modo de ejecución («${line.slice(0, 60)}»); formato válido: ${planFormat(detectLanguage([task.label]).lang)}`);
+        const found = invalidPlanLines(text, subsections).find((invalid) => invalid.text === line);
+        const where = found?.line == null ? "" : `, línea ${found.line}`;
+        throw manual(`el plan tiene texto que no es un paso ni el modo de ejecución («${line.slice(0, 60)}»${where}); formato válido: ${planFormat(detectLanguage([task.label]).lang)}`);
       }
     }
   } else if (steps.length) {

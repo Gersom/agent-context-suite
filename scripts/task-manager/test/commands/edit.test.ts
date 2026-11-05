@@ -398,10 +398,21 @@ describe("edit — handoff.md", () => {
       expect(out).toContain(`(línea ${line}): «Una nota suelta.»`);
     });
 
+    test("varias líneas inválidas: un Aviso por línea, con el formato válido solo en el primero", async () => {
+      const handoffText = LOOSE.replace("- [ ] Paso 2 — Probar", "Otra nota.\n- [ ] Paso 2 — Probar");
+      const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": handoffText } });
+      const avisos = (await exec(["edit", "12", "--next", "Correr los tests", "--apply"], p)).out.split("\n").filter((l) => l.startsWith("Aviso:"));
+      expect(avisos).toHaveLength(2);
+      expect(avisos[0]).toContain("Formato válido");
+      expect(avisos[1]).toContain("«Otra nota.»");
+      expect(avisos[1]).not.toContain("Formato válido");
+    });
+
     test("--json: aparece en `notice`", async () => {
       const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": LOOSE } });
       const json = JSON.parse((await exec(["edit", "12", "--next", "Correr los tests", "--json", "--apply"], p)).out);
       expect(json.notice).toContain("«Una nota suelta.»");
+      expect(json.notices).toHaveLength(1);
     });
 
     test("editar una pausada no lo menciona; un plan válido tampoco", async () => {
