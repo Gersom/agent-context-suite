@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 134 — Rediseñar la sección "EN PROGRESO" de acsuite board
+
+- Rediseñadas las secciones EN PROGRESO y PAUSADAS del board: Estado con barra (recién iniciado, Paso k de n, pasos completos) en lugar de Plan x/y, y Descripción y Decisiones como subtítulos con salto de línea (hasta 3 líneas); sin Qué falta, Próximo paso concreto ni otras subsecciones. Las pausadas usan la misma estructura más Por qué se pausó y Qué espera para retomarse.
+- Revisión independiente hecha, sin bugs graves; corregidos N/A en decisiones y el ejemplo del README. Los hallazgos menores quedaron en las tareas 142 y 143.
+- Commit en la suite: bec4e90.
+
 ## 2026-11-05 — ✅ Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
 
 - El board muestra el modo de ejecución del plan bajo el título de EN PROGRESO (✏️ Guiado, 📋 Paso a paso, 🤖 Auto, 🔥 Extremo); el texto legado o vacío no se muestra. La lectura del modo pasó a scripts/_shared/parse/plan-mode.ts y truncate corta por grafemas para mantener el borde alineado.

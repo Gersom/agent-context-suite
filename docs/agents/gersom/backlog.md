@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 142
+**Próximo número de tarea:** 146
 
 ---
 
@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 134 — Rediseñar la sección "EN PROGRESO" de acsuite board
-
-- **Descripción:** Cambiar cómo `acsuite board` muestra la tarea en progreso, sin tocar el formato interno de handoff.md: una línea `Estado:` clara en vez de "Qué falta" y "Próximo paso concreto", y la descripción y las decisiones en su propia línea bajo un subtítulo.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
 
 - **Descripción:** Subir la versión de la skill a 2.3.2 (plugin.json, SKILL.md y marcador de versión de rules.md) con su entrada en docs/changelog/2.3.md: la etiqueta del modo fija en inglés (Agreed execution mode) y los valores guided, step-by-step, auto y extreme en la plantilla del handoff; para proyectos ya generados, sin cambios que aplicar.
@@ -74,6 +65,42 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Alternativa descartada por ahora porque se pisaba con el modo; solo tiene sentido dentro de auto.
 - **Agregada:** 2026-11-04.
+
+### Tarea 142 — board: unificar con task-manager las regex y funciones duplicadas
+
+- **Descripción:** Subir a scripts/_shared/parse lo que hoy está duplicado entre task-tracker/src/model/model.ts y task-manager: NONE_RE (ya divergió: task-manager acepta n/a), DESCRIPTION_LABEL_RE, FIELD_START_RE y la lectura de la descripción (currentDescription vs splitPreamble). Quitar también wrapText o wrapWords, que hacen casi lo mismo, y el campo CurrentTask.subsections, que ya nadie usa.
+- **Decisiones/temas a definir antes de empezar:** Si wrapText reemplaza a wrapWords o al revés (wrapText parte por grafemas y respeta saltos de línea).
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 134 (hallazgos 1 y 7). Riesgo: que board y task-manager traten distinto el mismo texto. Los tests de ambos scripts tienen que seguir pasando sin cambios de lógica.
+- **Agregada:** 2026-11-05.
+
+### Tarea 143 — board: robustecer la descripción y las decisiones ante contenido raro
+
+- **Descripción:** Que la descripción y las decisiones de EN PROGRESO y PAUSADAS no muestren contenido que no les corresponde: una línea --- al final de la sección, checkboxes fuera de ### Plan (salen también en Estado), placeholders de plantilla como [Placeholder], un ESC crudo dentro del texto y markdown a medio cerrar (**negrita que cruza una línea). Agregar los tests que faltan: N/A, --- al final, ANSI y placeholders.
+- **Decisiones/temas a definir antes de empezar:** Si los placeholders se ocultan o se muestran con aviso (hoy ya hay un aviso de placeholders sin completar).
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 134 (hallazgos 2, 3, 5 y 6). Son formatos que acsuite task no genera; solo ocurren con un handoff editado a mano.
+- **Agregada:** 2026-11-05.
+
+### Tarea 144 — task-manager: avisos de edit y error de close más útiles
+
+- **Descripción:** Mejorar los mensajes sobre el plan: que edit emita un aviso por cada línea inválida (hoy los junta en un solo notice y repite el formato), que el error de close y pause cite el número de línea, y que check y step avisen también de las subsecciones desconocidas (por ejemplo ### Notas) que close rechaza.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 135 (hallazgos 2, 3 y 4). Hoy close y pause usan classifyPlanLine y no invalidPlanLines: quedan dos recorridos del plan que pueden desfasarse.
+- **Agregada:** 2026-11-05.
+
+### Tarea 145 — task mode: manejar varias líneas de modo en el plan
+
+- **Descripción:** Cuando el plan tiene dos o más líneas de modo, task mode reemplaza solo la última y no puede limpiar las demás (queda el aviso current-mode en la primera). Hacer que reemplace la primera y borre las otras, o que no dé por idéntico el valor si hay más de una línea.
+- **Decisiones/temas a definir antes de empezar:** Si se reemplaza la primera y se borran las demás, o si solo se avisa.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Salió de la revisión independiente de la Tarea 136. Es un handoff malformado y poco probable: close y pause lo siguen aceptando.
+- **Agregada:** 2026-11-05.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
