@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 149
+**Próximo número de tarea:** 150
 
 ---
 
@@ -55,6 +55,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** Ninguno.
 - **Disparador:** solo cuando el operador lo indique.
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
+- **Agregada:** 2026-11-05.
+
+### Tarea 149 — Skill: que el agente pregunte el modo con letras al presentar el plan
+
+- **Descripción:** Al presentar el plan, el agente ofrece los cuatro modos como lista de letras en el idioma del operador (A guiado, B paso a paso, C automático, D extremo) y una sola letra acepta el plan y fija el modo. Si el operador responde con texto, se toma como cambios al plan y se vuelve a presentar. Con la letra de extremo, el agente igual pide una confirmación explícita aparte antes de seguir (el modo es peligroso); solo con esa confirmación usa --confirm. Internamente usa siempre los ids en inglés (guided, step-by-step, auto, extreme) en task start --mode y task mode. Actualizar la regla 2(b) de rules.md y su copia en la skill.
+- **Decisiones/temas a definir antes de empezar:** Ninguno. Decidido el 2026-11-05: cuatro modos; las etiquetas pueden seguir las del board (Guiado, Paso a paso, Auto, Extremo); un texto libre se toma como cambios al plan; extremo siempre pide confirmación aparte aunque se haya elegido su letra.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Propuesta del operador el 2026-11-05. Es una instrucción para el agente, no cambia los comandos. Va con la próxima subida de versión de la skill (Tarea 141).
 - **Agregada:** 2026-11-05.
 
 <!-- agent-context-skill:section=blocked -->
