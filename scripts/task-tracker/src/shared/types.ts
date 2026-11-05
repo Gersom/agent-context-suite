@@ -39,18 +39,30 @@ export interface Plan {
   currentStep: PlanStep | null;
 }
 
-/** Tarea pausada con el avance de su plan (vacío si no traía plan). */
-export interface PausedTask extends ParsedPausedTask {
+/**
+ * Lo que la pantalla muestra de una tarea con plan (en progreso o pausada); el resto de sus
+ * subsecciones o campos (ej. «Qué falta», «Próximo paso concreto») no se muestra.
+ */
+interface TaskView {
   plan: Plan;
-}
-
-export interface CurrentTask extends CurrentTaskLine {
-  plan: Plan;
-  /** Subsecciones de la tarea salvo la que contiene los checkboxes del plan. */
-  details: Subsection[];
-  subsections: Subsection[];
   /** Modo de ejecución del plan; `null` si no hay línea de modo, está vacía o trae texto legado (solo cuentan los cuatro modos). */
   mode: ExecutionMode | null;
+  /** De qué trata, tal como está escrito (con sus saltos de línea); `null` si no trae. */
+  description: string | null;
+  /** «Decisiones a medio camino»; `null` si no hay o dice «Ninguna.»/«None». */
+  decisions: string | null;
+}
+
+/** Tarea pausada con el avance de su plan (vacío si no traía plan) y sus campos propios. */
+export interface PausedTask extends ParsedPausedTask, TaskView {
+  /** «Por qué se pausó»; `null` si no lo trae. */
+  why: string | null;
+  /** «Qué espera para retomarse»; `null` si no lo trae. */
+  waits: string | null;
+}
+
+export interface CurrentTask extends CurrentTaskLine, TaskView {
+  subsections: Subsection[];
 }
 
 /** Modelo completo para la pantalla. */

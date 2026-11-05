@@ -10,6 +10,7 @@ import picocolors from "picocolors";
 import { formatTime } from "../shared/time.ts";
 import type {
   BlockedTask,
+  CurrentTask,
   DrawTrigger,
   Model,
   ObserverRenderMeta,
@@ -25,7 +26,7 @@ import type {
 import type { ExecutionMode } from "../../../_shared/parse/plan-mode.ts";
 import type { HistoryEntry, TaskRef } from "../../../_shared/types.ts";
 import { BOX_PADDING, boxBottom, boxRow, boxTop, type Paint, type Segment } from "./box.ts";
-import { displayProjectName, plainText, progressBar, shortTaskName, truncate, visibleLength } from "./format.ts";
+import { displayProjectName, plainText, progressBar, shortTaskName, truncate, visibleLength, wrapText } from "./format.ts";
 import { currentText, OPERATOR_MAX_WIDTH, PROJECT_GAP, projectColumns, projectViewMode, truncateStart } from "./project-columns.ts";
 import { fitToHeight, type LineRange } from "./viewport.ts";
 
@@ -33,8 +34,10 @@ import { fitToHeight, type LineRange } from "./viewport.ts";
 const MIN_WIDTH = 40;
 /** Ancho cuando no hay terminal que lo informe (salida redirigida, `--once`) ni `COLUMNS`. */
 const DEFAULT_WIDTH = 100;
-/** Líneas que se muestran de cada subsección de la tarea en progreso (la primera + estas). */
-const DETAIL_EXTRA_LINES = 2;
+/** Líneas que se muestran de cada texto largo de una tarea (descripción, decisiones...); si hay más, la última termina en «…». */
+const TEXT_MAX_LINES = 3;
+/** Sangría de esos textos respecto de su subtítulo. */
+const TEXT_INDENT = 2;
 /** Colores de la paleta de 256 colores que no están en picocolors. */
 /** Tareas completadas (nombre y fecha). Los bordes usan el gris de picocolors. */
 const COMPLETED_GRAY_256 = 245;
@@ -286,16 +289,7 @@ export function render(model: Model, meta: RenderMeta): string {
             return;
           }
           row(0, { paint: (s) => pc.bold(pc.green(s)), text: fullTaskName(current) });
-          if (current.mode) row(0, { paint: pc.green, text: `Modo  ${EXECUTION_MODE_TEXT[current.mode]}` });
-          planRows(current.plan, 0, row, pc);
-          for (const sub of current.details) {
-            const lines = sub.body.split("\n").map((l) => l.trim()).filter(Boolean);
-            const [first, ...rest] = lines;
-            if (first === undefined) continue;
-            row(0, { text: `${sub.title}: ${first}` });
-            for (const text of rest.slice(0, DETAIL_EXTRA_LINES)) row(2, { paint: secondary, text });
-            if (rest.length > DETAIL_EXTRA_LINES) row(2, { paint: secondary, text: "…" });
-          }
+          taskRows(current, 0, row, pc, width);
         }, pc.green),
     },
     {
@@ -305,8 +299,10 @@ export function render(model: Model, meta: RenderMeta): string {
         box(`PAUSADAS (${model.counts.paused})`, "handoff.md", pc.yellow, (row) => {
           for (const task of model.paused) {
             row(0, { paint: pc.yellow, text: `• ${fullTaskName(task)}` });
-            planRows(task.plan, 4, row, pc);
-            for (const field of task.fields) row(4, { paint: secondary, text: `${field.label}: ${field.value}` });
+            taskRows(task, 4, row, pc, width);
+            // Sus campos propios, al final.
+            if (task.why) textRows("Por qué se pausó", task.why, 4, row, secondary, width);
+            if (task.waits) textRows("Qué espera para retomarse", task.waits, 4, row, secondary, width);
           }
         }),
     },
@@ -684,13 +680,45 @@ function tones(pc: Colors): { completed: Paint; completedGreen: Paint; unownedBl
 }
 
 /**
- * Barra de avance y pasos de un plan (de la tarea en progreso o de una pausada): los hechos con
- * el texto tachado, el actual resaltado y el resto normales. Sin plan, no agrega nada.
+ * Lo que se muestra de una tarea en progreso o pausada, bajo su título: el modo de ejecución, el
+ * estado con los pasos del plan, la descripción y las decisiones (las dos últimas, bajo un
+ * subtítulo gris y con salto de línea). Lo que no tiene, no se muestra.
+ */
+function taskRows(task: Pick<CurrentTask, "plan" | "mode" | "description" | "decisions">, indent: number, row: Row, pc: Colors, width: number): void {
+  const { secondary } = tones(pc);
+  if (task.mode) row(indent, { paint: pc.green, text: `Modo  ${EXECUTION_MODE_TEXT[task.mode]}` });
+  planRows(task.plan, indent, row, pc);
+  if (task.description) textRows("Descripción", task.description, indent, row, secondary, width);
+  if (task.decisions) textRows("Decisiones a medio camino", task.decisions, indent, row, secondary, width);
+}
+
+/**
+ * Subtítulo gris (`Descripción:`) y, debajo, su texto en color normal, partido en líneas del ancho
+ * que queda (hasta `TEXT_MAX_LINES`, con «…» al final si hay más).
+ */
+function textRows(label: string, text: string, indent: number, row: Row, secondary: Paint, width: number): void {
+  row(indent, { paint: secondary, text: `${label}:` });
+  const room = width - BOX_PADDING - indent - TEXT_INDENT;
+  for (const line of wrapText(plainText(text), room, TEXT_MAX_LINES)) row(indent + TEXT_INDENT, { text: line });
+}
+
+/** Cómo va el plan: `recién iniciado`, `Paso 2 de 7` con su barra o `pasos completos`; sin plan, `null`. */
+function stateText({ done, total }: Plan): string | null {
+  if (!total) return null;
+  if (!done) return "recién iniciado";
+  if (done >= total) return "pasos completos";
+  return `Paso ${done + 1} de ${total} ${progressBar(done, total)}`;
+}
+
+/**
+ * Estado y pasos de un plan (de la tarea en progreso o de una pausada): los hechos con el texto
+ * tachado, el actual resaltado y el resto normales. Sin plan, no agrega nada.
  */
 function planRows(plan: Plan, indent: number, row: Row, pc: Colors): void {
-  if (!plan.total) return;
+  const state = stateText(plan);
+  if (state === null) return;
   const { secondary } = tones(pc);
-  row(indent, { paint: pc.green, text: `Plan ${progressBar(plan.done, plan.total)} ${plan.done}/${plan.total}` });
+  row(indent, { paint: pc.green, text: `Estado: ${state}` });
   for (const step of plan.steps) {
     if (step.done) row(indent + 2, { paint: secondary, text: "✔ " }, { paint: (s) => secondary(pc.strikethrough(s)), text: step.text });
     else if (step === plan.currentStep) row(indent + 2, { paint: (s) => pc.bold(pc.green(s)), text: `▸ ${step.text}` });

@@ -39,6 +39,43 @@ export function truncate(text: string, max: number): string {
 }
 
 /**
+ * Parte texto plano en líneas de a lo sumo `width` columnas visibles, cortando en los espacios y
+ * respetando los saltos de línea del texto (las líneas en blanco se descartan). Una palabra más
+ * larga que `width` se parte entre grafemas. Con más de `maxLines` líneas, queda esa cantidad y
+ * la última termina en "…".
+ */
+export function wrapText(text: string, width: number, maxLines = Infinity): string[] {
+  const room = Math.max(1, width);
+  const lines: string[] = [];
+  for (const source of text.split("\n")) {
+    let current = "";
+    for (const word of source.split(/\s+/).filter(Boolean)) {
+      if (current && visibleLength(current) + 1 + visibleLength(word) <= room) {
+        current += ` ${word}`;
+        continue;
+      }
+      if (current) lines.push(current);
+      current = word;
+      // Una palabra que no entra sola en una línea: se parte en trozos de `room` columnas.
+      while (visibleLength(current) > room) {
+        let head = "";
+        for (const { segment } of graphemes.segment(current)) {
+          if (head && visibleLength(head + segment) > room) break;
+          head += segment;
+        }
+        lines.push(head);
+        current = current.slice(head.length);
+      }
+    }
+    if (current) lines.push(current);
+  }
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  kept[maxLines - 1] = truncate(`${kept[maxLines - 1]}…`, room);
+  return kept;
+}
+
+/**
  * Columnas que ocupa un texto en la terminal: ignora los códigos ANSI de color y cuenta los
  * caracteres anchos (ej. CJK) como 2, con `string-width`.
  */

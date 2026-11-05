@@ -197,20 +197,24 @@ describe("render", () => {
     expect(screen("es-anchors")).not.toContain("\x1b[9m");
   });
 
-  test("handoff en detalle: plan, subsecciones (sin la del plan) y pausadas con su plan y campos", () => {
+  test("handoff en detalle: estado y plan, descripción y pausadas con su plan y campos propios", () => {
     const out = screen("es-anchors");
     expect(rowWith(out, "Tarea 12")).toBe("Tarea 12 — Implementar el parser de anclas");
-    expect(rowWith(out, "2/5")).toBe("Plan [█████░░░░░░░] 2/5");
+    expect(rowWith(out, "Estado: Paso 3 de 5")).toBe("Estado: Paso 3 de 5 [█████░░░░░░░]");
     expect(rowWith(out, "Paso 3 — Escribir")).toBe("  ▸ Paso 3 — Escribir el modelo");
-    expect(rowWith(out, "Qué falta: Pasos")).toBe("Qué falta: Pasos 3 y 4.");
-    expect(rowWith(out, "Segunda línea")).toBe("  Segunda línea del próximo paso.");
+    expect(rowWith(out, "Descripción breve")).toBe("  Descripción breve que menciona la Tarea 13 a mitad de línea.");
+    // «Qué falta» y «Próximo paso concreto» no se muestran, ni en la tarea en curso ni en la pausada.
+    for (const hidden of ["Qué falta", "Pasos 3 y 4", "Próximo paso", "Segunda línea", "revisar setup.md", "Plan ["]) expect(out).not.toContain(hidden);
     // El fixture trae el modo con texto legado: no se muestra.
     expect(out).not.toContain("Modo");
     expect(rowWith(out, "Tarea 8")).toBe("• Tarea 8 — Migrar la documentación vieja");
-    expect(rowWith(out, "1/3")).toBe("    Plan [████░░░░░░░░] 1/3");
+    expect(rowWith(out, "Estado: Paso 2 de 3")).toBe("    Estado: Paso 2 de 3 [████░░░░░░░░]");
     expect(rowWith(out, "Copiar el contenido")).toBe("      ✔ Paso 1 — Copiar el contenido viejo");
     expect(rowWith(out, "Revisar los links")).toBe("      ▸ Paso 2 — Revisar los links");
-    expect(rowWith(out, "Por qué se pausó")).toBe("    Por qué se pausó: surgió una prioridad mayor.");
+    expect(rowWith(out, "Por qué se pausó:")).toBe("    Por qué se pausó:");
+    expect(rowWith(out, "surgió una prioridad")).toBe("      surgió una prioridad mayor.");
+    expect(rowWith(out, "Qué espera para retomarse:")).toBe("    Qué espera para retomarse:");
+    expect(rowWith(out, "que se cierre la Tarea 12")).toBe("      que se cierre la Tarea 12.");
     expect(out).not.toContain("Plan: ");
   });
 
@@ -223,14 +227,14 @@ describe("render", () => {
       });
     const SHOWN = { guided: "✏️ Guiado", "step-by-step": "📋 Paso a paso", auto: "🤖 Auto", extreme: "🔥 Extremo" } as const;
 
-    test("cada modo se muestra con su emoji y etiqueta, entre el título y el plan", () => {
+    test("cada modo se muestra con su emoji y etiqueta, entre el título y el estado", () => {
       for (const [mode, shown] of Object.entries(SHOWN)) {
         const out = render(withMode(mode), meta);
         expect(rowWith(out, "Modo")).toBe(`Modo  ${shown}`);
         const rows = out.split("\n");
         const at = (text: string) => rows.findIndex((l) => l.includes(text));
         expect(at("Modo  ")).toBe(at("Tarea 12 — Implementar") + 1);
-        expect(at("Plan [")).toBe(at("Modo  ") + 1);
+        expect(at("Estado: ")).toBe(at("Modo  ") + 1);
       }
     });
 
@@ -254,6 +258,173 @@ describe("render", () => {
           }
         }
       }
+    });
+  });
+
+  describe("EN PROGRESO y PAUSADAS: estado, descripción y decisiones", () => {
+    const handoffOf = (current: string, paused = "Ninguna.") =>
+      `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\n${current}\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n${paused}\n`;
+    const steps = (done: number, total: number) =>
+      Array.from({ length: total }, (_, i) => `- [${i < done ? "x" : " "}] Paso ${i + 1} — ${i === total - 1 ? "Documentar cierre de tarea" : `Hacer ${i + 1}`}`).join("\n");
+    const sections = (plan: string, decisions = "Ninguna.") =>
+      `### Plan\n\n${plan}\n\n**Modo de ejecución acordado:** auto\n\n### Qué falta\n\nToda la tarea.\n\n### Decisiones a medio camino\n\n${decisions}\n\n### Próximo paso concreto\n\nEmpezar la tarea.`;
+    const screenOf = (current: string, paused?: string, extra: Partial<RenderMeta> = {}) =>
+      render(buildModel({ handoffText: handoffOf(current, paused), backlogText: null }), { ...meta, ...extra });
+    /** Filas de contenido del recuadro cuyo título empieza con `title`, sin bordes ni relleno final. */
+    const rowsOf = (out: string, title: string) => {
+      const lines = out.split("\n");
+      const start = lines.findIndex((l) => l.startsWith(`╭─ ${title}`));
+      if (start < 0) throw new Error(`no se encontró el recuadro "${title}"`);
+      const rows: string[] = [];
+      for (let i = start + 1; !lines[i].startsWith("╰"); i++) rows.push(lines[i].slice(2, -2).trimEnd());
+      return rows;
+    };
+    const HIDDEN = ["Qué falta", "Toda la tarea", "Próximo paso", "Empezar la tarea", "Plan ["];
+
+    test("recién iniciada: «Estado: recién iniciado», sin «Qué falta» ni «Próximo paso concreto»", () => {
+      const out = screenOf(`Tarea 7 — Algo\n\nDe qué trata.\n\n${sections(steps(0, 3))}`);
+      expect(rowsOf(out, "EN PROGRESO")).toEqual([
+        "Tarea 7 — Algo",
+        "Modo  🤖 Auto",
+        "Estado: recién iniciado",
+        "  ▸ Paso 1 — Hacer 1",
+        "  ○ Paso 2 — Hacer 2",
+        "  ○ Paso 3 — Documentar cierre de tarea",
+        "Descripción:",
+        "  De qué trata.",
+      ]);
+      for (const hidden of HIDDEN) expect(out).not.toContain(hidden);
+    });
+
+    test("con pasos hechos: «Estado: Paso k de n» y la barra; descripción y decisiones bajo su subtítulo", () => {
+      const out = screenOf(`Tarea 7 — Algo\n\nDe qué trata.\n\n${sections(steps(2, 4), "Usar A en vez de B.")}`);
+      expect(rowsOf(out, "EN PROGRESO")).toEqual([
+        "Tarea 7 — Algo",
+        "Modo  🤖 Auto",
+        "Estado: Paso 3 de 4 [██████░░░░░░]",
+        "  ✔ Paso 1 — Hacer 1",
+        "  ✔ Paso 2 — Hacer 2",
+        "  ▸ Paso 3 — Hacer 3",
+        "  ○ Paso 4 — Documentar cierre de tarea",
+        "Descripción:",
+        "  De qué trata.",
+        "Decisiones a medio camino:",
+        "  Usar A en vez de B.",
+      ]);
+      for (const hidden of HIDDEN) expect(out).not.toContain(hidden);
+    });
+
+    test("pasos completos: «Estado: pasos completos», sin barra", () => {
+      const rows = rowsOf(screenOf(`Tarea 7 — Algo\n\n${sections(steps(3, 3))}`), "EN PROGRESO");
+      expect(rows.slice(0, 3)).toEqual(["Tarea 7 — Algo", "Modo  🤖 Auto", "Estado: pasos completos"]);
+      expect(rows.slice(3)).toEqual(["  ✔ Paso 1 — Hacer 1", "  ✔ Paso 2 — Hacer 2", "  ✔ Paso 3 — Documentar cierre de tarea"]);
+    });
+
+    test("sin plan no hay «Estado»; sin descripción ni decisiones (o con «Ninguna.»/«None») no hay subtítulos", () => {
+      expect(rowsOf(screenOf("Tarea 7 — Algo\n\nDe qué trata."), "EN PROGRESO")).toEqual(["Tarea 7 — Algo", "Descripción:", "  De qué trata."]);
+      for (const none of ["Ninguna.", "None"]) {
+        const out = screenOf(`Tarea 7 — Algo\n\n${sections(steps(1, 2), none)}`);
+        expect(rowsOf(out, "EN PROGRESO").map((r) => r.split(":")[0]).filter((r) => /^(Descripción|Decisiones)/.test(r))).toEqual([]);
+      }
+      expect(rowsOf(screenOf("Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — A"), "EN PROGRESO")).toEqual(["Tarea 7 — Algo", "Estado: recién iniciado", "  ▸ Paso 1 — A"]);
+    });
+
+    test("la línea «Origen» y los campos de la tarea no se muestran como descripción", () => {
+      const rows = rowsOf(screenOf(`Tarea 7 — Algo\n\nDe qué trata.\n\n- **Origen:** team-backlog\n- **Detalles:** contexto\n\n${sections(steps(0, 2))}`), "EN PROGRESO");
+      expect(rows.slice(-2)).toEqual(["Descripción:", "  De qué trata."]);
+      expect(rows.join("\n")).not.toMatch(/Origen|Detalles|contexto/);
+    });
+
+    describe("textos largos", () => {
+      const long = "Cambiar cómo se muestra la tarea en progreso del tablero, sin tocar el formato interno del archivo: una línea clara de estado, la descripción en su propia línea y las decisiones bajo un subtítulo. ".repeat(3);
+      const url = "https://ejemplo.com/una/ruta/muy/larga/que/no/tiene/espacio/donde/cortarse";
+      const current = `Tarea 7 — Algo\n\n${long}\n\n${sections(steps(1, 2), `Decidido: ${url} 日本語のテキスト ✏️ 👨‍👩‍👧 más.`)}`;
+
+      test("se parten por palabras: la descripción en hasta 3 líneas con «…» si hay más, sin romper el recuadro", () => {
+        const rows = rowsOf(screenOf(current, undefined, { width: 60 }), "EN PROGRESO");
+        const at = rows.indexOf("Descripción:");
+        expect(rows.slice(at + 1, at + 4).every((r) => r.startsWith("  ") && visibleLength(r) <= 56)).toBe(true);
+        expect(rows[at + 3].endsWith("…")).toBe(true);
+        expect(rows[at + 4]).toBe("Decisiones a medio camino:");
+        // Nada de la descripción pasa de la tercera línea.
+        expect(rows.slice(at + 1, at + 4).join(" ").length).toBeLessThan(long.length);
+      });
+
+      test("sin «…» cuando entra en 3 líneas; una palabra sin espacios se parte entre caracteres y no se pierde", () => {
+        const rows = rowsOf(screenOf(current, undefined, { width: 60 }), "EN PROGRESO");
+        const decisions = rows.slice(rows.indexOf("Decisiones a medio camino:") + 1);
+        expect(decisions.length).toBeLessThanOrEqual(3);
+        expect(decisions.join("").replace(/\s/g, "")).toContain(url);
+        expect(decisions.at(-1)?.endsWith("…")).toBe(false);
+        expect(decisions.every((r) => visibleLength(r) <= 56)).toBe(true);
+      });
+
+      test("el borde derecho queda alineado (medido con visibleLength) con y sin color, en varios anchos y con pausadas largas", () => {
+        const paused = `### Tarea 8 — Otra\n\n- **Descripción:** ${long}\n- **Decisiones a medio camino:** ${url} ${url}\n- **Por qué se pausó:** ${long}\n- **Qué espera para retomarse:** ${url}`;
+        for (const color of [false, true]) {
+          for (const width of [40, 60, 100]) {
+            const lines = boxLines(screenOf(current, paused, { width, color }));
+            expect(lines.length).toBeGreaterThan(10);
+            for (const line of lines) expect(visibleLength(line)).toBe(width);
+          }
+        }
+      });
+    });
+
+    test("pausada: título, estado con pasos, descripción, decisiones y, al final, sus campos propios", () => {
+      const paused = [
+        "### Tarea 8 — Migrar la documentación",
+        "",
+        "- **Descripción:** Mover lo viejo.",
+        "- **Plan:**",
+        "  - [x] Paso 1 — Copiar",
+        "  - [ ] Paso 2 — Revisar",
+        "  - [ ] Paso 3 — Documentar cierre de tarea",
+        "- **Modo de ejecución acordado:** guided",
+        "- **Qué falta:** Pasos 2 y 3.",
+        "- **Decisiones a medio camino:** Conservar `setup.md`.",
+        "- **Próximo paso concreto:** Paso 2.",
+        "- **Por qué se pausó:** Surgió una prioridad mayor.",
+        "- **Qué espera para retomarse:** Que se cierre la Tarea 12.",
+      ].join("\n");
+      const out = screenOf("Sin tarea en curso", paused);
+      expect(rowsOf(out, "PAUSADAS (1)")).toEqual([
+        "• Tarea 8 — Migrar la documentación",
+        "    Modo  ✏️ Guiado",
+        "    Estado: Paso 2 de 3 [████░░░░░░░░]",
+        "      ✔ Paso 1 — Copiar",
+        "      ▸ Paso 2 — Revisar",
+        "      ○ Paso 3 — Documentar cierre de tarea",
+        "    Descripción:",
+        "      Mover lo viejo.",
+        "    Decisiones a medio camino:",
+        "      Conservar setup.md.",
+        "    Por qué se pausó:",
+        "      Surgió una prioridad mayor.",
+        "    Qué espera para retomarse:",
+        "      Que se cierre la Tarea 12.",
+      ]);
+      for (const hidden of ["Qué falta", "Pasos 2 y 3", "Próximo paso"]) expect(out).not.toContain(hidden);
+    });
+
+    test("pausada sin plan, descripción ni decisiones: solo el título y sus campos propios", () => {
+      const paused = "### Tarea 8 — Algo\n\n- **Qué falta:** todo.\n- **Decisiones a medio camino:** Ninguna.\n- **Por qué se pausó:** Prioridad.\n- **Qué espera para retomarse:** Nada.";
+      expect(rowsOf(screenOf("Sin tarea en curso", paused), "PAUSADAS (1)")).toEqual([
+        "• Tarea 8 — Algo",
+        "    Por qué se pausó:",
+        "      Prioridad.",
+        "    Qué espera para retomarse:",
+        "      Nada.",
+      ]);
+    });
+
+    test("colores: subtítulos en gris secundario, valores sin color", () => {
+      const out = screenOf(`Tarea 7 — Algo\n\nDe qué trata.\n\n${sections(steps(1, 2), "Usar A.")}`, undefined, { color: true });
+      const row = (text: string) => out.split("\n").find((l) => l.includes(text)) ?? "";
+      expect(row("Descripción:")).toContain("\x1b[38;5;250mDescripción:\x1b[39m");
+      expect(row("Decisiones a medio camino:")).toContain("\x1b[38;5;250mDecisiones a medio camino:\x1b[39m");
+      expect(row("De qué trata.")).not.toMatch(/\x1b\[38;5;250m/);
+      expect(row("Usar A.")).not.toMatch(/\x1b\[38;5;250m/);
     });
   });
 

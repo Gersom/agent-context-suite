@@ -53,11 +53,21 @@ describe("modo compacto del panel", () => {
     expect(rowsOf(compact, "PAUSADAS (1)")).toEqual(rowsOf(expanded, "PAUSADAS (1)"));
   });
 
-  test("en progreso muestra el modo de ejecución también en compacto, antes del plan", () => {
+  test("en progreso muestra el modo de ejecución también en compacto, antes del estado", () => {
     const withMode = buildModel({ handoffText: (fixture("es-anchors", "handoff.md") ?? "").replace("todos los pasos seguidos.", "auto"), backlogText: fixture("es-anchors", "backlog.md"), historyText: fixture("es-anchors", "history.md") });
     const rows = rowsOf(render(withMode, { ...meta, compact: true }), "EN PROGRESO");
-    expect(rows.slice(0, 3)).toEqual(["Tarea 12 — Implementar el parser de anclas", "Modo  🤖 Auto", "Plan [█████░░░░░░░] 2/5"]);
+    expect(rows.slice(0, 3)).toEqual(["Tarea 12 — Implementar el parser de anclas", "Modo  🤖 Auto", "Estado: Paso 3 de 5 [█████░░░░░░░]"]);
     expect(rowsOf(render(withMode, meta), "EN PROGRESO")).toEqual(rows);
+  });
+
+  test("en progreso y pausadas muestran en compacto el mismo diseño: estado, descripción y campos propios, sin «Qué falta» ni «Próximo paso»", () => {
+    const rows = rowsOf(compact, "EN PROGRESO");
+    expect(rows).toContain("Estado: Paso 3 de 5 [█████░░░░░░░]");
+    expect(rows.slice(-2)).toEqual(["Descripción:", "  Descripción breve que menciona la Tarea 13 a mitad de línea."]);
+    const paused = rowsOf(compact, "PAUSADAS (1)");
+    expect(paused).toContain("    Por qué se pausó:");
+    expect(paused).toContain("    Qué espera para retomarse:");
+    for (const hidden of ["Qué falta", "Próximo paso", "Plan ["]) expect([...rows, ...paused].join("\n")).not.toContain(hidden);
   });
 
   test("ocupa menos pantalla que expandido y todos los recuadros siguen del ancho de la terminal", () => {

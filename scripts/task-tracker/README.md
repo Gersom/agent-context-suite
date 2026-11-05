@@ -122,18 +122,29 @@ El board recuerda el modo compacto, las flechas y el modo observador entre ejecu
 ╭─ EN PROGRESO ────────────────────────── handoff.md ─╮
 │ Tarea 11 — Refinar script de seguimiento de tareas    │
 │ Modo  🤖 Auto                                         │
-│ Plan [████░░░░░░░░] 2/7                               │
-│   ✔ Paso 1 — …                     (texto tachado)    │
+│ Estado: Paso 3 de 7 [███░░░░░░░░░]                    │
+│   ✔ Paso 1 — …                       (texto tachado)  │
+│   ✔ Paso 2 — …                                        │
 │   ▸ Paso 3 — …                                        │
-│ Qué falta: …                                          │
+│   ○ Paso 4 — …                                        │
+│ Descripción:                                          │
+│   Ajustar el script para que muestre el avance del    │
+│   plan y no repita lo que ya dice el estado.          │
+│ Decisiones a medio camino:                            │
+│   Se mantiene el recuadro en el ancho de la terminal. │
 ╰───────────────────────────────────────────────────────╯
    ↑ retoma · ↓ pausa
 ╭─ PAUSADAS (1) ───────────────────────── handoff.md ─╮
 │ • Tarea 9 — Migrar setup.md                           │
-│     Plan [██████░░░░░░] 1/2                           │
+│     Estado: Paso 2 de 2 [██████░░░░░░]                │
 │       ✔ Paso 1 — Copiar el contenido   (tachado)      │
 │       ▸ Paso 2 — Revisar los links                    │
-│     Por qué se pausó: surgió una prioridad mayor      │
+│     Descripción:                                      │
+│       Mover lo que quedó en el setup viejo.           │
+│     Por qué se pausó:                                 │
+│       Surgió una prioridad mayor.                     │
+│     Qué espera para retomarse:                        │
+│       Que se cierre la Tarea 12.                      │
 ╰───────────────────────────────────────────────────────╯
    ↓ se cierra
 ╭─ TAREAS COMPLETADAS (últimas 5) ─────── history.md ─╮
@@ -147,8 +158,8 @@ El board recuerda el modo compacto, las flechas y el modo observador entre ejecu
 - **Sin flechas (`f`):** quita las líneas de flecha de abajo, y los recuadros quedan igual pero una línea más pegados.
 - **Orden y flechas:** los recuadros van de arriba abajo como el flujo de una tarea: sin dueño (solo en modo multi-operador) → libres ⇅ bloqueadas → en progreso ⇅ pausadas → completadas. Entre cada par de recuadros que se muestran hay una línea con la transición: `↓ se toma` (desde sin dueño), `↓ bloquea · ↑ desbloquea` (entre libres y bloqueadas), `↓ empieza` (libres → en progreso) o `↓ empieza (desde libres)` (si hay bloqueadas entre medio: una bloqueada no empieza directo, primero se desbloquea), `↑ retoma · ↓ pausa` (entre en progreso y pausadas) y `↓ se cierra` (hacia completadas). No hay flecha hacia un recuadro que no se muestra; con el set mínimo (solo `handoff.md`) no hay ninguna.
 - **`history.md`:** las 5 últimas tareas cerradas, con su fecha. Las descartadas se marcan con ✖.
-- **Modo de ejecución:** bajo el título de EN PROGRESO, antes de la línea `Plan`, una fila `Modo  <emoji> <etiqueta>` con el modo de la línea `**Modo de ejecución acordado:** <valor>` (o `**Agreed execution mode:** <valor>`) del plan: `guided` → `✏️ Guiado`, `step-by-step` → `📋 Paso a paso`, `auto` → `🤖 Auto` y `extreme` → `🔥 Extremo`. Si la línea no está, está vacía o trae texto libre de antes de `acsuite task mode` (legado), no se muestra la fila; `acsuite check` avisa con `current-mode` cuando la línea existe y está vacía o es legado (si falta, no avisa). Se ve igual en la vista normal, la compacta, `--once` y el modo observador.
-- **`handoff.md`, en detalle:** la tarea en progreso con el avance de su plan y el resto de sus subsecciones (ej. "Qué falta", "Próximo paso concreto"), y cada tarea pausada con su plan (si lo trae: el campo opcional `Plan` de la plantilla) y todos sus demás campos. En los planes, el texto de los pasos ya hechos sale **tachado** (las tareas no se tachan, solo los pasos). Las etiquetas se muestran tal como están escritas en el documento, así que funciona en cualquier idioma.
+- **Modo de ejecución:** bajo el título de EN PROGRESO, antes de la línea `Estado`, una fila `Modo  <emoji> <etiqueta>` con el modo de la línea `**Modo de ejecución acordado:** <valor>` (o `**Agreed execution mode:** <valor>`) del plan: `guided` → `✏️ Guiado`, `step-by-step` → `📋 Paso a paso`, `auto` → `🤖 Auto` y `extreme` → `🔥 Extremo`. Si la línea no está, está vacía o trae texto libre de antes de `acsuite task mode` (legado), no se muestra la fila; `acsuite check` avisa con `current-mode` cuando la línea existe y está vacía o es legado (si falta, no avisa). Se ve igual en la vista normal, la compacta, `--once` y el modo observador.
+- **`handoff.md`, en detalle:** la tarea en progreso, en este orden: su título `Tarea N — título`, el modo, el estado con los pasos del plan, la descripción y las decisiones. `Estado:` dice `recién iniciado` si no hay pasos hechos; `Paso k de n` con la barra de progreso si los hay (k es el paso en que va, y n cuenta también el último, «Documentar cierre de tarea»); y `pasos completos` si están todos hechos. Sin plan no hay línea `Estado`. Los pasos van debajo: los hechos con el texto **tachado** (las tareas no se tachan, solo los pasos), el actual resaltado y el resto normales. `Descripción:` y `Decisiones a medio camino:` son subtítulos en gris, con su texto debajo (sangrado, en el color normal), partido en líneas según el ancho de la terminal: hasta 3 líneas, con «…» al final de la tercera si hay más. La descripción es el texto entre la línea `Tarea N — título` y la primera subsección (sin sus campos `- **Campo:** valor`, como `Origen` o `Detalles`); sin descripción, o con decisiones vacías o «Ninguna.» / «None», el subtítulo no aparece. Las demás subsecciones («Qué falta», «Próximo paso concreto»…) no se muestran. Cada tarea pausada tiene la misma estructura (su descripción es el campo `Descripción`, el plan es el campo opcional `Plan` de la plantilla y el modo el campo `Modo de ejecución acordado`) y, al final, sus campos propios como subtítulos grises: `Por qué se pausó:` y `Qué espera para retomarse:`; «Qué falta» y «Próximo paso concreto» tampoco se muestran en ellas. Los títulos y etiquetas del documento se reconocen en español e inglés, pero en pantalla los subtítulos salen siempre en español. El compacto (`c`) y el modo observador no cambian nada de esto.
 - **`backlog.md`, compacto:** libres (y sus grupos) y bloqueadas como `T-N: título`. Cada bloqueada muestra su tag (`[dependencia]`, `[postergada]`…) y las tareas que menciona su motivo; si alguna ya está cerrada en `history.md`, lo marca en amarillo como recordatorio de la Regla 8 (moverla a libres).
 - **Avisos:** al final, fuera de los recuadros, lo que no se pudo leer o interpretar (ver abajo).
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { displayProjectName, plainText, progressBar, shortTaskName, truncate, visibleLength } from "../../src/ui/format.ts";
+import { displayProjectName, plainText, progressBar, shortTaskName, truncate, visibleLength, wrapText } from "../../src/ui/format.ts";
 
 describe("helpers de formato", () => {
   test("truncate agrega … y respeta caracteres multibyte", () => {
@@ -46,5 +46,26 @@ describe("nombres para la pantalla", () => {
   test("shortTaskName: `T-N: título`, o `T-N` sin título", () => {
     expect(shortTaskName(4, "Deploy en skills.sh")).toBe("T-4: Deploy en skills.sh");
     expect(shortTaskName(12, null)).toBe("T-12");
+  });
+});
+
+describe("wrapText", () => {
+  test("parte por palabras en líneas de a lo sumo `width` columnas y descarta las líneas en blanco", () => {
+    expect(wrapText("uno dos tres cuatro", 9)).toEqual(["uno dos", "tres", "cuatro"]);
+    expect(wrapText("uno\n\n  dos   tres  ", 20)).toEqual(["uno", "dos tres"]);
+    expect(wrapText("", 10)).toEqual([]);
+  });
+
+  test("una palabra más larga que el ancho se parte entre grafemas, sin perder nada", () => {
+    expect(wrapText("abcdefghij", 4)).toEqual(["abcd", "efgh", "ij"]);
+    const lines = wrapText("a ✏️✏️✏️✏️ 日本語日本語", 5);
+    expect(lines.join("").replace(/\s/g, "")).toBe("a✏️✏️✏️✏️日本語日本語");
+    for (const line of lines) expect(visibleLength(line)).toBeLessThanOrEqual(5);
+  });
+
+  test("con más de `maxLines` líneas quedan esas y la última termina en «…» sin pasar del ancho", () => {
+    expect(wrapText("uno dos tres cuatro", 9, 2)).toEqual(["uno dos", "tres…"]);
+    expect(wrapText("uno dos tres", 7, 2)).toEqual(["uno dos", "tres"]);
+    expect(wrapText("uno dos tres cuatro", 3, 2)).toEqual(["uno", "do…"]);
   });
 });

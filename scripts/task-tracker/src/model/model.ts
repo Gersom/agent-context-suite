@@ -5,10 +5,12 @@
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
-import { type ExecutionMode, isExecutionMode, modeLines, planSubsections } from "../../../_shared/parse/plan-mode.ts";
+import { stripComments } from "../../../_shared/parse/markdown.ts";
+import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf } from "../../../_shared/parse/plan-mode.ts";
 import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
   CurrentTaskLine,
+  Field,
   Group,
   HistoryEntry,
   InProgress,
@@ -16,7 +18,9 @@ import type {
   ParsedFile,
   ParsedHandoff,
   ParsedHistory,
+  ParsedPausedTask,
   PlanStep,
+  Section,
   Subsection,
   Task,
 } from "../../../_shared/types.ts";
@@ -26,8 +30,14 @@ import { findTaskRefs, type TaskIndex } from "../../../_shared/tasks/task-refs.t
 /** Cuántas entradas de history.md se muestran en "TAREAS COMPLETADAS". */
 export const COMPLETED_LIMIT = 5;
 
-// Un checkbox de plan (`- [ ] Paso 1`): identifica la subsección del plan, que ya se muestra aparte.
-const CHECKBOX_LINE_RE = /^\s*[-*]\s+\[( |x|X)\]\s+/m;
+// Campo `- **Campo:** valor` (o `- **Campo**: valor`) del texto previo a las subsecciones (`Origen`, `Detalles`...).
+const FIELD_START_RE = /^[-*]\s+\*\*.+?(?::\*\*|\*\*:)/;
+// Línea `Origen: …` / `Origin: …` suelta (sin viñeta), que tampoco es descripción.
+const ORIGIN_LINE_RE = /^\**(?:Origen|Origin)\**:/i;
+// Campo `Descripción` de una tarea pausada.
+const DESCRIPTION_LABEL_RE = /^(descripci[oó]n|description)$/i;
+// «Ninguna.» / «None»: decisiones sin nada que mostrar.
+const NONE_RE = /^(ningun[ao]s?|none|n\/a)\.?$/i;
 
 /**
  * Modelo completo para la pantalla.
@@ -73,7 +83,7 @@ export function buildModel({
   }
 
   const inProgress = handoff?.inProgress;
-  const current = inProgress?.task && handoffText ? buildCurrent(inProgress.task, inProgress, handoffText) : null;
+  const current = inProgress?.task && handoffText ? buildCurrent(inProgress.task, inProgress, handoffText, handoff?.sections["in-progress"]) : null;
 
   const grouped = backlog?.grouped ?? [];
   const freeGroups: FreeGroup[] = (backlog?.free.groups ?? []).map((ref) => ({
@@ -82,7 +92,7 @@ export function buildModel({
     tasks: ref.taskNumbers.map((n) => findGroupedTask(grouped, n) ?? { number: n, label: null, title: null }),
   }));
   const freeTasks = backlog?.free.tasks ?? [];
-  const paused: PausedTask[] = (handoff?.paused ?? []).map((task) => ({ ...task, plan: buildPlan(task.steps) }));
+  const paused: PausedTask[] = (handoff?.paused ?? []).map((task) => buildPaused(task));
   const historyEntries = history?.entries ?? [];
 
   const blockedTasks = backlog?.blocked ?? [];
@@ -117,14 +127,69 @@ export function buildModel({
 }
 
 /**
- * Tarea en progreso con el avance de su plan y sus subsecciones de detalle (todas menos la que
- * tiene los checkboxes del plan; sus títulos están traducidos, así que no se eligen por nombre) y
- * su modo de ejecución.
+ * Tarea en progreso con el avance de su plan, su modo de ejecución, su descripción (el texto entre
+ * la línea `Tarea N — título` y la primera subsección, sin sus campos `- **Campo:** valor`) y sus
+ * decisiones. Las demás subsecciones («Qué falta», «Próximo paso concreto»...) no se exponen.
  */
-function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress, handoffText: string): CurrentTask {
-  const planSubs = new Set(planSubsections(subsections));
-  const details = subsections.filter((s) => !planSubs.has(s) && !CHECKBOX_LINE_RE.test(s.body) && s.body.trim() !== "");
-  return { ...task, plan: buildPlan(steps), details, subsections, mode: executionMode(handoffText, subsections) };
+function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress, handoffText: string, section: Section | undefined): CurrentTask {
+  const decisions = subsections.find((s) => partOf(s.title) === "decisions");
+  return {
+    ...task,
+    plan: buildPlan(steps),
+    subsections,
+    mode: executionMode(handoffText, subsections),
+    description: currentDescription(task, subsections, handoffText, section),
+    decisions: decisionsText(decisions?.body),
+  };
+}
+
+/** Texto entre la línea de la tarea y la primera subsección (o el fin de la sección), sin comentarios ni campos `- **Campo:** valor`. */
+function currentDescription(task: CurrentTaskLine, subsections: Subsection[], handoffText: string, section: Section | undefined): string | null {
+  const start = task.range?.end;
+  const end = subsections[0]?.range?.start ?? section?.bodyRange.end;
+  if (start === undefined || end === undefined || end <= start) return null;
+  const lines: string[] = [];
+  let inField = false;
+  for (const line of stripComments(handoffText.slice(start, end)).split("\n")) {
+    if (FIELD_START_RE.test(line) || ORIGIN_LINE_RE.test(line.trim())) {
+      inField = true;
+      continue;
+    }
+    // Las líneas indentadas que siguen a un campo son su continuación.
+    if (inField && /^\s+\S/.test(line)) continue;
+    if (line.trim()) inField = false;
+    if (line.trim()) lines.push(line.trim());
+  }
+  return lines.join("\n") || null;
+}
+
+/**
+ * Tarea pausada con el avance de su plan y los campos que se muestran: modo, descripción,
+ * decisiones, «Por qué se pausó» y «Qué espera para retomarse» (los demás, como «Qué falta», no).
+ */
+function buildPaused(task: ParsedPausedTask): PausedTask {
+  const { fields } = task;
+  const mode = pausedField(fields, "mode");
+  return {
+    ...task,
+    plan: buildPlan(task.steps),
+    mode: mode != null && isExecutionMode(mode) ? mode : null,
+    description: fields.filter((f) => DESCRIPTION_LABEL_RE.test(f.label)).at(-1)?.value.trim() || null,
+    decisions: decisionsText(pausedField(fields, "decisions")),
+    why: pausedField(fields, "why"),
+    waits: pausedField(fields, "waits"),
+  };
+}
+
+/** «Decisiones a medio camino» tal como está escrito, o `null` si falta o dice «Ninguna.»/«None». */
+function decisionsText(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  return text && !NONE_RE.test(text) ? text : null;
+}
+
+/** Valor del campo de una tarea pausada que corresponde a `part` (la última si se repite), `null` si no hay o está vacío. */
+function pausedField(fields: Field[], part: HandoffPart): string | null {
+  return fields.filter((f) => partOf(f.label) === part).at(-1)?.value.trim() || null;
 }
 
 /**
