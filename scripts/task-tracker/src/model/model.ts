@@ -5,8 +5,8 @@
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
-import { stripComments } from "../../../_shared/parse/markdown.ts";
 import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf } from "../../../_shared/parse/plan-mode.ts";
+import { classifyPreamble, DESCRIPTION_LABEL_RE, NONE_RE } from "../../../_shared/parse/text-fields.ts";
 import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
   CurrentTaskLine,
@@ -29,15 +29,6 @@ import { findTaskRefs, type TaskIndex } from "../../../_shared/tasks/task-refs.t
 
 /** Cuántas entradas de history.md se muestran en "TAREAS COMPLETADAS". */
 export const COMPLETED_LIMIT = 5;
-
-// Campo `- **Campo:** valor` (o `- **Campo**: valor`) del texto previo a las subsecciones (`Origen`, `Detalles`...).
-const FIELD_START_RE = /^[-*]\s+\*\*.+?(?::\*\*|\*\*:)/;
-// Línea `Origen: …` / `Origin: …` suelta (sin viñeta), que tampoco es descripción.
-const ORIGIN_LINE_RE = /^\**(?:Origen|Origin)\**:/i;
-// Campo `Descripción` de una tarea pausada.
-const DESCRIPTION_LABEL_RE = /^(descripci[oó]n|description)$/i;
-// «Ninguna.» / «None»: decisiones sin nada que mostrar.
-const NONE_RE = /^(ningun[ao]s?|none|n\/a)\.?$/i;
 
 /**
  * Modelo completo para la pantalla.
@@ -136,7 +127,6 @@ function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress,
   return {
     ...task,
     plan: buildPlan(steps),
-    subsections,
     mode: executionMode(handoffText, subsections),
     description: currentDescription(task, subsections, handoffText, section),
     decisions: decisionsText(decisions?.body),
@@ -148,18 +138,10 @@ function currentDescription(task: CurrentTaskLine, subsections: Subsection[], ha
   const start = task.range?.end;
   const end = subsections[0]?.range?.start ?? section?.bodyRange.end;
   if (start === undefined || end === undefined || end <= start) return null;
-  const lines: string[] = [];
-  let inField = false;
-  for (const line of stripComments(handoffText.slice(start, end)).split("\n")) {
-    if (FIELD_START_RE.test(line) || ORIGIN_LINE_RE.test(line.trim())) {
-      inField = true;
-      continue;
-    }
-    // Las líneas indentadas que siguen a un campo son su continuación.
-    if (inField && /^\s+\S/.test(line)) continue;
-    if (line.trim()) inField = false;
-    if (line.trim()) lines.push(line.trim());
-  }
+  // Los campos, su continuación y el `Origen:` suelto no son descripción; el resto se aplana a líneas sin sangría.
+  const lines = classifyPreamble(handoffText.slice(start, end), { looseOrigin: true })
+    .filter(({ kind, text }) => kind === "text" && text.trim())
+    .map(({ text }) => text.trim());
   return lines.join("\n") || null;
 }
 

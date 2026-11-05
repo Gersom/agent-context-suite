@@ -15,6 +15,7 @@ import {
   partOf,
   planSubsections,
 } from "../../../_shared/parse/plan-mode.ts";
+import { classifyPreamble } from "../../../_shared/parse/text-fields.ts";
 import type { ParsedHandoff, PlanStep, Section, Subsection } from "../../../_shared/types.ts";
 import { CliError, UsageError } from "../cli/errors.ts";
 import type { Doc } from "../workspace/docs.ts";
@@ -72,7 +73,6 @@ export interface CurrentParts {
   replace: { start: number; end: number };
 }
 
-const FIELD_START_RE = /^[-*]\s+\*\*.+?(?::\*\*|\*\*:)/;
 const CHECKBOX_RE = /^\s*[-*]\s+\[[ xX]\]\s+/;
 
 /** Qué es una línea del cuerpo de la subsección «Plan»: un paso, la línea de modo, un «nada» o texto que `close` y `pause` rechazan. */
@@ -174,17 +174,10 @@ export function invalidPlanLineMessage(invalid: InvalidPlanLine, lang: Lang): st
 function splitPreamble(text: string): { description: string | null; extras: string[] } {
   const extras: string[] = [];
   const rest: string[] = [];
-  let inField = false;
-  for (const line of text.split("\n")) {
-    if (FIELD_START_RE.test(line)) {
-      extras.push(line.replace(/\s+$/, ""));
-      inField = true;
-    } else if (inField && /^\s+\S/.test(line)) {
-      extras[extras.length - 1] += `\n${line.replace(/\s+$/, "")}`;
-    } else {
-      if (line.trim()) inField = false;
-      rest.push(line);
-    }
+  for (const { kind, text: line } of classifyPreamble(text)) {
+    if (kind === "field") extras.push(line.replace(/\s+$/, ""));
+    else if (kind === "continuation") extras[extras.length - 1] += `\n${line.replace(/\s+$/, "")}`;
+    else rest.push(line);
   }
   const description = rest.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   return { description: description || null, extras };
@@ -233,7 +226,7 @@ export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): Cur
   }
 
   const firstSub = subsections[0]?.range?.start ?? section.bodyRange.end;
-  const preamble = splitPreamble(stripComments(text.slice(task.range.end, firstSub)));
+  const preamble = splitPreamble(text.slice(task.range.end, firstSub));
   const body = (part: HandoffPart) => parts.get(part)?.body.trim() || null;
   const end = section.bodyRange.start + text.slice(section.bodyRange.start, section.bodyRange.end).trimEnd().length;
   return {

@@ -6,15 +6,19 @@
 // usa español y se avisa.
 
 import { type Lang, PART_LABELS } from "../../../_shared/parse/plan-mode.ts";
+import { DESCRIPTION_LABEL_RE, NONE_RE } from "../../../_shared/parse/text-fields.ts";
 import type { Field } from "../../../_shared/types.ts";
 
 export type { Lang };
+
+// El texto que significa «nada» (`Ninguno.`, `None`...) vive en _shared (lo usa también task-tracker).
+export { NONE_RE };
 
 /** Campos de una tarea de backlog que el script reconoce en cualquier idioma conocido. */
 export type FieldKind = "description" | "decisions" | "blockers" | "trigger" | "details" | "added";
 
 const FIELD_PATTERNS: Record<FieldKind, RegExp> = {
-  description: /^(descripci[oó]n|description)$/i,
+  description: DESCRIPTION_LABEL_RE,
   decisions: /^(decisiones|decisions)$/i,
   blockers: /^(bloqueos?|blockers?)$/i,
   trigger: /^(disparador|trigger)$/i,
@@ -36,9 +40,6 @@ export function isFieldKind(label: string, kind: FieldKind): boolean {
 export function findFieldOfKind(fields: Field[], kind: FieldKind): Field | undefined {
   return fields.find((field) => isFieldKind(field.label, kind));
 }
-
-/** Texto que significa «nada» en una tarea (`Ninguno.`, `None`...): no se copia al handoff. */
-export const NONE_RE = /^(ninguno|ninguna|none|n\/a)\.?$/i;
 
 /** Textos que el script escribe cuando no puede copiarlos de un archivo. */
 export interface Strings {

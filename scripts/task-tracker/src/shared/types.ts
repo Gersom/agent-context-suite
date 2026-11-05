@@ -11,7 +11,6 @@ import type {
   OperatorEntry,
   ParsedPausedTask,
   PlanStep,
-  Subsection,
   Task,
   TaskRef,
 } from "../../../_shared/types.ts";
@@ -61,9 +60,7 @@ export interface PausedTask extends ParsedPausedTask, TaskView {
   waits: string | null;
 }
 
-export interface CurrentTask extends CurrentTaskLine, TaskView {
-  subsections: Subsection[];
-}
+export interface CurrentTask extends CurrentTaskLine, TaskView {}
 
 /** Modelo completo para la pantalla. */
 export interface Model {

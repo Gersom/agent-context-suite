@@ -5,6 +5,7 @@
 // archivo (`Doc.text`) y los rangos del parser: devuelven ediciones, no leen ni escriben nada.
 
 import { commentSpans } from "../../../_shared/parse/markdown.ts";
+import { FIELD_START_RE } from "../../../_shared/parse/text-fields.ts";
 import { blockInfo, LEADING_TAG_RE } from "../../../_shared/tasks/block-info.ts";
 import type { Field } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
@@ -261,8 +262,6 @@ export function resolveBlocker(input: BlockerInput): string {
 // ---------------------------------------------------------------------------------------------
 // «Tarea en progreso»
 // ---------------------------------------------------------------------------------------------
-
-const FIELD_START_RE = /^[-*]\s+\*\*(.+?)(?::\*\*|\*\*:)/;
 
 /** Lo que hay entre la línea `Tarea N — título` y la primera subsección: la descripción y los campos `- **Campo:** valor`. */
 export interface Preamble {

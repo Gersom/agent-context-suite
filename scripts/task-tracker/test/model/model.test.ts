@@ -19,7 +19,7 @@ describe("buildModel", () => {
     expect(current.description).toBe("Descripción breve que menciona la Tarea 13 a mitad de línea.");
     expect(current.decisions).toBeNull();
     expect(current).not.toHaveProperty("details");
-    expect(JSON.stringify({ ...current, subsections: [] })).not.toContain("Pasos 3 y 4");
+    expect(JSON.stringify(current)).not.toContain("Pasos 3 y 4");
   });
 
   describe("descripción y decisiones de la tarea en curso", () => {
