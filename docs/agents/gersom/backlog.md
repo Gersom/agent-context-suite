@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 140
+**Próximo número de tarea:** 141
 
 ---
 
@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
 - **Agregada:** 2026-11-04.
 
-### Tarea 136 — Comando task mode (guided | step-by-step | auto | extreme)
-
-- **Descripción:** Agregar acsuite task mode <guided|step-by-step|auto|extreme> que escribe el modo de ejecución del plan en handoff.md en un formato que la herramienta lee y valida (check lo reconoce), y documentar el formato en la regla 2 de rules.md. Entrar a extreme exige el flag --confirm (recordatorio de que el operador lo confirmó en el chat; la herramienta no puede comprobarlo).
-- **Decisiones/temas a definir antes de empezar:** Formato exacto de la línea de modo en el handoff; cómo convive con start --mode.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Valores en inglés en el archivo; el board los muestra en español con emoji. guided: ejecuta el operador y el agente guía y verifica; step-by-step: el agente espera confirmación tras cada paso; auto: el agente ejecuta seguido y para ante los criterios de rules.md; extreme: el agente hace todo y solo espera al final (cerrar o corregir); las acciones irreversibles o externas las hace solo si un paso del plan las nombra explícitamente.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 137 — rules.md: criterios de parada de auto y comportamiento de guided y extreme
 
 - **Descripción:** Escribir en rules.md el comportamiento de los cuatro modos. auto: el agente para siempre ante decisiones de producto o diseño, acciones difíciles de revertir (borrar, push, publicar), pasos que solo puede hacer el operador y fallos inesperados. guided: ejecuta el operador y el agente da la instrucción, espera el resultado, diagnostica y avanza cuando el operador confirma. extreme (entra solo con confirmación explícita del operador): el agente hace todo y espera solo al final para cerrar o corregir; las dudas de producto no paran, toma la opción por defecto y la lista aparte en el resumen. El plan aprobado es el contrato: las acciones irreversibles o externas (borrar, push, publicar, editar fuera del repo) solo se hacen si un paso del plan las nombra de forma concreta (ej. «pushear a origin/main»); una acción así que surge sin estar en el plan obliga a parar y pedir agregar el paso.
@@ -73,6 +64,24 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** Ninguno.
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Puntos 3 y 4 adaptados tras el debate.
+- **Agregada:** 2026-11-04.
+
+### Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
+
+- **Descripción:** El board muestra el modo del plan en español con emoji: ✏️ Guiado, 📋 Paso a paso, 🤖 Auto y Extremo (emoji a definir).
+- **Decisiones/temas a definir antes de empezar:** Qué emoji usa Extremo.
+- **Bloqueos:** `[Resuelto el 2026-11-04]` — era `[dependencia]` depende de la Tarea 136 (comando task mode y formato del modo).
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Los valores en el archivo van en inglés; la traducción y el emoji son solo de presentación.
+- **Agregada:** 2026-11-04.
+
+### Tarea 140 — Skill: plantilla del handoff en inglés con la etiqueta del modo fija
+
+- **Descripción:** Verificar cómo genera la skill el handoff en proyectos en inglés y fijar la etiqueta de la línea de modo («Agreed execution mode»), porque la suite solo reconoce esa etiqueta y sus prefijos; una traducción distinta quedaría como línea inválida en close, pause y check.
+- **Decisiones/temas a definir antes de empezar:** Si la skill lleva una plantilla en inglés o una tabla de etiquetas fijas; y actualizar la plantilla (hoy placeholder «todos los pasos seguidos / uno a la vez») a los valores guided, step-by-step, auto y extreme.
+- **Bloqueos:** `[Resuelto el 2026-11-04]` — era `[dependencia]` depende de la Tarea 136 (comando task mode y valores del modo).
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Surgió al revisar la Tarea 136: partOf (scripts/task-manager/src/write/handoff.ts) acepta la etiqueta de STRINGS en es y en. La plantilla vive en skill/template/agents/handoff.md:35, repo de la skill. Va después de la 136.
 - **Agregada:** 2026-11-04.
 
 <!-- agent-context-skill:section=blocked -->
@@ -103,15 +112,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
-
-### Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
-
-- **Descripción:** El board muestra el modo del plan en español con emoji: ✏️ Guiado, 📋 Paso a paso, 🤖 Auto y Extremo (emoji a definir).
-- **Decisiones/temas a definir antes de empezar:** Qué emoji usa Extremo.
-- **Bloqueos:** [dependencia] depende de la Tarea 136 (comando task mode y formato del modo).
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Los valores en el archivo van en inglés; la traducción y el emoji son solo de presentación.
-- **Agregada:** 2026-11-04.
 
 ### Tarea 139 — Marca (verificar) por paso dentro del modo auto
 

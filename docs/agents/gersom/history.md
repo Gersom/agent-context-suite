@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-04 — ✅ Tarea 136 — Comando task mode (guided | step-by-step | auto | extreme)
+
+- Nuevo comando acsuite task mode <guided|step-by-step|auto|extreme> que guarda el modo de ejecución del plan como dato estructurado (extreme exige --confirm). Reemplaza o inserta la línea de modo en cualquier idioma; el texto legado sigue siendo válido. start --mode se restringió a los cuatro valores.
+- acsuite check avisa current-mode si el valor no es válido; el formato quedó en la regla 2 de rules.md y en los README de task-manager y docs-check.
+- Revisión independiente hecha, sin bugs bloqueantes.
+- Commit en la suite: feat(T-136).
+
 ## 2026-11-04 — ✅ Tarea 135 — Detección temprana de líneas de plan inválidas
 
 - Detección temprana de líneas inválidas en el plan: la validación de close/pause se extrajo a una función reutilizable; el error de close/pause muestra el formato válido; step y edit avisan sin bloquear; acsuite check tiene el warning current-plan-line. Documentado en los README de task-manager y docs-check.
