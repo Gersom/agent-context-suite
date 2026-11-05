@@ -68,6 +68,38 @@ describe("buildModel", () => {
       expect(withDecisions("")).toBeNull();
       expect(currentOf("Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — A")?.decisions).toBeNull();
     });
+
+    test("«N/A» en decisiones es nada", () => {
+      expect(currentOf("Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — A\n\n### Decisiones a medio camino\n\nN/A")?.decisions).toBeNull();
+    });
+
+    test("una regla `---` al final de la sección no es descripción ni decisión", () => {
+      expect(currentOf("Tarea 7 — Algo\n\nDe qué trata.\n\n---")?.description).toBe("De qué trata.");
+      expect(currentOf("Tarea 7 — Algo\n\n---")?.description).toBeNull();
+      expect(currentOf("Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — A\n\n### Decisiones a medio camino\n\nUsar A.\n\n---")?.decisions).toBe("Usar A.");
+    });
+
+    test("los placeholders de la plantilla no se muestran (descripción y decisiones), pero el resto del texto sí", () => {
+      expect(currentOf("Tarea 7 — Algo\n\n[Placeholder: describir la tarea]")?.description).toBeNull();
+      expect(currentOf("Tarea 7 — Algo\n\nTexto real.\n[Placeholder: más]")?.description).toBe("Texto real.");
+      const withDecisions = (text: string) => currentOf(`Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — A\n\n### Decisiones a medio camino\n\n${text}`)?.decisions;
+      expect(withDecisions("[Placeholder: decisiones]")).toBeNull();
+      expect(withDecisions("Usar A.\n[Placeholder: otra]")).toBe("Usar A.");
+    });
+
+    test("una línea con texto real que menciona un placeholder se conserva; sin subsecciones, los checkboxes sueltos son el plan; los pasos placeholder no cuentan", () => {
+      expect(currentOf("Tarea 7 — Algo\n\nOcultar `[Placeholder]` en el board.")?.description).toBe("Ocultar `[Placeholder]` en el board.");
+      expect(currentOf("Tarea 7 — Algo\n\n- [x] a\n- [ ] b")?.plan).toMatchObject({ done: 1, total: 2 });
+      expect(currentOf("Tarea 7 — Algo\n\n### Plan\n\n- [ ] Paso 1 — [Placeholder: paso]\n- [ ] Paso 2 — B")?.plan).toMatchObject({ done: 0, total: 1 });
+    });
+
+    test("solo los checkboxes de «Plan» son pasos: los de otras subsecciones o del texto previo no cuentan", () => {
+      const current = currentOf(
+        "Tarea 7 — Algo\n\n- [ ] suelto en la descripción\n\n### Plan\n\n- [x] Paso 1 — A\n- [ ] Paso 2 — B\n\n### Qué falta\n\n- [ ] otra cosa\n- [ ] y otra",
+      );
+      expect(current?.plan).toMatchObject({ done: 1, total: 2 });
+      expect(current?.plan.currentStep?.text).toBe("Paso 2 — B");
+    });
   });
 
   describe("modo de ejecución de la tarea en curso", () => {
@@ -170,6 +202,14 @@ describe("buildModel", () => {
         pausedOf(["- **Description:** About it.", "- **Agreed execution mode:** auto", "- **Decisions along the way:** None", "- **Why it was paused:** Urgent.", "- **What it is waiting for:** Task 3."]),
       ).toMatchObject({ description: "About it.", mode: "auto", decisions: null, why: "Urgent.", waits: "Task 3." });
     });
+  });
+
+  test("pausadas: los placeholders y las reglas `---` de sus campos no se muestran", () => {
+    const [paused] = buildModel({
+      handoffText: `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Descripción:** [Placeholder: qué es]\n- **Decisiones a medio camino:** Usar A.\n  ---\n- **Por qué se pausó:** [Placeholder: motivo]\n- **Qué espera para retomarse:** N/A\n`,
+      backlogText: null,
+    }).paused;
+    expect(paused).toMatchObject({ description: null, decisions: "Usar A.", why: null, waits: "N/A" });
   });
 
   test("completadas: las 5 primeras entradas de history.md", () => {

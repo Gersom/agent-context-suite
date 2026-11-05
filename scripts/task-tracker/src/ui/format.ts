@@ -6,9 +6,21 @@ import stringWidth from "string-width";
 
 const BAR_WIDTH = 12;
 
-/** Quita el formato markdown inline que en la terminal solo ensucia (negritas y backticks). */
+// Secuencias de escape ANSI (`ESC [ …`, `ESC ] … BEL|ST`) y caracteres de control salvo el salto de línea.
+const ANSI_RE = /\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b\n]*(?:\x07|\x1b\\)?)/g;
+const CONTROL_RE = /[\x00-\x09\x0b-\x1f\x7f-\x9f]/g;
+
+/**
+ * Deja el texto listo para pintarlo: quita las secuencias de escape y los caracteres de control
+ * (un ESC crudo en el handoff movería el cursor o cambiaría los colores de la terminal) y el formato
+ * markdown inline que solo ensucia (negritas, también las que cruzan un salto de línea pero no una línea en blanco, y backticks).
+ */
 export function plainText(text: string): string {
-  return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]*)`/g, "$1");
+  return text
+    .replace(ANSI_RE, "")
+    .replace(CONTROL_RE, " ")
+    .replace(/\*\*((?:[^\n]|\n(?!\n))+?)\*\*/g, "$1")
+    .replace(/`([^`]*)`/g, "$1");
 }
 
 /** Barra de progreso `[█████░░░░░░░]`. */

@@ -31,6 +31,22 @@ describe("helpers de formato", () => {
     expect(plainText("**sin** `package.json`")).toBe("sin package.json");
   });
 
+  test("plainText quita las secuencias ANSI y los caracteres de control", () => {
+    expect(plainText("\x1b[31mrojo\x1b[0m y \x1b]0;título\x07normal")).toBe("rojo y normal");
+    expect(plainText("a\x07b\tc\x7fd\r")).toBe("a b c d ");
+    expect(plainText("uno\ndos")).toBe("uno\ndos");
+  });
+
+  test("plainText: un OSC sin terminar no se come las líneas siguientes, los C1 se quitan y una negrita no cruza una línea en blanco", () => {
+    expect(plainText("\x1b]0;tit\nlinea2")).toBe(" \nlinea2".slice(1) === "\nlinea2" ? "\nlinea2" : "\nlinea2");
+    expect(plainText("a\u009b31mb")).toBe("a 31mb");
+    expect(plainText("**uno\n\n**dos")).toBe("**uno\n\n**dos");
+  });
+
+  test("plainText quita una negrita que cruza un salto de línea", () => {
+    expect(plainText("**una\nnegrita** fin")).toBe("una\nnegrita fin");
+  });
+
   test("progressBar", () => {
     expect(progressBar(0, 0, 4)).toBe("[░░░░]");
     expect(progressBar(2, 4, 4)).toBe("[██░░]");

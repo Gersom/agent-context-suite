@@ -3,9 +3,10 @@
 // conteos y avisos).
 
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
-import { parseHandoff } from "../../../_shared/parse/handoff.ts";
+import { parseHandoff, parseSteps } from "../../../_shared/parse/handoff.ts";
+import { isPlaceholder } from "../../../_shared/parse/markdown.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
-import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf } from "../../../_shared/parse/plan-mode.ts";
+import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf, planSubsections } from "../../../_shared/parse/plan-mode.ts";
 import { classifyPreamble, DESCRIPTION_LABEL_RE, NONE_RE } from "../../../_shared/parse/text-fields.ts";
 import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
@@ -126,7 +127,8 @@ function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress,
   const decisions = subsections.find((s) => partOf(s.title) === "decisions");
   return {
     ...task,
-    plan: buildPlan(steps),
+    // Solo cuentan los checkboxes de la subsección del plan: los de otras partes no son pasos.
+    plan: buildPlan(planSteps(steps, subsections)),
     mode: executionMode(handoffText, subsections),
     description: currentDescription(task, subsections, handoffText, section),
     decisions: decisionsText(decisions?.body),
@@ -142,7 +144,22 @@ function currentDescription(task: CurrentTaskLine, subsections: Subsection[], ha
   const lines = classifyPreamble(handoffText.slice(start, end), { looseOrigin: true })
     .filter(({ kind, text }) => kind === "text" && text.trim())
     .map(({ text }) => text.trim());
-  return lines.join("\n") || null;
+  return cleanText(lines.join("\n"));
+}
+
+// Líneas que el board no muestra: una regla horizontal (`---`) o una que es solo un placeholder de la plantilla (`[Placeholder: …]`);
+// una línea con texto real que menciona un placeholder se conserva.
+const RULE_RE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+const PLACEHOLDER_LINE_RE = /^\s*(?:[-*]\s+)?\[Placeholder[^\]]*\]\s*$/i;
+
+/** El texto sin sus líneas de regla horizontal ni de placeholder (solo para el board; el parseo compartido no las toca), o `null` si no queda nada. */
+function cleanText(value: string | null | undefined): string | null {
+  const text = (value ?? "")
+    .split("\n")
+    .filter((line) => !RULE_RE.test(line) && !PLACEHOLDER_LINE_RE.test(line))
+    .join("\n")
+    .trim();
+  return text || null;
 }
 
 /**
@@ -156,7 +173,7 @@ function buildPaused(task: ParsedPausedTask): PausedTask {
     ...task,
     plan: buildPlan(task.steps),
     mode: mode != null && isExecutionMode(mode) ? mode : null,
-    description: fields.filter((f) => DESCRIPTION_LABEL_RE.test(f.label)).at(-1)?.value.trim() || null,
+    description: cleanText(fields.filter((f) => DESCRIPTION_LABEL_RE.test(f.label)).at(-1)?.value),
     decisions: decisionsText(pausedField(fields, "decisions")),
     why: pausedField(fields, "why"),
     waits: pausedField(fields, "waits"),
@@ -165,13 +182,13 @@ function buildPaused(task: ParsedPausedTask): PausedTask {
 
 /** «Decisiones a medio camino» tal como está escrito, o `null` si falta o dice «Ninguna.»/«None». */
 function decisionsText(value: string | null | undefined): string | null {
-  const text = value?.trim();
+  const text = cleanText(value);
   return text && !NONE_RE.test(text) ? text : null;
 }
 
 /** Valor del campo de una tarea pausada que corresponde a `part` (la última si se repite), `null` si no hay o está vacío. */
 function pausedField(fields: Field[], part: HandoffPart): string | null {
-  return fields.filter((f) => partOf(f.label) === part).at(-1)?.value.trim() || null;
+  return cleanText(fields.filter((f) => partOf(f.label) === part).at(-1)?.value);
 }
 
 /**
@@ -183,8 +200,15 @@ function executionMode(handoffText: string, subsections: Subsection[]): Executio
   return value != null && isExecutionMode(value) ? value : null;
 }
 
-/** Avance de un plan: pasos hechos, total y el primer paso pendiente (el actual). */
-function buildPlan(steps: PlanStep[]): Plan {
+/** Pasos de la subsección del plan; si no hay ninguna (checkboxes sueltos), los de todo el cuerpo. */
+function planSteps(allSteps: PlanStep[], subsections: Subsection[]): PlanStep[] {
+  const plans = planSubsections(subsections);
+  return plans.length ? plans.flatMap((sub) => parseSteps(sub.body)) : allSteps;
+}
+
+/** Avance de un plan: pasos hechos, total y el primer paso pendiente (el actual); los pasos que son un placeholder de la plantilla no cuentan. */
+function buildPlan(allSteps: PlanStep[]): Plan {
+  const steps = allSteps.filter((step) => !isPlaceholder(step.text));
   return {
     steps,
     done: steps.filter((s) => s.done).length,
