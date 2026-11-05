@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 145 — task mode: manejar varias líneas de modo en el plan
-
-- **Descripción:** Cuando el plan tiene dos o más líneas de modo, task mode reemplaza solo la última y no puede limpiar las demás (queda el aviso current-mode en la primera). Hacer que reemplace la primera y borre las otras, o que no dé por idéntico el valor si hay más de una línea.
-- **Decisiones/temas a definir antes de empezar:** Si se reemplaza la primera y se borran las demás, o si solo se avisa.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Salió de la revisión independiente de la Tarea 136. Es un handoff malformado y poco probable: close y pause lo siguen aceptando.
-- **Agregada:** 2026-11-05.
-
 ### Tarea 148 — Avisar de todo lo que close y pause rechazan en Tarea en progreso
 
 - **Descripción:** step, edit y check solo avisan de líneas inválidas del plan y de subsecciones con título desconocido. Falta avisar también de subsecciones repetidas (dos Qué falta), de una subsección con checkboxes que se toma como segundo plan y de checkboxes fuera del plan, que hoy hacen fallar close y pause sin aviso previo.

@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 145 — task mode: manejar varias líneas de modo en el plan
+
+- task mode conserva la última línea de modo, borra las anteriores y avisa; se niega si comparte un comentario HTML multilínea.
+
 ## 2026-11-05 — ✅ Tarea 144 — task-manager: avisos de edit y error de close más útiles
 
 - edit avisa una línea por aviso (formato solo en el primero), close y pause citan el número de línea y step/check avisan de subsecciones desconocidas.
