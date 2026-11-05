@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
+
+- El board muestra el modo de ejecución del plan bajo el título de EN PROGRESO (✏️ Guiado, 📋 Paso a paso, 🤖 Auto, 🔥 Extremo); el texto legado o vacío no se muestra. La lectura del modo pasó a scripts/_shared/parse/plan-mode.ts y truncate corta por grafemas para mantener el borde alineado.
+- Revisión independiente hecha, sin bugs; corregidos sus hallazgos menores. Documentado en el README del board.
+- Commit en la suite: 09cccde.
+
 ## 2026-11-05 — ✅ Tarea 137 — rules.md: criterios de parada de auto y comportamiento de guided y extreme
 
 - Nueva sección «Modos de ejecución del plan» en las reglas específicas de rules.md: comportamiento de guided, step-by-step, auto y extreme, con las paradas de auto, la regla del plan como contrato y el registro con acsuite task mode. La pregunta (b) de la regla 2 ofrece ahora los cuatro modos.

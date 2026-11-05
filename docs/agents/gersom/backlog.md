@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Hoy el recuadro muestra "Qué falta: Toda la tarea", "Decisiones a medio camino: <texto truncado con …>" y "Próximo paso concreto: Empezar la tarea", textos obvios o redundantes. Cambios en el render: (1) Se mantiene la línea `Tarea N — título`. (2) `Estado:` reemplaza a "Qué falta" y "Próximo paso concreto": sin pasos avanzados muestra `Estado: recién iniciado`; con pasos muestra `Estado: Paso 2 de 3` más la barra de progreso que ya existe. (3) `Descripción:` como subtítulo y su texto en la línea siguiente (una o pocas líneas); los `Detalles` no se muestran. (4) `Decisiones a medio camino:` como subtítulo y su texto en la línea siguiente, con salto de línea en vez de truncar con "…". (5) Colores: subtítulos en gris y valores en blanco, como ahora. Criterios de hecho: una tarea recién iniciada no muestra "Qué falta" ni "Próximo paso concreto"; descripción y decisiones aparecen bajo su subtítulo; los textos largos no rompen el recuadro; hay tests del render para tarea recién iniciada y tarea con pasos.
 - **Agregada:** 2026-11-04.
 
-### Tarea 138 — board: mostrar el modo de la tarea en curso con emoji
-
-- **Descripción:** El board muestra el modo del plan en español con emoji: ✏️ Guiado, 📋 Paso a paso, 🤖 Auto y Extremo (emoji a definir).
-- **Decisiones/temas a definir antes de empezar:** Qué emoji usa Extremo.
-- **Bloqueos:** `[Resuelto el 2026-11-04]` — era `[dependencia]` depende de la Tarea 136 (comando task mode y formato del modo).
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Los valores en el archivo van en inglés; la traducción y el emoji son solo de presentación.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
 
 - **Descripción:** Subir la versión de la skill a 2.3.2 (plugin.json, SKILL.md y marcador de versión de rules.md) con su entrada en docs/changelog/2.3.md: la etiqueta del modo fija en inglés (Agreed execution mode) y los valores guided, step-by-step, auto y extreme en la plantilla del handoff; para proyectos ya generados, sin cambios que aplicar.
