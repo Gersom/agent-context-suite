@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { SKILL_URL } from "../../src/io/paths.ts";
 import type { ProjectRow, ProjectsRenderMeta } from "../../src/shared/types.ts";
+import { visibleLength } from "../../src/ui/format.ts";
 import { render, renderObserver, renderProjects, renderTeam } from "../../src/ui/render.ts";
 import { buildModel } from "../../src/model/model.ts";
 import { fixture } from "../../../_shared/test/helpers.ts";
@@ -42,6 +43,13 @@ describe("modo observador: pie", () => {
     const on = render(model, { ...repoMeta, observer: { notice: null } });
     expect(on).toContain("[r] redibujar - [o] salir del modo observador - [Ctrl+C o q] salir");
     expect(on).not.toContain("[o] observar");
+  });
+
+  test("con el observador activo el panel de un repo también muestra el modo de la tarea en curso", () => {
+    const withMode = buildModel({ handoffText: (fixture("es-anchors", "handoff.md") ?? "").replace("todos los pasos seguidos.", "auto"), backlogText: fixture("es-anchors", "backlog.md"), historyText: fixture("es-anchors", "history.md") });
+    const on = render(withMode, { ...repoMeta, observer: { notice: null } });
+    expect(on).toContain("Modo  🤖 Auto");
+    for (const line of on.split("\n").filter((l) => /^[╭│╰]/.test(l))) expect(visibleLength(line)).toBe(160);
   });
 
   test("la vista de equipo y el panel de un operador también lo ofrecen", () => {

@@ -25,6 +25,11 @@ export function isPlaceholder(value: string | null | undefined): boolean {
   return PLACEHOLDER_RE.test(value ?? "");
 }
 
+/** Quita acentos y mayúsculas y colapsa espacios, para comparar títulos. */
+export function normalizeTitle(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 /** Estado "dentro de un comentario HTML" al terminar la línea. */
 export function commentStateAfter(line: string, inComment: boolean): boolean {
   let pos = 0;

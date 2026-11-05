@@ -22,6 +22,56 @@ describe("buildModel", () => {
     ]);
   });
 
+  describe("modo de ejecución de la tarea en curso", () => {
+    // El fixture trae la línea de modo con texto legado: se cambia solo el valor.
+    const modeOf = (edit: (handoff: string) => string) =>
+      buildModel({ handoffText: edit(fixture("es-anchors", "handoff.md") ?? ""), backlogText: null }).current?.mode;
+    const withValue = (value: string) => (handoff: string) => handoff.replace("todos los pasos seguidos.", value);
+
+    test("los cuatro modos válidos", () => {
+      for (const mode of ["guided", "step-by-step", "auto", "extreme"] as const) expect(modeOf(withValue(mode))).toBe(mode);
+    });
+
+    test("la etiqueta en inglés también", () => {
+      expect(modeOf((h) => h.replace("**Modo de ejecución acordado:** todos los pasos seguidos.", "**Agreed execution mode:** auto"))).toBe("auto");
+    });
+
+    test("texto legado o distinto de los cuatro valores (incluso con otra mayúscula): null", () => {
+      expect(load("es-anchors").current?.mode).toBeNull();
+      expect(modeOf(withValue("Auto"))).toBeNull();
+      expect(modeOf(withValue("auto, sin parar"))).toBeNull();
+    });
+
+    test("línea de modo vacía o ausente: null", () => {
+      expect(modeOf((h) => h.replace("**Modo de ejecución acordado:** todos los pasos seguidos.", "**Modo de ejecución acordado:**"))).toBeNull();
+      expect(modeOf((h) => h.replace("**Modo de ejecución acordado:** todos los pasos seguidos.\n", ""))).toBeNull();
+    });
+
+    test("una línea de modo dentro de un comentario HTML no cuenta", () => {
+      expect(modeOf((h) => h.replace("**Modo de ejecución acordado:** todos los pasos seguidos.", "<!-- **Modo de ejecución acordado:** auto -->"))).toBeNull();
+    });
+
+    test("con varias líneas de modo vale la última, como en `close` y `pause`", () => {
+      const twice = (h: string) => h.replace("**Modo de ejecución acordado:** todos los pasos seguidos.", "**Modo de ejecución acordado:** guided\n**Modo de ejecución acordado:** extreme");
+      expect(modeOf(twice)).toBe("extreme");
+    });
+
+    test("la subsección del plan no se repite en los detalles, ni siquiera sin checkboxes", () => {
+      const noSteps = (h: string) =>
+        h
+          .replace(/^- \[[ xX]\] .*\n/gm, "")
+          .replace("### Plan\n\n", "### Plan\n\nNinguno.\n\n")
+          .replace("todos los pasos seguidos.", "guided");
+      const current = buildModel({ handoffText: noSteps(fixture("es-anchors", "handoff.md") ?? ""), backlogText: null }).current;
+      expect(current?.mode).toBe("guided");
+      expect(current?.details.some((d) => d.body.includes("Modo de ejecución acordado"))).toBe(false);
+    });
+
+    test("sin tarea en curso no hay modo que calcular", () => {
+      expect(load("minimal").current).toBeNull();
+    });
+  });
+
   test("pausadas con el avance de su plan", () => {
     const [paused] = load("es-anchors").paused;
     if (!paused) throw new Error("no hay pausadas en el fixture");

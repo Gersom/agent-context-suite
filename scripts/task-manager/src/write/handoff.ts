@@ -3,36 +3,25 @@
 // que no se reconoce se rechaza con un error en vez de reescribirse o perderse.
 
 import { commentSpans, stripComments } from "../../../_shared/parse/markdown.ts";
+import {
+  CHECKBOX_ANY_RE,
+  EXECUTION_MODES,
+  type ExecutionMode,
+  type HandoffPart,
+  isExecutionMode,
+  type ModeLine,
+  modeLines,
+  parseModeLine,
+  partOf,
+  planSubsections,
+} from "../../../_shared/parse/plan-mode.ts";
 import type { ParsedHandoff, PlanStep, Section, Subsection } from "../../../_shared/types.ts";
 import { CliError, UsageError } from "../cli/errors.ts";
-import { normalizeTitle } from "../query/find.ts";
 import type { Doc } from "../workspace/docs.ts";
-import { detectLanguage, type Lang, NONE_RE, STRINGS, type Strings } from "./language.ts";
+import { detectLanguage, type Lang, NONE_RE, STRINGS } from "./language.ts";
 
-/** Las partes con nombre de una tarea en curso (subsecciones) o pausada (campos). */
-export type HandoffPart = "plan" | "missing" | "decisions" | "next" | "why" | "waits" | "mode";
-
-const PART_KEY: Record<HandoffPart, keyof Strings> = {
-  plan: "plan",
-  missing: "missing",
-  decisions: "decisions",
-  next: "next",
-  why: "why",
-  waits: "waits",
-  mode: "mode",
-};
-
-/** Cuál es la parte que nombra el título (o etiqueta de campo), en cualquiera de los idiomas conocidos; `null` si ninguna. */
-export function partOf(title: string): HandoffPart | null {
-  const wanted = normalizeTitle(title);
-  for (const part of Object.keys(PART_KEY) as HandoffPart[]) {
-    for (const strings of Object.values(STRINGS)) {
-      const known = normalizeTitle(strings[PART_KEY[part]] as string);
-      if (wanted === known || (wanted.startsWith(known) && /[^\p{L}\p{N}]/u.test(wanted[known.length]))) return part;
-    }
-  }
-  return null;
-}
+// La lectura del modo de ejecución y de las partes del handoff vive en _shared (la usa también task-tracker).
+export { EXECUTION_MODES, type ExecutionMode, type HandoffPart, isExecutionMode, type ModeLine, modeLines, partOf };
 
 /** La subsección de esa parte, si la hay. */
 export function findPart(subsections: Subsection[], part: HandoffPart): Subsection | undefined {
@@ -85,8 +74,6 @@ export interface CurrentParts {
 
 const FIELD_START_RE = /^[-*]\s+\*\*.+?(?::\*\*|\*\*:)/;
 const CHECKBOX_RE = /^\s*[-*]\s+\[[ xX]\]\s+/;
-const CHECKBOX_ANY_RE = /^\s*[-*]\s+\[[ xX]\]\s+/m;
-const MODE_RE = /^\*\*(.+?):\*\*\s*(.*)$/;
 
 /** Qué es una línea del cuerpo de la subsección «Plan»: un paso, la línea de modo, un «nada» o texto que `close` y `pause` rechazan. */
 export type PlanLine = { kind: "step" } | { kind: "mode"; value: string | null } | { kind: "none" } | { kind: "invalid" };
@@ -94,8 +81,8 @@ export type PlanLine = { kind: "step" } | { kind: "mode"; value: string | null }
 /** Clasifica una línea (ya sin sangría ni comentarios) del cuerpo de «Plan». */
 export function classifyPlanLine(line: string): PlanLine {
   if (CHECKBOX_RE.test(line)) return { kind: "step" };
-  const field = line.match(MODE_RE);
-  if (field && partOf(field[1]) === "mode") return { kind: "mode", value: field[2].trim() || null };
+  const mode = parseModeLine(line);
+  if (mode) return { kind: "mode", value: mode.value };
   if (NONE_RE.test(line) || /^no aplica\.?$/i.test(line)) return { kind: "none" };
   return { kind: "invalid" };
 }
@@ -118,27 +105,13 @@ export interface InvalidPlanLine {
   line: number | null;
 }
 
-/** Las subsecciones que se leen como el plan: la titulada «Plan» o, sin título conocido, la que trae checkboxes. */
-function planSubsections(subsections: Subsection[]): Subsection[] {
-  return subsections.filter((sub) => (partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null)) === "plan");
-}
-
 /** La subsección del plan de la tarea en curso (la primera si hubiera varias; `inspectCurrent` rechaza las repetidas), si la hay. */
 export function findPlan(subsections: Subsection[]): Subsection | undefined {
   return planSubsections(subsections)[0];
 }
 
-/** Los modos de ejecución del plan, siempre en inglés (también en proyectos en español). Cualquier otro texto de un handoff ya escrito es legado. */
-export const EXECUTION_MODES = ["guided", "step-by-step", "auto", "extreme"] as const;
-export type ExecutionMode = (typeof EXECUTION_MODES)[number];
-
 /** El modo que ya requiere confirmación explícita del operador (`--confirm`). */
 const CONFIRMED_MODE: ExecutionMode = "extreme";
-
-/** `value` es exactamente uno de los cuatro modos (los demás textos son legado). */
-export function isExecutionMode(value: string): value is ExecutionMode {
-  return (EXECUTION_MODES as readonly string[]).includes(value);
-}
 
 /**
  * Interpreta el modo que pide el operador (argumento de `mode` o `start --mode`).
@@ -156,49 +129,6 @@ export function parseExecutionMode(raw: string, confirmed: boolean): ExecutionMo
     );
   }
   return value;
-}
-
-/** Una línea de modo de ejecución del plan, con su posición. */
-export interface ModeLine {
-  /** Valor tal como está escrito; `null` si la línea no trae ninguno. */
-  value: string | null;
-  /** Desde el primer hasta el último carácter de la línea (sin sangría ni comentarios al final), en offsets del texto LF. */
-  start: number;
-  end: number;
-  /** Su número de línea en el archivo (1-based). */
-  line: number;
-}
-
-/**
- * Las líneas de modo de ejecución del plan (con la etiqueta en cualquier idioma conocido), en orden.
- * Ignora lo que está dentro de comentarios HTML. Las subsecciones sin posiciones no se miran.
- * @param text handoff.md completo, el mismo que se parseó
- */
-export function modeLines(text: string, subsections: Subsection[]): ModeLine[] {
-  return planSubsections(subsections).flatMap((sub): ModeLine[] => {
-    if (!sub.range) return [];
-    // Los comentarios se vacían con espacios (sin tocar los saltos de línea): los offsets y las líneas se conservan.
-    const raw = text.slice(sub.range.start, sub.range.end);
-    let clean = "";
-    let at = 0;
-    for (const [from, to] of commentSpans(raw)) {
-      clean += raw.slice(at, from) + raw.slice(from, to).replace(/[^\n]/g, " ");
-      at = to;
-    }
-    clean += raw.slice(at);
-    const found: ModeLine[] = [];
-    let offset = sub.range.start;
-    clean.split("\n").forEach((l, i) => {
-      const line = l.trim();
-      const kind = i > 0 && line ? classifyPlanLine(line) : null;
-      if (kind?.kind === "mode") {
-        const start = offset + (l.length - l.trimStart().length);
-        found.push({ value: kind.value, start, end: start + line.length, line: sub.range!.startLine + i });
-      }
-      offset += l.length + 1;
-    });
-    return found;
-  });
 }
 
 /**

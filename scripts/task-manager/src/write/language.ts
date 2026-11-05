@@ -5,9 +5,10 @@
 // mínima en español o inglés. No se inventan traducciones a otros idiomas: ante lo desconocido se
 // usa español y se avisa.
 
+import { type Lang, PART_LABELS } from "../../../_shared/parse/plan-mode.ts";
 import type { Field } from "../../../_shared/types.ts";
 
-export type Lang = "es" | "en";
+export type { Lang };
 
 /** Campos de una tarea de backlog que el script reconoce en cualquier idioma conocido. */
 export type FieldKind = "description" | "decisions" | "blockers" | "trigger" | "details" | "added";
@@ -111,19 +112,19 @@ export const STRINGS: Record<Lang, Strings> = {
     },
     origin: "Origen",
     by: "por",
-    plan: "Plan",
-    missing: "Qué falta",
-    decisions: "Decisiones a medio camino",
-    next: "Próximo paso concreto",
-    mode: "Modo de ejecución acordado",
+    plan: PART_LABELS.plan.es,
+    missing: PART_LABELS.missing.es,
+    decisions: PART_LABELS.decisions.es,
+    next: PART_LABELS.next.es,
+    mode: PART_LABELS.mode.es,
     closeStep: "Documentar cierre de tarea",
     missingWithPlan: "Todos los pasos del plan.",
     missingNoPlan: "Toda la tarea.",
     nextNoPlan: "Empezar la tarea.",
     noDecisions: "Ninguna.",
     noTask: "Sin tarea en curso",
-    why: "Por qué se pausó",
-    waits: "Qué espera para retomarse",
+    why: PART_LABELS.why.es,
+    waits: PART_LABELS.waits.es,
     pendingSteps: "Pasos pendientes:",
     allDone: "Todos los pasos del plan están hechos; falta cerrar la tarea.",
     planDone: "Plan completo: falta cerrar la tarea.",
@@ -152,19 +153,19 @@ export const STRINGS: Record<Lang, Strings> = {
     },
     origin: "Origen",
     by: "by",
-    plan: "Plan",
-    missing: "What's left",
-    decisions: "Decisions along the way",
-    next: "Next concrete step",
-    mode: "Agreed execution mode",
+    plan: PART_LABELS.plan.en,
+    missing: PART_LABELS.missing.en,
+    decisions: PART_LABELS.decisions.en,
+    next: PART_LABELS.next.en,
+    mode: PART_LABELS.mode.en,
     closeStep: "Document task closure",
     missingWithPlan: "All the plan steps.",
     missingNoPlan: "The whole task.",
     nextNoPlan: "Start the task.",
     noDecisions: "None.",
     noTask: "No task in progress",
-    why: "Why it was paused",
-    waits: "What it is waiting for",
+    why: PART_LABELS.why.en,
+    waits: PART_LABELS.waits.en,
     pendingSteps: "Pending steps:",
     allDone: "All the plan steps are done; the task is left to close.",
     planDone: "Plan complete: the task is left to close.",

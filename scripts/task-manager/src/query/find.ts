@@ -4,6 +4,7 @@
 // debería vivir en un solo lugar: si aparece en varios, se devuelven todos.
 
 import { join } from "node:path";
+import { normalizeTitle } from "../../../_shared/parse/markdown.ts";
 import type { Range } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
 import { type Doc, type Docs, readDocs } from "../workspace/docs.ts";
@@ -77,10 +78,7 @@ export function findTask(docs: Docs, number: number): TaskLocation[] {
   return found;
 }
 
-/** Quita acentos y mayúsculas y colapsa espacios, para comparar títulos. */
-export function normalizeTitle(text: string): string {
-  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
-}
+export { normalizeTitle };
 
 /**
  * Tareas de `team-backlog.md` (libres y bloqueadas) cuyo título coincide con `query`: las de

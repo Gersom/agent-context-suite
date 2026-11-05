@@ -53,6 +53,13 @@ describe("modo compacto del panel", () => {
     expect(rowsOf(compact, "PAUSADAS (1)")).toEqual(rowsOf(expanded, "PAUSADAS (1)"));
   });
 
+  test("en progreso muestra el modo de ejecución también en compacto, antes del plan", () => {
+    const withMode = buildModel({ handoffText: (fixture("es-anchors", "handoff.md") ?? "").replace("todos los pasos seguidos.", "auto"), backlogText: fixture("es-anchors", "backlog.md"), historyText: fixture("es-anchors", "history.md") });
+    const rows = rowsOf(render(withMode, { ...meta, compact: true }), "EN PROGRESO");
+    expect(rows.slice(0, 3)).toEqual(["Tarea 12 — Implementar el parser de anclas", "Modo  🤖 Auto", "Plan [█████░░░░░░░] 2/5"]);
+    expect(rowsOf(render(withMode, meta), "EN PROGRESO")).toEqual(rows);
+  });
+
   test("ocupa menos pantalla que expandido y todos los recuadros siguen del ancho de la terminal", () => {
     expect(compact.split("\n").length).toBeLessThan(expanded.split("\n").length);
     for (const width of [40, 70, 120]) {

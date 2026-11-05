@@ -204,13 +204,57 @@ describe("render", () => {
     expect(rowWith(out, "Paso 3 — Escribir")).toBe("  ▸ Paso 3 — Escribir el modelo");
     expect(rowWith(out, "Qué falta: Pasos")).toBe("Qué falta: Pasos 3 y 4.");
     expect(rowWith(out, "Segunda línea")).toBe("  Segunda línea del próximo paso.");
-    expect(out).not.toContain("Modo de ejecución");
+    // El fixture trae el modo con texto legado: no se muestra.
+    expect(out).not.toContain("Modo");
     expect(rowWith(out, "Tarea 8")).toBe("• Tarea 8 — Migrar la documentación vieja");
     expect(rowWith(out, "1/3")).toBe("    Plan [████░░░░░░░░] 1/3");
     expect(rowWith(out, "Copiar el contenido")).toBe("      ✔ Paso 1 — Copiar el contenido viejo");
     expect(rowWith(out, "Revisar los links")).toBe("      ▸ Paso 2 — Revisar los links");
     expect(rowWith(out, "Por qué se pausó")).toBe("    Por qué se pausó: surgió una prioridad mayor.");
     expect(out).not.toContain("Plan: ");
+  });
+
+  describe("modo de ejecución de la tarea en curso", () => {
+    // El fixture trae la línea de modo con texto legado: se cambia solo el valor.
+    const withMode = (value: string, label = "Modo de ejecución acordado") =>
+      buildModel({
+        handoffText: (fixture("es-anchors", "handoff.md") ?? "").replace("**Modo de ejecución acordado:** todos los pasos seguidos.", `**${label}:** ${value}`),
+        backlogText: fixture("es-anchors", "backlog.md"),
+      });
+    const SHOWN = { guided: "✏️ Guiado", "step-by-step": "📋 Paso a paso", auto: "🤖 Auto", extreme: "🔥 Extremo" } as const;
+
+    test("cada modo se muestra con su emoji y etiqueta, entre el título y el plan", () => {
+      for (const [mode, shown] of Object.entries(SHOWN)) {
+        const out = render(withMode(mode), meta);
+        expect(rowWith(out, "Modo")).toBe(`Modo  ${shown}`);
+        const rows = out.split("\n");
+        const at = (text: string) => rows.findIndex((l) => l.includes(text));
+        expect(at("Modo  ")).toBe(at("Tarea 12 — Implementar") + 1);
+        expect(at("Plan [")).toBe(at("Modo  ") + 1);
+      }
+    });
+
+    test("con la etiqueta en inglés también", () => {
+      expect(rowWith(render(withMode("extreme", "Agreed execution mode"), meta), "Modo")).toBe("Modo  🔥 Extremo");
+    });
+
+    test("texto legado, vacío o de otro tipo: no se muestra nada", () => {
+      for (const value of ["todos los pasos seguidos.", "", "Auto", "auto, sin parar"]) {
+        expect(render(withMode(value), meta)).not.toContain("Modo  ");
+      }
+    });
+
+    test("el borde derecho queda alineado con cada modo, en color y sin color, y en pantallas angostas", () => {
+      for (const mode of Object.keys(SHOWN)) {
+        for (const color of [false, true]) {
+          for (const width of [40, 60, 100]) {
+            const lines = boxLines(render(withMode(mode), { ...meta, color, width }));
+            expect(lines.length).toBeGreaterThan(0);
+            for (const line of lines) expect(visibleLength(line)).toBe(width);
+          }
+        }
+      }
+    });
   });
 
   test("backlog compacto con T-N, grupos y dependencias de las bloqueadas", () => {

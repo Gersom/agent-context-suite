@@ -17,17 +17,22 @@ export function progressBar(done: number, total: number, width = BAR_WIDTH): str
   return `[${"█".repeat(filled)}${"░".repeat(width - filled)}]`;
 }
 
-/** Recorta texto plano (sin códigos de color) a un ancho visible, agregando "…". */
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+/**
+ * Recorta texto plano (sin códigos de color) a un ancho visible, agregando "…". Se corta entre
+ * grafemas: un emoji con selector de variación (`✏️`) o unido con ZWJ (`👨‍👩‍👧`) es una sola unidad.
+ */
 export function truncate(text: string, max: number): string {
   const flat = text.replace(/\s*\n\s*/g, " ");
   if (visibleLength(flat) <= max) return flat;
   const room = Math.max(1, max - 1);
   let out = "";
   let used = 0;
-  for (const char of flat) {
-    const w = visibleLength(char);
+  for (const { segment } of graphemes.segment(flat)) {
+    const w = visibleLength(segment);
     if (used + w > room) break;
-    out += char;
+    out += segment;
     used += w;
   }
   return out + "…";

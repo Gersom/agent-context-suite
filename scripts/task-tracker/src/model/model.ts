@@ -5,6 +5,7 @@
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
+import { type ExecutionMode, isExecutionMode, modeLines, planSubsections } from "../../../_shared/parse/plan-mode.ts";
 import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
   CurrentTaskLine,
@@ -16,6 +17,7 @@ import type {
   ParsedHandoff,
   ParsedHistory,
   PlanStep,
+  Subsection,
   Task,
 } from "../../../_shared/types.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
@@ -71,7 +73,7 @@ export function buildModel({
   }
 
   const inProgress = handoff?.inProgress;
-  const current = inProgress?.task ? buildCurrent(inProgress.task, inProgress) : null;
+  const current = inProgress?.task && handoffText ? buildCurrent(inProgress.task, inProgress, handoffText) : null;
 
   const grouped = backlog?.grouped ?? [];
   const freeGroups: FreeGroup[] = (backlog?.free.groups ?? []).map((ref) => ({
@@ -116,11 +118,22 @@ export function buildModel({
 
 /**
  * Tarea en progreso con el avance de su plan y sus subsecciones de detalle (todas menos la que
- * tiene los checkboxes del plan; sus títulos están traducidos, así que no se eligen por nombre).
+ * tiene los checkboxes del plan; sus títulos están traducidos, así que no se eligen por nombre) y
+ * su modo de ejecución.
  */
-function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress): CurrentTask {
-  const details = subsections.filter((s) => !CHECKBOX_LINE_RE.test(s.body) && s.body.trim() !== "");
-  return { ...task, plan: buildPlan(steps), details, subsections };
+function buildCurrent(task: CurrentTaskLine, { steps, subsections }: InProgress, handoffText: string): CurrentTask {
+  const planSubs = new Set(planSubsections(subsections));
+  const details = subsections.filter((s) => !planSubs.has(s) && !CHECKBOX_LINE_RE.test(s.body) && s.body.trim() !== "");
+  return { ...task, plan: buildPlan(steps), details, subsections, mode: executionMode(handoffText, subsections) };
+}
+
+/**
+ * Modo de ejecución del plan: el de la última línea de modo (como `inspectCurrent` y `task mode`), solo si es uno de los cuatro valores
+ * válidos (texto legado, vacío o sin línea de modo → `null`).
+ */
+function executionMode(handoffText: string, subsections: Subsection[]): ExecutionMode | null {
+  const value = modeLines(handoffText, subsections).at(-1)?.value;
+  return value != null && isExecutionMode(value) ? value : null;
 }
 
 /** Avance de un plan: pasos hechos, total y el primer paso pendiente (el actual). */

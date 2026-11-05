@@ -22,6 +22,7 @@ import type {
   TeamRenderMeta,
   TeamRow,
 } from "../shared/types.ts";
+import type { ExecutionMode } from "../../../_shared/parse/plan-mode.ts";
 import type { HistoryEntry, TaskRef } from "../../../_shared/types.ts";
 import { BOX_PADDING, boxBottom, boxRow, boxTop, type Paint, type Segment } from "./box.ts";
 import { displayProjectName, plainText, progressBar, shortTaskName, truncate, visibleLength } from "./format.ts";
@@ -43,6 +44,14 @@ const SECONDARY_GRAY_256 = 250;
 const COMPLETED_GREEN_RGB = [0x6d, 0xb0, 0x7b] as const;
 /** Título y viñeta de "sin dueño": un azul pálido, #8FB3D9 (elegido por el operador). */
 const UNOWNED_BLUE_RGB = [0x8f, 0xb3, 0xd9] as const;
+
+/** Cómo se muestra cada modo de ejecución del plan (los valores en inglés son los del handoff). */
+const EXECUTION_MODE_TEXT: Record<ExecutionMode, string> = {
+  guided: "✏️ Guiado",
+  "step-by-step": "📋 Paso a paso",
+  auto: "🤖 Auto",
+  extreme: "🔥 Extremo",
+};
 
 type Colors = ReturnType<typeof picocolors.createColors>;
 /** Agrega una fila al recuadro abierto: sangría + tramos con estilo. */
@@ -277,6 +286,7 @@ export function render(model: Model, meta: RenderMeta): string {
             return;
           }
           row(0, { paint: (s) => pc.bold(pc.green(s)), text: fullTaskName(current) });
+          if (current.mode) row(0, { paint: pc.green, text: `Modo  ${EXECUTION_MODE_TEXT[current.mode]}` });
           planRows(current.plan, 0, row, pc);
           for (const sub of current.details) {
             const lines = sub.body.split("\n").map((l) => l.trim()).filter(Boolean);

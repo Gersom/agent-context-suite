@@ -2,6 +2,7 @@
 // archivos y resolver rutas. Los tipos del dominio (tareas, secciones, historial) viven en
 // `scripts/_shared/types.ts`.
 
+import type { ExecutionMode } from "../../../_shared/parse/plan-mode.ts";
 import type {
   BlockInfo,
   CurrentTaskLine,
@@ -48,6 +49,8 @@ export interface CurrentTask extends CurrentTaskLine {
   /** Subsecciones de la tarea salvo la que contiene los checkboxes del plan. */
   details: Subsection[];
   subsections: Subsection[];
+  /** Modo de ejecución del plan; `null` si no hay línea de modo, está vacía o trae texto legado (solo cuentan los cuatro modos). */
+  mode: ExecutionMode | null;
 }
 
 /** Modelo completo para la pantalla. */

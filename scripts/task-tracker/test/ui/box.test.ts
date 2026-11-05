@@ -23,6 +23,15 @@ describe("recuadros", () => {
     expect(visibleLength(boxRow([{ text: "un texto demasiado largo" }], 12))).toBe(12);
   });
 
+  test("fila: el recorte con un emoji de ancho 2 o con selector de variación deja el borde alineado", () => {
+    for (const mode of ["✏️ Guiado", "📋 Paso a paso", "🤖 Auto", "🔥 Extremo"]) {
+      for (let width = 8; width <= 30; width++) {
+        expect(visibleLength(boxRow([{ text: `Modo  ${mode}` }], width))).toBe(width);
+        expect(visibleLength(boxRow([{ text: `Modo  ${mode}`, paint: pc.green }], width, pc.green))).toBe(width);
+      }
+    }
+  });
+
   test("fila: los saltos de línea no rompen el borde", () => {
     expect(boxRow([{ text: "a\n  b" }], 10)).toBe("│ a b    │");
   });
