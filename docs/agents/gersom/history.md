@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-04 — ✅ Tarea 131 — Revisar las referencias de la skill a la suite
+
+- Revisadas las referencias de la skill a la suite (comandos acsuite, instalación, bloque de rules.md): estaban vigentes; no hace falta nombrar los comandos group-*.
+- Los enlaces a GitHub de skill/README.md y docs/suite-recommendation.md pasan al paquete de npm (https://www.npmjs.com/package/agent-context-suite); la lectura del README ahora usa npm view.
+- Commit en la skill: 54cf837.
+
 ## 2026-10-31 — ✅ Tarea 130 — Regla en rules.md: omitir la revisión independiente en tareas pequeñas
 
 - Regla nueva en «Reglas específicas de este proyecto» de docs/agents/rules.md, para todos los operadores: la revisión independiente se omite en tareas pequeñas (mensajes, texto o un solo archivo sin lógica nueva) y se hace con lógica nueva, varios archivos o comportamiento no cubierto por tests; tests y typecheck se corren siempre.
