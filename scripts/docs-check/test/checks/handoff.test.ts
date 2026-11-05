@@ -111,6 +111,15 @@ describe("current-subsection", () => {
     expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-subsection", file: FILE, line: lineOf(handoff, "### Notas") }]);
     expect(findings[0].message).toContain("«Notas»");
   });
+
+  test("subsección repetida, texto antes de la tarea y checkbox fuera del plan: `current-structure`", () => {
+    const repeated = HANDOFF.replace("### Qué falta", "### Qué falta\n\nuno\n\n### Qué falta");
+    expect(checkCurrentSubsections(makeCtx({ handoff: repeated })).map(brief)).toEqual([{ severity: "warning", code: "current-structure", file: FILE, line: lineOf(repeated, "### Qué falta") + 4 }]);
+    const outside = HANDOFF.replace("### Qué falta", "### Qué falta\n\n- [ ] suelto");
+    const findings = checkCurrentSubsections(makeCtx({ handoff: outside }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-structure", file: FILE, line: lineOf(outside, "- [ ] suelto") }]);
+    expect(findings[0].message).toContain("hay checkboxes fuera de la subsección del plan");
+  });
 });
 
 describe("current-plan-line", () => {

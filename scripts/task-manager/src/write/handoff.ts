@@ -179,29 +179,69 @@ export function invalidPlanLineMessages(invalids: InvalidPlanLine[], lang: Lang)
   return invalids.map((invalid, i) => invalidPlanLineMessage(invalid, lang, i === 0));
 }
 
-/** Una subsección de «Tarea en progreso» con un título que `close` y `pause` no reconocen. */
-export interface UnknownSubsection {
-  title: string;
-  /** Su número de línea en el archivo (1-based); `null` si no trae posiciones. */
-  line: number | null;
-}
-
 /** La parte del handoff que es una subsección: por su título o, si trae checkboxes, el plan; `null` si no es ninguna de las que `close` y `pause` aceptan. */
 function acceptedPart(sub: Subsection): HandoffPart | null {
   const part = partOf(sub.title) ?? (CHECKBOX_ANY_RE.test(sub.body) ? "plan" : null);
   return !part || part === "why" || part === "waits" || part === "mode" ? null : part;
 }
 
-/** Las subsecciones con título desconocido (por ejemplo `### Notas`) que `close` y `pause` rechazarían. */
-export function unknownSubsections(subsections: Subsection[]): UnknownSubsection[] {
-  return subsections.filter((sub) => !acceptedPart(sub)).map((sub) => ({ title: sub.title, line: sub.range?.startLine ?? null }));
+/** Qué tiene mal la estructura de «Tarea en progreso» (lo que `close` y `pause` rechazan además de las líneas del plan). */
+export type StructureProblemKind = "text-before" | "unknown-subsection" | "repeated-subsection" | "checkbox-outside";
+
+/** Un problema de la estructura de «Tarea en progreso» que `close` y `pause` rechazarían. */
+export interface StructureProblem {
+  kind: StructureProblemKind;
+  /** Qué pasa, en la forma en que lo dice el error de `close` y `pause`. */
+  why: string;
+  /** Su número de línea en el archivo (1-based); `null` si no se pudo ubicar. */
+  line: number | null;
+  /** Cuántos hay del mismo tipo juntos (solo `checkbox-outside`: se agrupan en un problema, con la línea del primero). */
+  count?: number;
 }
 
-/** Aviso (no bloquea) para `step` y docs-check: una subsección que `close` y `pause` rechazarían. */
-export function unknownSubsectionMessage(unknown: UnknownSubsection, lang: Lang = "es"): string {
+/**
+ * Los problemas de estructura de «Tarea en progreso» que `close` y `pause` rechazan, en el orden en
+ * que los detectan (texto antes de la tarea, subsecciones desconocidas o repetidas, checkboxes
+ * fuera del plan). Pura: no lee ni escribe nada; no incluye las líneas inválidas del plan (ver `invalidPlanLines`).
+ * @param text handoff.md completo, el mismo que se parseó
+ */
+export function structureProblems(text: string, handoff: ParsedHandoff, lang: Lang = "es"): StructureProblem[] {
+  const { task, steps, subsections } = handoff.inProgress;
+  const section = handoff.sections["in-progress"];
+  if (!task?.range || !section) return [];
   const S = STRINGS[lang];
-  const where = unknown.line === null ? "" : ` (línea ${unknown.line})`;
-  return `«Tarea en progreso» tiene la subsección «${unknown.title.slice(0, 60)}»${where}, que no es una de las conocidas (Plan, ${S.missing}, ${S.decisions}, ${S.next}); \`close\` y \`pause\` la rechazarían.`;
+  const problems: StructureProblem[] = [];
+
+  if (stripComments(text.slice(section.bodyRange.start, task.range.start)).trim()) {
+    problems.push({ kind: "text-before", why: "hay texto antes de la línea `Tarea N — título`", line: null });
+  }
+
+  const seen = new Set<HandoffPart>();
+  for (const sub of subsections) {
+    const line = sub.range?.startLine ?? null;
+    const part = acceptedPart(sub);
+    if (!part) {
+      problems.push({ kind: "unknown-subsection", why: `la subsección «${sub.title}» no es una de las conocidas (Plan, ${S.missing}, ${S.decisions}, ${S.next})`, line });
+    } else if (seen.has(part)) {
+      problems.push({ kind: "repeated-subsection", why: `la subsección «${sub.title}» está repetida`, line });
+    } else {
+      seen.add(part);
+    }
+  }
+
+  const plan = subsections.find((sub) => acceptedPart(sub) === "plan");
+  const outside = steps.filter((step) => !plan?.range || !step.range || step.range.start < plan.range.start || step.range.end > plan.range.end);
+  if (outside.length) {
+    problems.push({ kind: "checkbox-outside", why: "hay checkboxes fuera de la subsección del plan", line: outside[0].range?.startLine ?? null, count: outside.length });
+  }
+  return problems;
+}
+
+/** Aviso (no bloquea) para `step`, `edit` y docs-check: un problema de estructura que `close` y `pause` rechazarían. */
+export function structureProblemMessage(problem: StructureProblem): string {
+  const where = problem.line === null ? "" : ` (línea ${problem.line})`;
+  const more = problem.count && problem.count > 1 ? ` (el primero; son ${problem.count})` : "";
+  return `«Tarea en progreso»: ${problem.why}${where}${more}; \`close\` y \`pause\` la rechazarían.`;
 }
 
 /** Separa el texto previo a las subsecciones en descripción y campos `- **Campo:** valor` (con sus líneas de continuación). */
@@ -223,30 +263,23 @@ function splitPreamble(text: string): { description: string | null; extras: stri
  *   otro título, repetida, texto suelto en el plan...): hay que resolverlo a mano
  */
 export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): CurrentParts {
-  const { task, steps, subsections } = handoff.parsed.inProgress;
+  const { task, subsections } = handoff.parsed.inProgress;
   const section = handoff.parsed.sections["in-progress"];
   if (!task?.range || !section) throw new CliError(`No hay tarea en curso que ${action}: «Tarea en progreso» dice «Sin tarea en curso». No se escribió nada.`);
   const manual = (why: string) => new CliError(`No puedo ${action} la Tarea ${task.number}: ${why}. Revisa «Tarea en progreso» de handoff.md a mano. No se escribió nada.`);
   const text = handoff.text;
 
-  const before = stripComments(text.slice(section.bodyRange.start, task.range.start));
-  if (before.trim()) throw manual("hay texto antes de la línea `Tarea N — título`");
+  // Solo el primer problema: es el que detiene `close` y `pause`.
+  const [problem] = structureProblems(text, handoff.parsed);
+  if (problem) throw manual(problem.why);
 
   const parts = new Map<HandoffPart, Subsection>();
-  for (const sub of subsections) {
-    const part = acceptedPart(sub);
-    if (!part) throw manual(`la subsección «${sub.title}» no es una de las conocidas (Plan, ${STRINGS.es.missing}, ${STRINGS.es.decisions}, ${STRINGS.es.next})`);
-    if (parts.has(part)) throw manual(`la subsección «${sub.title}» está repetida`);
-    parts.set(part, sub);
-  }
+  for (const sub of subsections) parts.set(acceptedPart(sub)!, sub);
 
   const plan = parts.get("plan");
   let mode: string | null = null;
   const planLines: string[] | null = plan ? [] : null;
   if (plan) {
-    if (steps.some((step) => !step.range || step.range.start < plan.range!.start || step.range.end > plan.range!.end)) {
-      throw manual("hay checkboxes fuera de la subsección del plan");
-    }
     for (const line of plan.body.split("\n").map((l) => l.trim()).filter(Boolean)) {
       const kind = classifyPlanLine(line);
       if (kind.kind === "step") planLines!.push(line);
@@ -257,8 +290,6 @@ export function inspectCurrent(handoff: Doc<ParsedHandoff>, action: string): Cur
         throw manual(`el plan tiene texto que no es un paso ni el modo de ejecución («${line.slice(0, 60)}»${where}); formato válido: ${planFormat(detectLanguage([task.label]).lang)}`);
       }
     }
-  } else if (steps.length) {
-    throw manual("hay checkboxes fuera de la subsección del plan");
   }
 
   const firstSub = subsections[0]?.range?.start ?? section.bodyRange.end;

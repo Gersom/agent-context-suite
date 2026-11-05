@@ -3,7 +3,7 @@
 
 import { isPlaceholder, stripComments } from "../../../_shared/parse/markdown.ts";
 import { detectLanguage } from "../../../task-manager/src/write/language.ts";
-import { EXECUTION_MODES, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, unknownSubsectionMessage, unknownSubsections } from "../../../task-manager/src/write/handoff.ts";
+import { EXECUTION_MODES, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, structureProblemMessage, structureProblems } from "../../../task-manager/src/write/handoff.ts";
 import type { Check, Finding } from "../types.ts";
 
 // «Sin tarea en curso» en los idiomas conocidos (el texto de la plantilla está traducido).
@@ -61,17 +61,17 @@ export const checkCurrentPlanLines: Check = ({ docs }) => {
   }));
 };
 
-/** Subsecciones de la tarea en curso con un título que `close` y `pause` no reconocen (por ejemplo `### Notas`). */
+/** Problemas de estructura de la tarea en curso que `close` y `pause` rechazan: `current-subsection` (título desconocido, por ejemplo `### Notas`) y `current-structure` (subsección repetida, texto antes de la tarea, checkboxes fuera del plan). */
 export const checkCurrentSubsections: Check = ({ docs }) => {
   const { handoff } = docs;
   if (!handoff.exists || !handoff.parsed.inProgress.task) return [];
-  const { task, subsections } = handoff.parsed.inProgress;
-  return unknownSubsections(subsections).map((unknown) => ({
+  const { task } = handoff.parsed.inProgress;
+  return structureProblems(handoff.text, handoff.parsed, detectLanguage([task.label]).lang).map((problem) => ({
     severity: "warning",
-    code: "current-subsection",
+    code: problem.kind === "unknown-subsection" ? "current-subsection" : "current-structure",
     file: handoff.file,
-    line: unknown.line ?? task.range?.startLine ?? 1,
-    message: unknownSubsectionMessage(unknown, detectLanguage([task.label]).lang),
+    line: problem.line ?? task.range?.startLine ?? 1,
+    message: structureProblemMessage(problem),
   }));
 };
 

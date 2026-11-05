@@ -398,6 +398,13 @@ describe("edit — handoff.md", () => {
       expect(out).toContain(`(línea ${line}): «Una nota suelta.»`);
     });
 
+    test("en curso: también avisa de una subsección desconocida o de un checkbox fuera del plan", async () => {
+      const unknown = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": HANDOFF_FULL.replace("### Qué falta", "### Notas\n\nalgo\n\n### Qué falta") } });
+      expect((await exec(["edit", "12", "--next", "Correr los tests", "--apply"], unknown)).out).toContain("la subsección «Notas» no es una de las conocidas");
+      const outside = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": HANDOFF_FULL.replace("### Qué falta", "### Qué falta\n\n- [ ] suelto") } });
+      expect((await exec(["edit", "12", "--next", "Correr los tests", "--apply"], outside)).out).toContain("hay checkboxes fuera de la subsección del plan");
+    });
+
     test("varias líneas inválidas: un Aviso por línea, con el formato válido solo en el primero", async () => {
       const handoffText = LOOSE.replace("- [ ] Paso 2 — Probar", "Otra nota.\n- [ ] Paso 2 — Probar");
       const p = project({ folders: ["gersom"], ...FULL, contents: { ...FULL.contents, "handoff.md": handoffText } });

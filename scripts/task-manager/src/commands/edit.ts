@@ -20,7 +20,7 @@ import { requireDoc, type Doc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
 import { BLOCKING_TAGS } from "../write/blocking.ts";
 import { singleLine, textFlag } from "../write/flags.ts";
-import { findPart, invalidPlanLineMessages, invalidPlanLines } from "../write/handoff.ts";
+import { findPart, invalidPlanLineMessages, invalidPlanLines, structureProblemMessage, structureProblems } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
 import { detectLanguage, STRINGS, type FieldKind } from "../write/language.ts";
 import { normalizeText, renderField } from "../write/render.ts";
@@ -296,10 +296,15 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
   // Avisa (no bloquea) de las líneas del plan de la tarea en curso que `close` y `pause` rechazarían.
   // Se evalúa sobre el texto ya editado: así el número de línea es el que tendrá el archivo escrito.
   const edited = [...edits].sort((a, b) => b.start - a.start || b.end - a.end).reduce((acc, e) => acc.slice(0, e.start) + e.text + acc.slice(e.end), text);
-  const planNotices =
-    location.place === "in-progress"
-      ? invalidPlanLineMessages(invalidPlanLines(edited, parseHandoff(edited).inProgress.subsections), detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)]).lang)
-      : [];
+  let planNotices: string[] = [];
+  if (location.place === "in-progress") {
+    const reparsed = parseHandoff(edited);
+    const lang = detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)]).lang;
+    planNotices = [
+      ...invalidPlanLineMessages(invalidPlanLines(edited, reparsed.inProgress.subsections), lang),
+      ...structureProblems(edited, reparsed, lang).map(structureProblemMessage),
+    ];
+  }
   const notices = [names.notice(), ...planNotices].filter((part) => part !== null);
   return { doc: handoff, edits, task: { number: location.number, title: given.title ?? title }, place: location.place, notices };
 }

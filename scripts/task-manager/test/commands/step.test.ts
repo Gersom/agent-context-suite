@@ -178,8 +178,23 @@ describe("step", () => {
       const line = handoff(p).split("\n").indexOf("### Notas") + 1;
       const { code, out } = await exec(["step", "1", "--apply"], p);
       expect(code).toBe(0);
-      expect(out).toContain(`Aviso: «Tarea en progreso» tiene la subsección «Notas» (línea ${line})`);
+      expect(out).toContain(`Aviso: «Tarea en progreso»: la subsección «Notas» no es una de las conocidas`);
+      expect(out).toContain(`(línea ${line}); \`close\` y \`pause\` la rechazarían.`);
       expect(handoff(p)).toContain("- [x] Paso 1 — Escribir");
+    });
+
+    test("una subsección repetida o un checkbox fuera del plan también avisan, sin bloquear", async () => {
+      const p = await started();
+      writeFileSync(join(p.agents, "gersom", "handoff.md"), handoff(p).replace("### Qué falta", "### Qué falta\n\nuno\n\n### Qué falta"));
+      const repeated = await exec(["step", "1", "--apply"], p);
+      expect(repeated.code).toBe(0);
+      expect(repeated.out).toContain("la subsección «Qué falta» está repetida");
+
+      const q = await started();
+      writeFileSync(join(q.agents, "gersom", "handoff.md"), handoff(q).replace("### Qué falta", "### Qué falta\n\n- [ ] suelto"));
+      const outside = await exec(["step", "1", "--apply"], q);
+      expect(outside.code).toBe(0);
+      expect(outside.out).toContain("hay checkboxes fuera de la subsección del plan");
     });
   });
 

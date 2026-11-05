@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { UsageError } from "../../src/cli/errors.ts";
-import { classifyPlanLine, EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, parseExecutionMode, planFormat, unknownSubsectionMessage, unknownSubsections } from "../../src/write/handoff.ts";
+import { classifyPlanLine, EXECUTION_MODES, invalidPlanLineMessage, invalidPlanLineMessages, invalidPlanLines, isExecutionMode, modeLines, parseExecutionMode, planFormat, structureProblemMessage, structureProblems } from "../../src/write/handoff.ts";
 
 const handoff = (plan: string) => `<!-- agent-context-skill:section=in-progress -->
 ## Tarea en progreso
@@ -104,18 +104,59 @@ describe("planFormat y mensaje", () => {
     expect(invalidPlanLineMessages([], "es")).toEqual([]);
   });
 
-  test("subsecciones desconocidas: las que close y pause rechazarían, con su línea", () => {
-    const subsections = [
-      { title: "Plan", body: "- [ ] Paso 1 — A" },
-      { title: "Notas", body: "algo", range: { startLine: 9, endLine: 11, start: 0, end: 0 } },
-      { title: "Qué falta", body: "x" },
-      { title: "Por qué se pausó", body: "y" },
-    ];
-    expect(unknownSubsections(subsections)).toEqual([
-      { title: "Notas", line: 9 },
-      { title: "Por qué se pausó", line: null },
-    ]);
-    expect(unknownSubsectionMessage({ title: "Notas", line: 9 })).toContain("«Notas» (línea 9)");
+});
+
+describe("structureProblems", () => {
+  const section = (body: string) =>
+    `# Handoff\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\n${body}\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\nNinguna.\n`;
+  const problems = (body: string, lang: "es" | "en" = "es") => {
+    const text = section(body);
+    return structureProblems(text, parseHandoff(text), lang).map(({ kind, line }) => ({ kind, line }));
+  };
+  const lineOf = (body: string, needle: string) => section(body).split("\n").indexOf(needle) + 1;
+  const PLAN = "### Plan\n\n- [ ] Paso 1 — A";
+
+  test("una estructura válida no tiene problemas", () => {
+    expect(problems(`Tarea 7 — Algo\n\n${PLAN}\n\n### Qué falta\n\nx\n\n### Próximo paso concreto\n\ny`)).toEqual([]);
+    expect(structureProblems("", parseHandoff(""))).toEqual([]);
+  });
+
+  test("subsección con título desconocido, con su línea", () => {
+    const body = `Tarea 7 — Algo\n\n${PLAN}\n\n### Notas\n\nalgo`;
+    expect(problems(body)).toEqual([{ kind: "unknown-subsection", line: lineOf(body, "### Notas") }]);
+    expect(problems(`Tarea 7 — Algo\n\n${PLAN}\n\n### Por qué se pausó\n\ny`).map((p) => p.kind)).toEqual(["unknown-subsection"]);
+  });
+
+  test("subsección repetida y checkboxes en otra subsección que se toma como segundo plan", () => {
+    const repeated = `Tarea 7 — Algo\n\n${PLAN}\n\n### Qué falta\n\nx\n\n### Qué falta\n\ny`;
+    expect(problems(repeated).map((p) => p.kind)).toEqual(["repeated-subsection"]);
+    const second = `Tarea 7 — Algo\n\n${PLAN}\n\n### Notas\n\n- [ ] otro paso`;
+    expect(problems(second).map((p) => p.kind)).toEqual(["repeated-subsection", "checkbox-outside"]);
+  });
+
+  test("checkboxes fuera del plan: un problema con la línea del primero y cuántos son; sin plan, todos", () => {
+    const body = `Tarea 7 — Algo\n\n- [ ] suelto\n\n${PLAN}\n\n### Qué falta\n\nx`;
+    expect(problems(body)).toEqual([{ kind: "checkbox-outside", line: lineOf(body, "- [ ] suelto") }]);
+    const loose = "Tarea 7 — Algo\n\n- [ ] a\n- [ ] b\n- [ ] c";
+    const text = section(loose);
+    const [only, ...rest] = structureProblems(text, parseHandoff(text));
+    expect(rest).toEqual([]);
+    expect(only).toMatchObject({ kind: "checkbox-outside", count: 3 });
+    expect(structureProblemMessage(only)).toContain("(el primero; son 3)");
+  });
+
+  test("texto antes de la línea de la tarea", () => {
+    expect(problems(`Una nota.\n\nTarea 7 — Algo\n\n${PLAN}`).map((p) => p.kind)).toEqual(["text-before"]);
+  });
+
+  test("el mensaje cita el motivo y la línea; las etiquetas válidas siguen el idioma", () => {
+    const text = section(`Tarea 7 — Algo\n\n${PLAN}\n\n### Notas\n\nalgo`);
+    const [es] = structureProblems(text, parseHandoff(text), "es");
+    const [en] = structureProblems(text, parseHandoff(text), "en");
+    expect(structureProblemMessage(es)).toContain("«Notas»");
+    expect(structureProblemMessage(es)).toContain(`(línea ${es.line})`);
+    expect(es.why).toContain("Qué falta");
+    expect(en.why).not.toContain("Qué falta");
   });
 });
 
