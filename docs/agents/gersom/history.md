@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 146 — task-manager: unificar parsePreamble y FIELD_LINE_RE con text-fields.ts
+
+- Refactor: parsePreamble reescrito sobre classifyPreamble (con offsets y maskComments) y matchFieldLine compartido con group.ts.
+
 ## 2026-11-05 — ✅ Tarea 142 — board: unificar con task-manager las regex y funciones duplicadas
 
 - Refactor: parseo de campos compartido entre board y task-manager en _shared/parse/text-fields.ts; wrapText reemplaza wrapWords; CurrentTask sin subsections.
