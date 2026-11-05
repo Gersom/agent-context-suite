@@ -1,6 +1,6 @@
 {
   "name": "agent-context-suite",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Suite de herramientas (task-tracker, task-manager, docs-check) para los proyectos que usan la skill agent-context-skill, que genera documentación de contexto de proyecto para agentes de IA.",
   "license": "MIT",
   "type": "module",
