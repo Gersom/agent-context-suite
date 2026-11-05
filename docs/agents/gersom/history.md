@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ❌ Tarea 139 — Marca (verificar) por paso dentro del modo auto
+
+- No hace falta por ahora: el modo auto ya para en los pasos que solo puede hacer el operador y en las acciones irreversibles o externas, step-by-step cubre revisar todo, y para un punto de control puntual basta pedirlo en el chat o dividir la tarea. Retomarla solo si, usando auto en tareas reales, aparece un caso concreto que lo pida.
+
 ## 2026-11-05 — ✅ Tarea 134 — Rediseñar la sección "EN PROGRESO" de acsuite board
 
 - Rediseñadas las secciones EN PROGRESO y PAUSADAS del board: Estado con barra (recién iniciado, Paso k de n, pasos completos) en lugar de Plan x/y, y Descripción y Decisiones como subtítulos con salto de línea (hasta 3 líneas); sin Qué falta, Próximo paso concreto ni otras subsecciones. Las pausadas usan la misma estructura más Por qué se pausó y Qué espera para retomarse.

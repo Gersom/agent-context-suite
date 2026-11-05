@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Sale de la Tarea 140, que cambia la plantilla y template-architecture.md sin subir la versión. Versionado de la skill en su repo (ver docs/releasing.md de la suite); tag anotado vX.Y.Z.
 - **Agregada:** 2026-11-05.
 
-### Tarea 139 — Marca (verificar) por paso dentro del modo auto
-
-- **Descripción:** Opcional: permitir marcar pasos del plan con (verificar) para que en modo auto el agente pare ahí además de los criterios de rules.md.
-- **Decisiones/temas a definir antes de empezar:** Si hace falta: se evalúa tras usar los tres modos.
-- **Bloqueos:** `[Resuelto el 2026-11-05]` — era `[dependencia]` depende de la Tarea 136 (modo auto) y de la Tarea 137 (criterios de parada).
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Del issue #3 (https://github.com/Gersom/agent-context-suite/issues/3). Alternativa descartada por ahora porque se pisaba con el modo; solo tiene sentido dentro de auto.
-- **Agregada:** 2026-11-04.
-
 ### Tarea 142 — board: unificar con task-manager las regex y funciones duplicadas
 
 - **Descripción:** Subir a scripts/_shared/parse lo que hoy está duplicado entre task-tracker/src/model/model.ts y task-manager: NONE_RE (ya divergió: task-manager acepta n/a), DESCRIPTION_LABEL_RE, FIELD_START_RE y la lectura de la descripción (currentDescription vs splitPreamble). Quitar también wrapText o wrapWords, que hacen casi lo mismo, y el campo CurrentTask.subsections, que ya nadie usa.
