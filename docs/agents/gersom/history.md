@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-05 — ✅ Tarea 149 — Skill: que el agente pregunte el modo con letras al presentar el plan
+
+- La regla 2b ofrece los cuatro modos como letras en el idioma del operador (extremo pide confirmación aparte), en la suite y en la plantilla de la skill.
+
 ## 2026-11-05 — ✅ Tarea 148 — Avisar de todo lo que close y pause rechazan en Tarea en progreso
 
 - structureProblems unifica los problemas de estructura de Tarea en progreso; step, edit y docs-check (current-structure) avisan antes de que close y pause los rechacen.
