@@ -238,7 +238,8 @@ Registra el **modo de ejecución acordado** del plan de la tarea en curso como l
 - **Reemplaza o agrega:** si el plan ya tiene una línea de modo la reemplaza (también la de antes con texto libre, como «uno a la vez», y la que tiene la etiqueta de otro idioma, que no se duplica); si no, la agrega al final del plan, con la etiqueta del idioma del proyecto (con aviso, como `add`, si no lo reconoce). Es idempotente: con el mismo valor avisa que no hay nada que cambiar y no escribe.
 - **Solo la tarea en curso y con plan:** sin tarea en curso, o sin plan (checkboxes), es un error que no escribe nada; con contenido de «Tarea en progreso» que no reconoce (ver `pause`), también se niega.
 - **Legado:** un texto libre ya escrito en un handoff sigue siendo válido para `close`, `pause` y `resume`; `mode` lo reemplaza y `docs-check` lo señala (`current-mode`).
-- `--json` informa `task`, `mode`, `previous`, `unchanged` y `notice`, además de los campos comunes de los comandos que escriben.
+- **Varias líneas de modo:** si el plan tiene más de una, la vigente es la última (la que leen el tablero y `close`): `mode` la reemplaza, borra las anteriores y avisa de cuáles; aunque la última ya tenga el valor pedido, limpia las demás.
+- `--json` informa `task`, `mode`, `previous`, `unchanged`, `removed` (cuántas líneas anteriores borró) y `notice`, además de los campos comunes de los comandos que escriben.
 
 ### `pause`
 

@@ -90,6 +90,62 @@ describe("mode", () => {
     expect(json).toMatchObject({ command: "mode", applied: false, pending: false, unchanged: true, mode: "auto", previous: "auto" });
   });
 
+  describe("varias líneas de modo en el plan", () => {
+    /** Tarea con el plan y, antes del modo vigente, las líneas de modo extra que se pidan. */
+    async function withExtras(extras: string[], current = "auto"): Promise<Project> {
+      const p = await started(["--mode", current]);
+      write(p, handoff(p).replace(MODE_ES(current), [...extras, MODE_ES(current)].join("\n\n")));
+      return p;
+    }
+
+    test("conserva la última, la reemplaza y borra las anteriores sin dejar huecos", async () => {
+      const p = await withExtras([MODE_ES("seguidos"), "**Agreed execution mode:** guided"], "auto");
+      const { code, out } = await exec(["mode", "step-by-step", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("quedó solo la última");
+      const text = handoff(p);
+      expect(text.match(/odo de ejecución acordado|Agreed execution mode/g)).toHaveLength(1);
+      expect(text).toContain(`${PLAN_END}\n${MODE_ES("step-by-step")}\n\n### `);
+      expect(text).not.toContain("\n\n\n");
+    });
+
+    test("si la última ya tiene el valor pedido igual limpia las demás; con una sola línea igual no escribe", async () => {
+      const p = await withExtras([MODE_ES("guided")], "auto");
+      const { out } = await exec(["mode", "auto", "--apply"], p);
+      expect(out).toContain("quedó solo la última");
+      expect(handoff(p)).not.toContain("guided");
+      expect(handoff(p)).toContain(MODE_ES("auto"));
+      const before = snapshot(p.root);
+      expect((await exec(["mode", "auto", "--apply"], p)).out).toContain("ya tiene el modo");
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("el aviso concuerda en número y, si el valor no cambia, no dice «cambiado de X a X»", async () => {
+      const many = await withExtras([MODE_ES("seguidos"), MODE_ES("guided")], "auto");
+      expect((await exec(["mode", "step-by-step", "--apply"], many)).out).toContain("se borraron las líneas");
+      const same = await withExtras([MODE_ES("guided")], "auto");
+      const { out } = await exec(["mode", "auto", "--apply"], same);
+      expect(out).toContain("se borró la línea");
+      expect(out).not.toContain("cambiado de");
+    });
+
+    test("una línea de modo extra que comparte un comentario HTML de varias líneas: se niega y no escribe", async () => {
+      const p = await started(["--mode", "auto"]);
+      write(p, handoff(p).replace(MODE_ES("auto"), `<!-- abre\ny cierra --> ${MODE_ES("guided")}\n\n${MODE_ES("auto")}`));
+      const before = snapshot(p.root);
+      const { code, err } = await exec(["mode", "step-by-step", "--apply"], p);
+      expect(code).toBe(1);
+      expect(err).toContain("comentario HTML de varias líneas");
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("--json informa cuántas borró", async () => {
+      const p = await withExtras([MODE_ES("seguidos")], "auto");
+      const json = JSON.parse((await exec(["mode", "guided", "--json", "--apply"], p)).out);
+      expect(json).toMatchObject({ mode: "guided", previous: "auto", removed: 1, unchanged: false });
+    });
+  });
+
   test("sin --apply muestra el diff y no escribe nada", async () => {
     const p = await started();
     const before = snapshot(p.root);

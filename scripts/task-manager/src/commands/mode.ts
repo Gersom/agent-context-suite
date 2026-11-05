@@ -6,8 +6,9 @@
 
 import { CliError, UsageError } from "../cli/errors.ts";
 import type { Command } from "../cli/types.ts";
-import { insertAt, replaceRange } from "../edit/edits.ts";
+import { deleteRange, insertAt, replaceRange } from "../edit/edits.ts";
 import { contentBounds } from "../edit/layout.ts";
+import { commentSpans } from "../../../_shared/parse/markdown.ts";
 import { relFile } from "../query/format.ts";
 import { requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
@@ -49,9 +50,21 @@ export const mode: Command = {
     const { lang, notice } = detectLanguage([current.label, ...headerLabels(docs)]);
     const S = STRINGS[lang];
     const line = `**${S.mode}:** ${value}`;
-    const existing = modeLines(handoff.text, handoff.parsed.inProgress.subsections).at(-1);
+    const all = modeLines(handoff.text, handoff.parsed.inProgress.subsections);
+    // La última es la vigente (la que leen el board y `close`); las anteriores sobran y se borran.
+    const existing = all.at(-1);
+    const extras = all.slice(0, -1);
     const previous = existing?.value ?? null;
-    const unchanged = existing?.value === value;
+    const unchanged = existing?.value === value && !extras.length;
+    // Borrar la línea de un comentario HTML de varias líneas lo dejaría partido (y taparía o destaparía otras líneas del plan).
+    const multiline = commentSpans(handoff.text).filter(([from, to]) => handoff.text.slice(from, to).includes("\n"));
+    const split = extras.find((extra) => {
+      const { start, end } = wholeLine(handoff.text, extra);
+      return multiline.some(([from, to]) => from < end && to > start);
+    });
+    if (split) {
+      throw new CliError(`La línea de modo ${split.line} comparte un comentario HTML de varias líneas con otras: no puedo borrarla sin partirlo; resuélvelo a mano en «Plan». No se escribió nada.`);
+    }
 
     // Reemplaza la línea que haya, con su etiqueta en cualquier idioma; si no hay, va al final del plan.
     const edits = unchanged
@@ -60,18 +73,34 @@ export const mode: Command = {
           existing
             ? replaceRange(existing, line)
             : insertAt(contentBounds(handoff.text, plan.range)!.end, `\n\n${line}`),
+          ...extras.map((extra) => deleteRange(wholeLine(handoff.text, extra))),
         ];
     const result = ctx.commit([{ doc: handoff, edits }], { quiet: flags.json === true || unchanged });
 
     if (flags.json === true) {
-      emitWriteJson(ctx, "mode", result, { task: { number: current.number, title: current.title }, mode: value, previous, unchanged, notice });
+      emitWriteJson(ctx, "mode", result, { task: { number: current.number, title: current.title }, mode: value, previous, unchanged, removed: extras.length, notice });
       return;
     }
     if (unchanged) {
       io.out(`Aviso: la Tarea ${current.number} ya tiene el modo de ejecución «${value}»: no hay nada que cambiar.`);
     } else if (result.files.some((file) => file.written)) {
-      io.out(`Tarea ${current.number}: modo de ejecución ${previous ? `cambiado de «${previous}» a` : "fijado en"} «${value}» (${relFile(ws, handoff.path)}).`);
+      const sameValue = previous === value;
+      io.out(
+        sameValue
+          ? `Tarea ${current.number}: modo de ejecución «${value}» (${relFile(ws, handoff.path)}).`
+          : `Tarea ${current.number}: modo de ejecución ${previous ? `cambiado de «${previous}» a` : "fijado en"} «${value}» (${relFile(ws, handoff.path)}).`,
+      );
     }
+    if (extras.length && !unchanged) io.out(`Aviso: el plan tenía ${all.length} líneas de modo; quedó solo la última (${extras.length === 1 ? "se borró la línea" : "se borraron las líneas"} ${extras.map((extra) => extra.line).join(", ")}).`);
     if (notice) io.out(`Aviso: ${notice}`);
   },
 };
+
+/** El rango de la línea de `mode` entera (sangría y salto de línea incluidos), con la línea en blanco que la precede si la hay, para no dejar huecos. */
+function wholeLine(text: string, mode: { start: number; end: number }): { start: number; end: number } {
+  let start = text.lastIndexOf("\n", mode.start - 1) + 1;
+  const newline = text.indexOf("\n", mode.end);
+  const end = newline === -1 ? text.length : newline + 1;
+  if (start >= 2 && text[start - 2] === "\n") start -= 1;
+  return { start, end };
+}
