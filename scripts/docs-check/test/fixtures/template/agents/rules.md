@@ -1,4 +1,4 @@
-<!-- agent-context-skill:version 2.4.0 — versión de la skill con la que se generaron las Reglas por defecto de este archivo; ignorar al leer, no es contenido. Lo usa la skill para detectar versiones más nuevas (ver docs/version-check.md de la skill). -->
+<!-- agent-context-skill:version 2.4.1 — versión de la skill con la que se generaron las Reglas por defecto de este archivo; ignorar al leer, no es contenido. Lo usa la skill para detectar versiones más nuevas (ver docs/version-check.md de la skill). -->
 # Reglas del proyecto
 
 ## Reglas por defecto (fijas — no se editan por proyecto)
@@ -9,7 +9,15 @@ Vienen con la skill y aplican a cualquier proyecto; las reglas de proceso adicio
 
 2. **El tamaño de la tarea decide el proceso:**
    - **Pequeña o muy pequeña** → se ejecuta directo, sin plan.
-   - **Mediana a grande** → primero un plan con los pasos, escrito completo en el chat; después, en ese mismo mensaje, que cierra el turno, y en texto (no con el recuadro de preguntas, para que el plan se vea), preguntarle al operador si el plan está bien y en qué modo prefiere ejecutarlo, con las alternativas como letras en su idioma, p. ej. «Este es el plan; si te parece bien, dime qué modo prefieres: A) guiado (tú ejecutas y yo te guío) · B) paso a paso (ejecuto un paso y espero tu confirmación) · C) automático (ejecuto los pasos seguidos y me detengo ante lo irreversible, lo externo o lo que el plan no resolvió) · D) extremo (hago todo y espero solo al final)». Una letra acepta el plan y fija el modo; un texto libre se toma como cambios al plan, que se vuelve a presentar. Los ids del modo son siempre `guided`, `step-by-step`, `auto` y `extreme` aunque las alternativas se traduzcan; el modo acordado queda en la línea `**Modo de ejecución acordado:** <valor>` del plan. `extreme` es peligroso: aunque el operador haya elegido su letra, se le pide una confirmación explícita aparte antes de continuar.
+   - **Mediana a grande** → primero un plan con los pasos, escrito completo en el chat; después, en ese mismo mensaje, que cierra el turno, y en texto (no con el recuadro de preguntas, para que el plan se vea), preguntarle al operador si el plan está bien y en qué modo prefiere ejecutarlo, con las alternativas como letras en su idioma, **una por línea** (con salto de línea entre opciones, nunca en un párrafo corrido ni separadas por «·»), p. ej.:
+     > Este es el plan; si te parece bien, dime qué modo prefieres:
+     >
+     > A) guiado (tú ejecutas y yo te guío)
+     > B) paso a paso (ejecuto un paso y espero tu confirmación)
+     > C) automático (ejecuto los pasos seguidos y me detengo ante lo irreversible, lo externo o lo que el plan no resolvió)
+     > D) extremo (hago todo y espero solo al final)
+
+     Una letra acepta el plan y fija el modo; un texto libre se toma como cambios al plan, que se vuelve a presentar. Los ids del modo son siempre `guided`, `step-by-step`, `auto` y `extreme` aunque las alternativas se traduzcan; el modo acordado queda en la línea `**Modo de ejecución acordado:** <valor>` del plan. `extreme` es peligroso: aunque el operador haya elegido su letra, se le pide una confirmación explícita aparte antes de continuar.
    - **Antes de actuar, de cualquier tamaño:** (a) *pedir no es autorizar*: una pregunta, investigación, explicación, revisión, comparación o proponer una solución es solo lectura, y no se edita ni se ejecuta ningún cambio hasta que el operador pida implementar; si la intención es ambigua, una sola aclaración y seguir en solo lectura. (b) *Explorar primero*: mirar el código y los requisitos relevantes, en proporción a la tarea, antes de proponer o escribir. (c) *Ante una duda real de producto*, una sola pregunta concreta y esperar la respuesta; no asumir.
 
 3. **Idioma de la documentación:** todo lo que un agente redacte acá (prosa y headers) va en el idioma registrado abajo, detectado una sola vez al generar esta documentación; no se vuelve a preguntar. Siempre en inglés: nombres de archivo/carpeta del catálogo y términos de la skill o jerga técnica sin traducción asentada ("Handoff", "Backlog", "Placeholder", "linter", "commit", "deploy").

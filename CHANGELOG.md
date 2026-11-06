@@ -2,6 +2,17 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.2.1
+
+Solo documentación: la regla 2 de `rules.md` pide al agente que presente las alternativas de modo (A–D) una por línea y no en un párrafo corrido. Va con la skill 2.4.1.
+
+### Cómo pasar de la 2.2.0 a la 2.2.1
+
+1. Actualiza el paquete: `npm install -g agent-context-suite@latest`.
+2. Actualiza la skill a la **2.4.1** en tus proyectos (su changelog trae el texto exacto de la regla 2 a reemplazar).
+
+No cambia ningún comando ni el formato de los archivos.
+
 ## 2.2.0
 
 Los modos de ejecución del plan (`guided`, `step-by-step`, `auto`, `extreme`), un tablero más claro y avisos antes de que `close` y `pause` fallen. No rompe nada para quien ya usa la suite.
