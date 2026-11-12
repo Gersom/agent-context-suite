@@ -1,35 +1,37 @@
+English | [Español](./README.es.md)
+
 # agent-context-suite
 
-Suite de herramientas para trabajar con la skill [agent-context-skill](https://github.com/Gersom/agent-context-skill), que genera documentación de contexto de proyecto para que **cualquier agente de IA** (Claude Code, Cursor, Copilot, etc.) entienda en qué momento está un proyecto, qué falta, qué se hizo y por qué — sin depender de la memoria de una sola conversación. La skill vive en su propio repo (`agent-context-skill`); este repo tiene las herramientas (seguimiento, gestión y verificación de tareas).
+A suite of tools for working with the [agent-context-skill](https://github.com/Gersom/agent-context-skill) skill, which generates project context documentation so that **any AI agent** (Claude Code, Cursor, Copilot, etc.) understands where a project stands, what is missing, what was done and why — without depending on the memory of a single conversation. The skill lives in its own repo (`agent-context-skill`); this repo has the tools (task tracking, management and verification).
 
-## Instalar la suite
+## Install the suite
 
-### Requisitos
+### Requirements
 
-- Node 20 o superior, o Bun.
-- Haber iniciado la skill [agent-context-skill](https://github.com/Gersom/agent-context-skill) en el proyecto en el que ejecutas la suite.
+- Node 20 or higher, or Bun.
+- Having started the [agent-context-skill](https://github.com/Gersom/agent-context-skill) skill in the project where you run the suite.
 
-### Recomendado: instalarla de forma global
+### Recommended: install it globally
 
-Se instala una vez y desde entonces existe el comando `acsuite` en cualquier carpeta:
+Install it once and the `acsuite` command exists from then on in any folder:
 
 ```sh
 bun add -g agent-context-suite@latest
 ```
 
-O con npm:
+Or with npm:
 
 ```sh
 npm install -g agent-context-suite@latest
 ```
 
-Para actualizarla, ejecuta el mismo comando.
+To update it, run the same command.
 
-> **Instálala desde npm, no desde GitHub.** No uses `bun install -g github:Gersom/agent-context-suite`: el repo no incluye `dist/`, así que no se crea el comando `acsuite`. Usa siempre el paquete de [npm](https://www.npmjs.com/package/agent-context-suite). Si ya la instalaste desde GitHub con Bun, limpia esa copia con `bun pm cache rm` y vuelve a instalar desde npm.
+> **Install it from npm, not from GitHub.** Do not use `bun install -g github:Gersom/agent-context-suite`: the repo does not include `dist/`, so the `acsuite` command is not created. Always use the [npm](https://www.npmjs.com/package/agent-context-suite) package. If you already installed it from GitHub with Bun, clean that copy with `bun pm cache rm` and reinstall from npm.
 
-### Alternativa: usarla sin instalar nada
+### Alternative: use it without installing anything
 
-Con `npx` o `bunx` se descarga, se ejecuta y termina, sin dejar instalado el comando `acsuite`, así que cada vez se escribe completo:
+With `npx` or `bunx` it is downloaded, run and finished, without leaving the `acsuite` command installed, so you type it in full each time:
 
 ```sh
 npx agent-context-suite@latest board
@@ -39,65 +41,67 @@ npx agent-context-suite@latest board
 bunx agent-context-suite@latest board
 ```
 
-`@latest` trae siempre la versión más reciente. Sin ruta, usa el proyecto de la carpeta donde lo ejecutas; si quieres otro, pásale su ruta al final (`npx agent-context-suite@latest board D:/otro-proyecto`).
+`@latest` always fetches the most recent version. Without a path, it uses the project in the folder where you run it; to use another one, pass its path at the end (`npx agent-context-suite@latest board D:/other-project`).
 
-**Nombres.** El *paquete* (lo que escribes con `npm install`, `npx` o `bunx`) es `agent-context-suite`; el *comando* (una vez instalada) es `acsuite`.
+**Names.** The *package* (what you type with `npm install`, `npx` or `bunx`) is `agent-context-suite`; the *command* (once installed) is `acsuite`.
 
-**Compatibilidad.** Probada en Windows 11 con Node 20, 22 y 24, y con Bun. En Linux y macOS debería funcionar igual (es Node estándar), pero no está comprobado: si encuentras algún problema, abre un [Issue](https://github.com/Gersom/agent-context-suite/issues).
+**Compatibility.** Tested on Windows 11 with Node 20, 22 and 24, and with Bun. On Linux and macOS it should work the same (it is standard Node), but it has not been verified: if you run into any problem, open an [Issue](https://github.com/Gersom/agent-context-suite/issues).
 
-## Herramientas
+## Tools
 
-La suite trae cuatro herramientas, que trabajan sobre un proyecto que use la skill. Se usan con el comando `acsuite` (si no la instalaste, antepón `npx agent-context-suite@latest` al subcomando). Sin ruta, usan el proyecto de la carpeta donde ejecutas el comando, subiendo hasta la raíz de su repo git; `board` y `check` aceptan una ruta para revisar otro proyecto (`acsuite check D:/otro-proyecto`).
+The suite comes with four tools, which work on a project that uses the skill. They are used with the `acsuite` command (if you did not install it, put `npx agent-context-suite@latest` before the subcommand). Without a path, they use the project in the folder where you run the command, going up to the root of its git repo; `board` and `check` accept a path to inspect another project (`acsuite check D:/other-project`).
 
-`acsuite` sin argumentos lista los subcomandos, y `acsuite <subcomando> --help` muestra la ayuda de cada uno.
+`acsuite` with no arguments lists the subcommands, and `acsuite <subcommand> --help` shows the help for each one.
 
 ### `acsuite board`
 
-Tablero de tareas en vivo en la terminal: la tarea en progreso, las pausadas, las pendientes y las últimas completadas. Se redibuja solo cuando cambian los archivos, así que conviene dejarlo en una terminal aparte mientras un agente trabaja.
+Live task board in the terminal: the task in progress, the paused ones, the pending ones and the latest completed. It redraws by itself when the files change, so it is best left in a separate terminal while an agent works.
 
 ```sh
 acsuite board
 ```
 
-Uso, atajos y cómo lee los archivos: [README de `board`](./scripts/task-tracker/README.md). El board recuerda el modo compacto, las flechas y el modo observador entre ejecuciones (`settings.json` en `~/.acsuite`), con las teclas `c`, `f` y `o`.
+Usage, shortcuts and how it reads the files: [`board` README](./scripts/task-tracker/README.md). The board remembers compact mode, the arrows and observer mode between runs (`settings.json` in `~/.acsuite`), with the `c`, `f` and `o` keys.
 
-#### Seguir el proyecto activo de Claude
+<!-- ![acsuite board](docs/board.gif) -->
 
-Si trabajas con varias sesiones de Claude Code a la vez, el board puede cambiar solo al proyecto que marques desde Claude. Pulsa `o` con el board abierto para activar el modo observador (se recuerda para la próxima vez):
+#### Follow Claude's active project
+
+If you work with several Claude Code sessions at once, the board can switch by itself to the project you mark from Claude. Press `o` with the board open to turn on observer mode (it is remembered for next time):
 
 ```sh
 acsuite board
 ```
 
-Se marca desde Claude con el mod `acsuite-active-project`, con su botón `[ ● Mark this project as active ]` o con `/board`. Se instala con una línea, `/plugin install acsuite-active-project --marketplace Gersom/agent-context-suite`; los demás pasos y el detalle están en el [README del mod](./mods/acsuite-active-project/README.md), y el modo observador del board, en su [README](./scripts/task-tracker/README.md#modo-observador).
+You mark it from Claude with the `acsuite-active-project` mod, with its `[ ● Mark this project as active ]` button or with `/board`. It is installed with one line, `/plugin install acsuite-active-project --marketplace Gersom/agent-context-suite`; the other steps and the details are in the [mod's README](./mods/acsuite-active-project/README.md), and the board's observer mode is in its [README](./scripts/task-tracker/README.md#modo-observador).
 
 ### `acsuite task`
 
-Consulta y edita las tareas sin tocar a mano `handoff.md`, `backlog.md` ni `history.md`. Las escrituras exigen `--apply`; sin él solo muestra el diff.
+Query and edit tasks without hand-editing `handoff.md`, `backlog.md` or `history.md`. Writes require `--apply`; without it, it only shows the diff.
 
 ```sh
 acsuite task status
 ```
 
 ```sh
-acsuite task <comando> --help
+acsuite task <command> --help
 ```
 
-Comandos, flags y cómo escribe: [README de `task`](./scripts/task-manager/README.md).
+Commands, flags and how it writes: [`task` README](./scripts/task-manager/README.md).
 
 ### `acsuite check`
 
-Verificador de solo lectura: revisa que la documentación de agentes del proyecto sirva a la skill, al tablero y a la gestión de tareas, y lista errores y avisos con archivo y línea.
+Read-only checker: it verifies that the project's agent documentation works for the skill, the board and task management, and lists errors and warnings with file and line.
 
 ```sh
 acsuite check
 ```
 
-Uso y códigos de hallazgo: [README de `check`](./scripts/docs-check/README.md).
+Usage and finding codes: [`check` README](./scripts/docs-check/README.md).
 
 ### `acsuite init`
 
-Agrega a `rules.md` del proyecto la sección que enseña al agente a usar la suite: que no edite a mano `handoff.md`, `backlog.md` ni `history.md`, y que use `acsuite task`, `acsuite check` y `acsuite board`. La pone al inicio de `rules.md`, después del título, y solo toca esa sección, entre sus marcas; no cambia las reglas fijas. Sin `--apply` muestra el diff y no escribe nada; si la sección ya está al día, no hace nada. En un proyecto con varios operadores, `rules.md` es de todos, así que el cambio se aplica a todo el proyecto. Si no la agregas, `acsuite check` lo avisa.
+Adds to the project's `rules.md` the section that teaches the agent to use the suite: not to hand-edit `handoff.md`, `backlog.md` or `history.md`, and to use `acsuite task`, `acsuite check` and `acsuite board`. It puts it at the start of `rules.md`, after the title, and only touches that section, between its markers; it does not change the fixed rules. Without `--apply` it shows the diff and writes nothing; if the section is already up to date, it does nothing. In a project with several operators, `rules.md` belongs to everyone, so the change applies to the whole project. If you do not add it, `acsuite check` warns about it.
 
 ```sh
 acsuite init
@@ -107,14 +111,14 @@ acsuite init
 acsuite init --apply
 ```
 
-## Licencia
+## License
 
-[MIT](./LICENSE). La skill, que vive en su propio repo, tiene la misma licencia.
+[MIT](./LICENSE). The skill, which lives in its own repo, has the same license.
 
-## Apoyar el proyecto
+## Support the project
 
-Si la suite o la skill te sirven y quieres apoyar su desarrollo, puedes hacer una donación por PayPal: [paypal.me/gersomalaja](https://paypal.me/gersomalaja).
+If the suite or the skill is useful to you and you want to support their development, you can donate through PayPal: [paypal.me/gersomalaja](https://paypal.me/gersomalaja).
 
-## Colaborar
+## Contributing
 
-Si deseas colaborar con el proyecto, consulta la [guía de colaboración](https://github.com/Gersom/agent-context-suite/blob/main/CONTRIBUTING.md).
+If you want to contribute to the project, see the [contribution guide](https://github.com/Gersom/agent-context-suite/blob/main/CONTRIBUTING.md).
