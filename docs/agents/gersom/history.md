@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-12 — ✅ Tarea 150 — READMEs en inglés y español en la suite y la skill
+
+- README de la suite y de la skill en inglés (README.md) y español (README.es.md) con selector de idioma.
+- La skill suma la sección Install in other agents (npx skills add probado); la suite deja comentado el lugar de docs/board.gif.
+- Commits: 09ed4ef (suite) y 7388ba7 (skill).
+
 ## 2026-11-05 — ✅ Tarea 141 — Skill: subir la versión (2.3.2) con la etiqueta fija del modo
 
 - Skill 2.4.0 (minor): modos de ejecución con letras en la regla 2b, changelog 2.4 y fixture de docs-check sincronizado. Sin tag ni push.
