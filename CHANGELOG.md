@@ -2,6 +2,14 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.2.2
+
+Solo documentación: el README ahora está en inglés (`README.md`) y en español (`README.es.md`), con selector de idioma. No cambia ningún comando ni el formato de los archivos.
+
+### Cómo pasar de la 2.2.1 a la 2.2.2
+
+Actualiza el paquete: `npm install -g agent-context-suite@latest`. No hay nada más que hacer.
+
 ## 2.2.1
 
 Solo documentación: la regla 2 de `rules.md` pide al agente que presente las alternativas de modo (A–D) una por línea y no en un párrafo corrido. Va con la skill 2.4.1.
