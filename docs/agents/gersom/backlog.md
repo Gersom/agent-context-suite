@@ -56,15 +56,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Agregada:** 2026-11-16.
 
-### Tarea 155 — step --evidence/--commit: registrar evidencia y commit del paso
-
-- **Descripción:** La regla 7 pide anotar al final de cada paso hecho «· evidencia · commit abc1234», pero `step` no tiene flags para eso (confirmado en su ayuda): la anotación queda a mano o se omite.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Origen: issue de otro agente. Propuesta: `step <N> --evidence <texto> [--commit <hash>]`; con `--commit auto` usa el último commit de HEAD. Hecho cuando: la línea del paso termina en «· <evidencia> · commit <hash>», sin duplicar si se vuelve a ejecutar.
-- **Agregada:** 2026-11-16.
-
 ### Tarea 156 — step: sincronizar «Próximo paso concreto» con el siguiente pendiente
 
 - **Descripción:** Al marcar un paso, `step` actualiza «Qué falta» pero deja «Próximo paso concreto» con texto anterior y solo avisa; un chat nuevo leería un próximo paso ya hecho.

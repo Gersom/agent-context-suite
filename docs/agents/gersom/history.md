@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 155 — step --evidence/--commit: registrar evidencia y commit del paso
+
+- `step <N> --evidence <texto> [--commit <hash|auto>]` anota al final de la línea del paso «· evidencia · commit <hash>» (Regla 7); repetir el comando reemplaza solo los campos pasados sin duplicar, y `--undo` quita evidencia y commit. `--commit auto` usa el hash corto de HEAD.
+- `plan --json`, `status` y `next` muestran el texto base del paso; `plan --set -` empareja por texto base sin robar pasos hechos. Se amplió src/write/suffix.ts (hecho en la T-154) con evidencia y commit.
+- Commit: d94bb14. bun test 1973 pass, typecheck y acsuite check sin errores; revisión independiente con hallazgos corregidos. Limitación documentada: en un paso hecho sin commit, el último tramo tras « · » se lee como evidencia, así que reabrirlo lo quita (hay aviso al marcar). close.ts y el «Próximo paso concreto» de start aún usan el texto crudo del paso.
+
 ## 2026-11-16 — ✅ Tarea 154 — step --undo --reason: reabrir un paso con motivo
 
 - `step <N> --undo --reason <texto>` deja el paso como «- [ ] texto (reabierto: motivo)»: reemplaza un sufijo previo, se quita al marcar el paso como hecho y, sin --reason, avisa de la Regla 7. La búsqueda por texto y los textos generados de «Qué falta» y «Próximo paso concreto» ignoran el sufijo (módulo src/write/suffix.ts, preparado para T-155).
