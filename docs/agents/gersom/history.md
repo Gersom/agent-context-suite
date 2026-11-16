@@ -11,6 +11,18 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 153 — task plan: modificar el plan de una tarea en curso
+
+- Nuevo comando `acsuite task plan`: agrega (--add/--at), quita (--remove), renombra (--rename), mueve (--move/--to) o reemplaza (--set -) los pasos del plan de la tarea en curso sin editar handoff.md a mano; el paso «Documentar cierre de tarea» queda siempre al final.
+- Se extrajo de step la resolución de pasos y la sincronización de «Qué falta» y «Próximo paso concreto» (src/write/plan.ts), sin cambiar su comportamiento; avisos para líneas de cierre descartadas, texto de cierre en --add/--rename y cierre ya hecho. Un revisor independiente corrigió casos límite; quedan menores sin tocar (cierre mal ubicado previo, plan al final del archivo sin salto de línea, mensaje «sin cambios» con --dry-run).
+- Commits: e4fac87 (código y tests), 6de7bbd (README). bun test 1911 pass, typecheck y acsuite check sin errores.
+
+## 2026-11-16 — ✅ Tarea 151 — Investigar «Code Mode» de Cloudflare y «programmatic tool calling» de Anthropic
+
+- Investigación de «Code Mode» (Cloudflare) y «programmatic tool calling» (Anthropic): el segundo es estable (API de Claude, AWS, Foundry; -24 % de tokens de entrada y +11 % de rendimiento en búsqueda agéntica según Anthropic); el primero depende de Workers y su sandbox (Worker Loader) está en beta cerrada, sin cifras de ahorro publicadas.
+- Ninguno se usa tal cual: dependen de su infraestructura y el mayor ahorro (esquemas de herramientas) no aplica a la suite.
+- Viable en versión local: comando `acsuite task batch` con JSON { "actions": [ { "action": ... } ] } por stdin o --file, todo o nada con --apply; costo medio. REST y MCP descartados por ahora (exigen un proceso siempre vivo). Antes de construir, medir las llamadas seguidas por sesión.
+
 ## 2026-11-12 — ✅ Tarea 150 — READMEs en inglés y español en la suite y la skill
 
 - README de la suite y de la skill en inglés (README.md) y español (README.es.md) con selector de idioma.

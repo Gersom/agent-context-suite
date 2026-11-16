@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 151
+**Próximo número de tarea:** 159
 
 ---
 
@@ -47,6 +47,59 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera hacer pública la skill, o priorice esta tarea explícitamente.
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
+
+### Tarea 152 — Implementar `acsuite task batch` (JSON con actions por stdin o --file, todo o nada); antes, medir llamadas seguidas por sesión y confirmar que commit encadena varias operaciones
+
+- **Descripción:** Surgió al cerrar la Tarea 151; falta detallarla.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Agregada:** 2026-11-16.
+
+### Tarea 154 — step --undo --reason: reabrir un paso con motivo
+
+- **Descripción:** La regla 7 pide dejar un paso reabierto como `- [ ] Paso N — … (reabierto: <motivo>)`, pero `step --undo` solo desmarca, sin motivo.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Origen: issue de otro agente. Propuesta: `step <N> --undo --reason <texto>` agrega el sufijo «(reabierto: <motivo>)»; sin --reason, avisa de que la regla lo pide. Hecho cuando: el sufijo queda en la línea del paso y se quita al volver a marcarlo como hecho.
+- **Agregada:** 2026-11-16.
+
+### Tarea 155 — step --evidence/--commit: registrar evidencia y commit del paso
+
+- **Descripción:** La regla 7 pide anotar al final de cada paso hecho «· evidencia · commit abc1234», pero `step` no tiene flags para eso (confirmado en su ayuda): la anotación queda a mano o se omite.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Origen: issue de otro agente. Propuesta: `step <N> --evidence <texto> [--commit <hash>]`; con `--commit auto` usa el último commit de HEAD. Hecho cuando: la línea del paso termina en «· <evidencia> · commit <hash>», sin duplicar si se vuelve a ejecutar.
+- **Agregada:** 2026-11-16.
+
+### Tarea 156 — step: sincronizar «Próximo paso concreto» con el siguiente pendiente
+
+- **Descripción:** Al marcar un paso, `step` actualiza «Qué falta» pero deja «Próximo paso concreto» con texto anterior y solo avisa; un chat nuevo leería un próximo paso ya hecho.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Origen: issue de otro agente. Opciones: (a) sincronizar siempre con el siguiente paso pendiente, o (b) hacerlo solo si el texto actual coincide con el paso recién marcado y avisar si no. Recomendada: (b), porque no pisa un texto escrito a propósito por el operador. Hecho cuando: tras marcar un paso, el próximo paso concreto coincide con el siguiente pendiente, salvo que el operador haya escrito un texto distinto.
+- **Agregada:** 2026-11-16.
+
+### Tarea 157 — close --commits: agregar los commits de la tarea a history.md
+
+- **Descripción:** La regla 6 pide que la entrada de history.md diga qué commits contienen la tarea, pero `close --summary` no los agrega y hay que pasarlos a mano en el texto.
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Origen: issue de otro agente. Propuesta: `close --commits auto|<h1,h2>`; con auto busca en `git log` los commits con scope (T-N) de esa tarea y los agrega a la entrada, sin el commit de cierre (aún no existe). Hecho cuando: la entrada lista los commits de la tarea sin pasarlos a mano.
+- **Agregada:** 2026-11-16.
+
+### Tarea 158 — close: reducir el aviso «Para revisar a mano»
+
+- **Descripción:** Cada cierre imprime la lista completa de tareas bloqueadas o postergadas cuyo motivo no nombra una tarea propia, aunque no tengan relación con la cerrada (siete líneas repetidas en dos cierres seguidos).
+- **Decisiones/temas a definir antes de empezar:** Ninguno.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes.
+- **Detalles:** Origen: issue de otro agente. Propuesta: mostrar ese bloque solo con --verbose, o limitarlo a las tareas bloqueadas cuyo motivo mencione la tarea cerrada. Hecho cuando: el reporte de cierre muestra solo lo relevante a la tarea cerrada.
+- **Agregada:** 2026-11-16.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
