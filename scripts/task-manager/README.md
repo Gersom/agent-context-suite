@@ -1,6 +1,6 @@
 # task-manager
 
-Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `mode`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
+Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `plan`, `mode`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
 
 Es **opcional** y es una herramienta de este repo, no parte de la skill: no se copia a los repos destino (principio 4 de [`docs/philosophy.md`](../../docs/philosophy.md)). Sin ella, los archivos se editan a mano igual.
 
@@ -52,6 +52,7 @@ bun run task <comando> --agents D:/proyectos/mi-app --operator ana
 | `add` `*` | Agrega una tarea a tu `backlog.md` (con el siguiente número) o, con `--team`, al `team-backlog.md`. |
 | `start <N>` `*` | Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el `handoff.md`. Con `--team "<título>"`, la toma del `team-backlog.md`. |
 | `step <N \| texto>...` `*` | Marca (o con `--undo` desmarca) pasos del plan de la tarea en curso y pone al día «Qué falta» y «Próximo paso concreto». |
+| `plan [<N>] --add\|--remove\|--rename\|--move\|--set` `*` | Cambia el plan de la tarea en curso: agrega, quita, renombra, mueve o reemplaza pasos, con «Documentar cierre de tarea» siempre al final. |
 | `mode <guided\|step-by-step\|auto\|extreme>` `*` | Registra el modo de ejecución acordado del plan de la tarea en curso. |
 | `pause` `*` | Pasa la tarea en curso a «Tareas pausadas» y deja «Sin tarea en curso». |
 | `resume <N>` `*` | Inverso de `pause`: la pausada vuelve a «Tarea en progreso». |
@@ -180,7 +181,7 @@ Reglas de seguridad que aplica el **núcleo** (no cada comando) a todo comando q
 - **`--apply` obligatorio.** Sin él, el comando calcula todo, verifica el resultado y muestra el diff, pero no escribe. Con `--dry-run` tampoco escribe aunque se pase `--apply`.
 - **Solo la carpeta propia.** Si la carpeta resuelta no es la del correo de `git config user.email` (otro operador, o no se pudo verificar), el comando se niega con un error claro, sin escribir ni mostrar el diff: las carpetas de otros operadores son de solo lectura. En el repo plano no hay otros operadores. **Excepción:** lo que solo cambia el `team-backlog.md` (`add --team`) es un archivo compartido y no lo exige.
 - **Todo por `planChanges`/`commitChanges`:** verificación de legibilidad (anclas y secciones), detección de cambios concurrentes, escritura atómica, CRLF/LF respetados, todo o nada entre los archivos que toca un comando.
-- **`--json`:** los comandos de escritura nuevos (`edit`, `step`, `pause`, `resume`, `block`, `unblock`, `close` y los de grupos) lo aceptan: en vez del diff y los mensajes imprimen `{ schema, command, applied, dryRun, pending, files: [{ file, changed, written }], ...datos del comando }`. `applied`: se escribió algún archivo; `pending`: había cambios y falta `--apply`. (`add` y `start` todavía no lo tienen.)
+- **`--json`:** los comandos de escritura nuevos (`edit`, `step`, `plan`, `pause`, `resume`, `block`, `unblock`, `close` y los de grupos) lo aceptan: en vez del diff y los mensajes imprimen `{ schema, command, applied, dryRun, pending, files: [{ file, changed, written }], ...datos del comando }`. `applied`: se escribió algún archivo; `pending`: había cambios y falta `--apply`. (`add` y `start` todavía no lo tienen.)
 - **Números sin repetir:** antes de numerar, «Próximo número de tarea» tiene que ser mayor que la tarea más alta que ya existe en handoff, backlog (con grupos) e history; si no, error que lo explica (no se elige otro número por cuenta propia).
 
 ### `add`
@@ -221,9 +222,36 @@ Marca pasos del «Plan» de la tarea en curso (Regla 7 de `rules.md`: el handoff
 
 - Cada argumento es el **número** del paso (posición en el plan, desde 1) o **parte de su texto** (sin distinguir mayúsculas ni acentos; si coincide con varios, error que los lista). Se pueden pasar varios. `--undo` los desmarca. Un paso que ya estaba en ese estado avisa y no cambia nada.
 - «Qué falta» y «Próximo paso concreto» se reescriben **solos solo si siguen con el texto que puso el script**: el de `start` (`Todos los pasos del plan.`, el primer paso) o el que `step` generó antes (`Pasos pendientes:` con la lista de los pasos sin hacer; `Plan completo: falta cerrar la tarea.` al terminar). Un texto que alguien escribió no se pisa: se avisa y se actualiza con `edit --missing` / `--next`. «Decisiones a medio camino» nunca cambia solo.
-- `step` solo marca y desmarca pasos. Para cambiar un texto a mano («Qué falta», «Decisiones a medio camino», «Próximo paso concreto») se usa `edit` (ver la sección `edit`).
+- `step` solo marca y desmarca pasos. Para agregar, quitar, renombrar o mover pasos se usa `plan` (ver la sección `plan`). Para cambiar un texto a mano («Qué falta», «Decisiones a medio camino», «Próximo paso concreto») se usa `edit` (ver la sección `edit`).
 - Las subsecciones se reconocen por su título en español o inglés. Sin plan (sin checkboxes) no hay pasos que marcar.
 - **Aviso de formato:** `step` no bloquea por el contenido del plan, pero si «Plan» tiene una línea que `close` y `pause` rechazarían (texto que no es un paso ni la línea de modo) imprime un `Aviso:` por línea, con su número de línea (el formato válido va solo en el primero; ver «Formato del plan» en `close`); lo mismo avisa de los problemas de estructura que `close` y `pause` rechazan: una subsección con título desconocido (`### Notas`) o repetida, texto antes de la línea de la tarea y checkboxes fuera del plan. Con `--json` va en `notes`. `edit` avisa de lo mismo (un `Aviso:` por línea; con `--json`, `notice` y la lista `notices`). El paso se marca igual y el exit code no cambia. `docs-check` lo detecta también (`current-plan-line`, `current-subsection` y `current-structure`).
+
+### `plan`
+
+```sh
+bun run task plan [<N | T-N>] --add <texto> [--at <pos>] [--json] [--apply]
+bun run task plan [<N | T-N>] --remove <paso> [--json] [--apply]
+bun run task plan [<N | T-N>] --rename <paso> <texto> [--json] [--apply]
+bun run task plan [<N | T-N>] --move <paso> --to <pos> [--json] [--apply]
+bun run task plan [<N | T-N>] --set - [--json] [--apply]
+```
+
+Cambia el «Plan» de la tarea en curso sin editar `handoff.md` a mano (los planes cambian a mitad de trabajo; el plan inicial se sigue definiendo en `start --plan`). Cada invocación hace **una** sola operación:
+
+- **`--add <texto>`:** agrega un paso pendiente. Por defecto va justo antes de «Documentar cierre de tarea»; con `--at <pos>` (desde 1) va en esa posición, y si cae después del cierre se coloca antes.
+- **`--remove <paso>`:** quita un paso, también uno ya hecho. No quita el paso de cierre ni el único paso del plan.
+- **`--rename <paso> <texto>`:** cambia todo el texto del paso (incluido un sufijo de evidencia) y conserva si estaba hecho. No aplica al paso de cierre. Ej.: `plan --rename 2 "texto nuevo" --apply`.
+- **`--move <paso> --to <pos>`:** reordena. El paso de cierre no se mueve ni nada queda después de él.
+- **`--set -`:** reemplaza todo el plan con un paso por línea de la entrada estándar (el mismo formato de `start --plan -`). Los pasos cuyo texto ya existía conservan su estado; el paso de cierre va siempre al final y conserva el suyo. La línea de modo y el resto del handoff no se tocan. Detalles:
+  - La coincidencia por texto no distingue mayúsculas ni acentos, y el paso conserva su texto antiguo (no el de la entrada).
+  - Un paso hecho con sufijo de evidencia solo conserva su estado si la entrada trae el texto completo, con la evidencia; sin ella queda pendiente.
+  - Si varias líneas de la entrada parecen el paso de cierre (p. ej. «Documentar cierre de la fase 2»), solo cuenta la primera; las demás se ignoran con un `Aviso:` que dice cuáles (con `--json`, en `notes`).
+  - Si el plan no tenía paso de cierre, se agrega uno al final.
+- `<paso>` es el **número** (posición actual, desde 1) o **parte del texto**, igual que en `step`. Los números cambian al agregar, quitar o mover pasos: la salida muestra el plan resultante numerado.
+- «Qué falta» y «Próximo paso concreto» se ponen al día con la misma regla que `step`: solo si siguen con el texto que puso el script. Si alguien los escribió, no se pisan: se avisa y se cambian con `edit --missing` / `--next`.
+- `--add` y `--rename` rechazan (error, exit 1) un texto que es el del paso de cierre: en `--add` solo si el plan ya lo tiene; en `--rename` siempre. Si el paso de cierre ya estaba hecho, `--add` agrega igual el paso pendiente antes de él y avisa.
+- Sin tarea en curso o sin plan es un error. Solo `--add` acepta un valor que empieza con `-`, pasado como `--add=- texto` (ojo: se quita un `- ` inicial, así que el paso queda como `texto`). El texto de `--rename` es posicional y no puede empezar con `-`.
+- Escribe solo con `--apply`; sin él muestra el diff.
 
 ### `mode`
 
@@ -297,7 +325,7 @@ Modifica el **contenido** de una tarea y nunca su estado ni su lugar: una libre 
 
 - **`--blocker` no cambia el estado.** La sección la decide el tag al inicio de `Bloqueos`. En una libre, un valor con tag `[dependencia]`/`[postergada]` se rechaza (usa `block`). En una bloqueada, un valor con tag se respeta (sirve para pasar de `dependencia` a `postergada`) y uno sin tag conserva el tag actual y cambia solo el motivo; dejarlo en «Ninguno» se rechaza (usa `unblock`). En una agrupada, `--blocker` con un tag de bloqueo (o sobre una tarea ya bloqueada) es un error: se saca antes con `group-eject N`; un texto de bloqueo sin tag como «Ninguno.» sí se edita.
 - Si edita la tarea en curso y su plan tiene una línea que `close` y `pause` rechazarían, agrega un `Aviso:` con su número de línea y el formato válido (ver «Formato del plan» en `close`); con `--json` va en `notice`. No bloquea ni cambia el exit code.
-- No toca los checkboxes del plan (eso es de `step`) ni las tareas de otro operador. Una descripción en curso mezclada con campos o comentarios da error en vez de adivinar qué reemplazar.
+- No toca los checkboxes del plan (eso es de `step` y `plan`) ni las tareas de otro operador. Una descripción en curso mezclada con campos o comentarios da error en vez de adivinar qué reemplazar.
 - El título cambia solo el texto: conserva el número, el nivel del header y la etiqueta. En las tareas con número, las referencias entre tareas van por número, así que no se rompen. En el team-backlog el título es la identidad de la tarea (no tiene número): las referencias por título quedan huérfanas, así que `edit --title` sobre una de ellas imprime un `Aviso:` recordando revisarlas.
 - Un valor que empieza con un tag `[...]` en `--description`, `--decisions`, `--details` o `--trigger` se rechaza en el backlog y el team-backlog (el parser lo leería como tag de bloqueo). En una tarea en curso, `--description`, `--missing`, `--decisions` y `--next` rechazan líneas que empiecen con `#` o con un checkbox (`- [ ]`, `- [x]`), porque crearían subsecciones o pasos del plan.
 - `--blocker` conserva siempre el historial `[Resuelto ...]` que ya tuviera el campo, detrás del valor nuevo.
