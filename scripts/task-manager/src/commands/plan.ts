@@ -16,9 +16,10 @@ import { textFlag } from "../write/flags.ts";
 import { invalidPlanLineMessages, invalidPlanLines, structureProblemMessage, structureProblems } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
 import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
-import { progressUpdates, resolveStep, staleNotice } from "../write/plan.ts";
+import { progressUpdates, resolveStep, staleNotice, stepTextRange } from "../write/plan.ts";
 import { closingStepRe, parsePlan } from "../write/render.ts";
 import { headerLabels } from "../write/samples.ts";
+import { stepBase } from "../write/suffix.ts";
 
 const OPERATIONS = ["add", "remove", "rename", "move", "set"] as const;
 type Operation = (typeof OPERATIONS)[number];
@@ -48,7 +49,7 @@ export const plan: Command = {
     add: { type: "string", valueName: "texto", description: "Agrega el paso `- [ ] texto`: por defecto justo antes del paso de cierre." },
     at: { type: "string", valueName: "pos", description: "Con --add: posición (desde 1) del paso nuevo. Si cae después del paso de cierre, va justo antes." },
     remove: { type: "string", valueName: "paso", description: "Quita un paso (número o texto, como en `step`), también uno ya hecho. El paso de cierre no se quita." },
-    rename: { type: "string", valueName: "paso", description: "Cambia todo el texto de un paso (número o texto) por el argumento que sigue: `--rename 2 \"texto nuevo\"`. Conserva si está hecho. No aplica al paso de cierre." },
+    rename: { type: "string", valueName: "paso", description: "Cambia todo el texto de un paso (número o texto), también su sufijo `(reabierto: …)`, por el argumento que sigue: `--rename 2 \"texto nuevo\"`. Conserva si está hecho. No aplica al paso de cierre." },
     move: { type: "string", valueName: "paso", description: "Mueve un paso (número o texto) a la posición de --to. El paso de cierre no se mueve ni nada pasa después de él." },
     to: { type: "string", valueName: "pos", description: "Con --move: posición (desde 1) en la que queda el paso." },
     set: {
@@ -111,8 +112,9 @@ export const plan: Command = {
       ...invalidPlanLineMessages(invalidPlanLines(handoff.text, subsections), lang),
       ...structureProblems(handoff.text, handoff.parsed, lang).map(structureProblemMessage),
     ];
-    const pendingBefore = steps.filter((step) => !step.done).map((step) => step.text);
-    const pendingAfter = outcome.after.filter((item) => !item.done).map((item) => item.text);
+    // Los textos generados llevan el paso sin el sufijo de reabierto.
+    const pendingBefore = steps.filter((step) => !step.done).map((step) => stepBase(step.text));
+    const pendingAfter = outcome.after.filter((item) => !item.done).map((item) => stepBase(item.text));
     const progress = progressUpdates({ text: handoff.text, subsections, S, taskNumber: task.number, pendingBefore, pendingAfter });
     const stale = progress.stale.map(staleNotice);
 
@@ -225,10 +227,9 @@ function planRename({ text, steps, closing, S }: Context, arg: string, newText: 
   if (closingStepRe(S).test(newText)) {
     throw new CliError(`No se puede renombrar el paso ${i + 1} a «${newText}»: ese texto es el del paso de cierre, que va siempre al final. No se escribió nada.`);
   }
-  const { start, end } = steps[i].range!;
-  const prefix = text.slice(start, end).match(/^\s*[-*]\s+\[[ xX]\]\s+/)![0];
   return {
-    edits: [replaceRange({ start: start + prefix.length, end }, newText)],
+    // Reemplaza todo el texto del paso, también un sufijo (`(reabierto: …)`).
+    edits: [replaceRange(stepTextRange(text, steps[i]), newText)],
     after: steps.map((step, j) => ({ text: j === i ? newText : step.text, done: step.done })),
     message: `paso ${i + 1} renombrado de «${steps[i].text}» a «${newText}»`,
     notes: [],
@@ -260,7 +261,8 @@ function planSet({ text, steps, closing, S }: Context, lines: string[]): Outcome
   const existing = new Map<string, Array<{ step: PlanStep; i: number }>>();
   steps.forEach((step, i) => {
     if (i === closing) return;
-    const key = normalizeTitle(step.text);
+    // Se compara sin el sufijo de reabierto: el paso conserva su línea (y su sufijo) venga o no en la entrada.
+    const key = normalizeTitle(stepBase(step.text));
     existing.set(key, [...(existing.get(key) ?? []), { step, i }]);
   });
 
@@ -268,7 +270,7 @@ function planSet({ text, steps, closing, S }: Context, lines: string[]): Outcome
   const kept: string[] = [];
   const list: Array<Item & { line: string }> = [];
   for (const line of lines.filter((candidate) => !isClosing.test(candidate))) {
-    const match = existing.get(normalizeTitle(line))?.shift();
+    const match = existing.get(normalizeTitle(stepBase(line)))?.shift();
     if (match) {
       kept.push(match.step.text);
       list.push({ text: match.step.text, done: match.step.done, line: lineText(text, match.step) });

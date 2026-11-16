@@ -3,15 +3,26 @@
 // los pasos pendientes. Esos dos textos se reescriben solos únicamente si siguen con el que dejó el
 // script (el de `start` o el que se generó antes); un texto que alguien escribió no se toca.
 
-import type { PlanStep, Subsection } from "../../../_shared/types.ts";
+import type { PlanStep, Range, Subsection } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
 import type { Edit } from "../edit/edits.ts";
 import { replaceSubsectionBody } from "../edit/layout.ts";
 import { normalizeTitle } from "../query/find.ts";
 import { findPart } from "./handoff.ts";
 import { STRINGS, type Strings } from "./language.ts";
+import { stepBase } from "./suffix.ts";
 
-/** Qué paso es el que se pidió: un número (posición, desde 1) o parte del texto del paso. */
+/** El rango del texto de un paso en su línea (lo que sigue al `- [ ] `), para reemplazarlo. @param text handoff.md (LF) */
+export function stepTextRange(text: string, step: PlanStep): Pick<Range, "start" | "end"> {
+  const { start, end } = step.range!;
+  const prefix = text.slice(start, end).match(/^\s*[-*]\s+\[[ xX]\]\s+/)![0];
+  return { start: start + prefix.length, end };
+}
+
+/**
+ * Qué paso es el que se pidió: un número (posición, desde 1) o parte del texto del paso. El texto
+ * se busca sin el sufijo de reabierto (`stepBase`): el motivo no es parte del nombre del paso.
+ */
 export function resolveStep(arg: string, steps: PlanStep[]): number {
   const wanted = arg.trim();
   if (/^\d+$/.test(wanted)) {
@@ -20,11 +31,11 @@ export function resolveStep(arg: string, steps: PlanStep[]): number {
     return index - 1;
   }
   const query = normalizeTitle(wanted);
-  const exact = steps.flatMap((step, i) => (normalizeTitle(step.text) === query ? [i] : []));
-  const found = exact.length ? exact : steps.flatMap((step, i) => (query && normalizeTitle(step.text).includes(query) ? [i] : []));
+  const exact = steps.flatMap((step, i) => (normalizeTitle(stepBase(step.text)) === query ? [i] : []));
+  const found = exact.length ? exact : steps.flatMap((step, i) => (query && normalizeTitle(stepBase(step.text)).includes(query) ? [i] : []));
   if (!found.length) throw new CliError(`Ningún paso del plan tiene «${wanted}» en su texto. Usa el número del paso (1 a ${steps.length}). No se escribió nada.`);
   if (found.length > 1) {
-    throw new CliError(`«${wanted}» coincide con ${found.length} pasos; usa su número:\n${found.map((i) => `  ${i + 1}. ${steps[i].text}`).join("\n")}\nNo se escribió nada.`);
+    throw new CliError(`«${wanted}» coincide con ${found.length} pasos; usa su número:\n${found.map((i) => `  ${i + 1}. ${stepBase(steps[i].text)}`).join("\n")}\nNo se escribió nada.`);
   }
   return found[0];
 }

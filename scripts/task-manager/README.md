@@ -51,7 +51,7 @@ bun run task <comando> --agents D:/proyectos/mi-app --operator ana
 | `show <N>` | El bloque completo de una tarea y de dónde salió. |
 | `add` `*` | Agrega una tarea a tu `backlog.md` (con el siguiente número) o, con `--team`, al `team-backlog.md`. |
 | `start <N>` `*` | Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el `handoff.md`. Con `--team "<título>"`, la toma del `team-backlog.md`. |
-| `step <N \| texto>...` `*` | Marca (o con `--undo` desmarca) pasos del plan de la tarea en curso y pone al día «Qué falta» y «Próximo paso concreto». |
+| `step <N \| texto>...` `*` | Marca (o con `--undo [--reason <texto>]` desmarca, dejando el motivo en el paso) pasos del plan de la tarea en curso y pone al día «Qué falta» y «Próximo paso concreto». |
 | `plan [<N>] --add\|--remove\|--rename\|--move\|--set` `*` | Cambia el plan de la tarea en curso: agrega, quita, renombra, mueve o reemplaza pasos, con «Documentar cierre de tarea» siempre al final. |
 | `mode <guided\|step-by-step\|auto\|extreme>` `*` | Registra el modo de ejecución acordado del plan de la tarea en curso. |
 | `pause` `*` | Pasa la tarea en curso a «Tareas pausadas» y deja «Sin tarea en curso». |
@@ -215,12 +215,15 @@ Empieza una tarea, **en una sola operación** sobre todos los archivos (o ningun
 ### `step`
 
 ```sh
-bun run task step <N | texto>... [--undo] [--json] [--apply]
+bun run task step <N | texto>... [--undo [--reason <texto>]] [--json] [--apply]
 ```
 
 Marca pasos del «Plan» de la tarea en curso (Regla 7 de `rules.md`: el handoff se pone al día en cada paso):
 
-- Cada argumento es el **número** del paso (posición en el plan, desde 1) o **parte de su texto** (sin distinguir mayúsculas ni acentos; si coincide con varios, error que los lista). Se pueden pasar varios. `--undo` los desmarca. Un paso que ya estaba en ese estado avisa y no cambia nada.
+- Cada argumento es el **número** del paso (posición en el plan, desde 1) o **parte de su texto** (sin distinguir mayúsculas ni acentos; si coincide con varios, error que los lista). Se pueden pasar varios. `--undo` los desmarca. Un paso que ya estaba en ese estado avisa y no cambia nada. La búsqueda por texto ignora el sufijo de reabierto (ver abajo).
+- **`--reason <texto>` (solo con `--undo`):** el motivo de reabrir. A cada paso que realmente pasa de hecho a pendiente se le añade al final de la línea ` (reabierto: <motivo>)` (`(reopened: <motivo>)` en un proyecto en inglés; al leer se reconocen ambas). Si el paso ya traía un sufijo de reabierto, se **reemplaza** (no se acumula); un paso que ya estaba pendiente no cambia ni recibe el motivo. El motivo es una sola línea (varias líneas, vacío o con el comienzo de un sufijo `(reabierto: ` / `(reopened: ` es error de uso, exit 2) y puede llevar paréntesis: el sufijo se reconoce como el último `(reabierto: ` que cierra con `)` al final de la línea. `--reason` sin `--undo` es error de uso. Al **marcar como hecho** un paso con ese sufijo, se quita de la línea.
+- **Sin `--reason`**, `--undo` funciona igual que antes pero imprime un `Aviso:` («La Regla 7 pide un motivo al reabrir: usa --reason.») cuando reabre algún paso; con `--json` va en `notes`.
+- «Qué falta» y «Próximo paso concreto» listan los pasos **sin** el sufijo de reabierto. Con `--json`, cada paso trae `text` sin el sufijo y, si lo tiene, `reopened` con el motivo.
 - «Qué falta» y «Próximo paso concreto» se reescriben **solos solo si siguen con el texto que puso el script**: el de `start` (`Todos los pasos del plan.`, el primer paso) o el que `step` generó antes (`Pasos pendientes:` con la lista de los pasos sin hacer; `Plan completo: falta cerrar la tarea.` al terminar). Un texto que alguien escribió no se pisa: se avisa y se actualiza con `edit --missing` / `--next`. «Decisiones a medio camino» nunca cambia solo.
 - `step` solo marca y desmarca pasos. Para agregar, quitar, renombrar o mover pasos se usa `plan` (ver la sección `plan`). Para cambiar un texto a mano («Qué falta», «Decisiones a medio camino», «Próximo paso concreto») se usa `edit` (ver la sección `edit`).
 - Las subsecciones se reconocen por su título en español o inglés. Sin plan (sin checkboxes) no hay pasos que marcar.
@@ -240,14 +243,15 @@ Cambia el «Plan» de la tarea en curso sin editar `handoff.md` a mano (los plan
 
 - **`--add <texto>`:** agrega un paso pendiente. Por defecto va justo antes de «Documentar cierre de tarea»; con `--at <pos>` (desde 1) va en esa posición, y si cae después del cierre se coloca antes.
 - **`--remove <paso>`:** quita un paso, también uno ya hecho. No quita el paso de cierre ni el único paso del plan.
-- **`--rename <paso> <texto>`:** cambia todo el texto del paso (incluido un sufijo de evidencia) y conserva si estaba hecho. No aplica al paso de cierre. Ej.: `plan --rename 2 "texto nuevo" --apply`.
+- **`--rename <paso> <texto>`:** cambia todo el texto del paso (incluido un sufijo de reabierto o de evidencia) y conserva si estaba hecho. No aplica al paso de cierre. Ej.: `plan --rename 2 "texto nuevo" --apply`.
 - **`--move <paso> --to <pos>`:** reordena. El paso de cierre no se mueve ni nada queda después de él.
 - **`--set -`:** reemplaza todo el plan con un paso por línea de la entrada estándar (el mismo formato de `start --plan -`). Los pasos cuyo texto ya existía conservan su estado; el paso de cierre va siempre al final y conserva el suyo. La línea de modo y el resto del handoff no se tocan. Detalles:
   - La coincidencia por texto no distingue mayúsculas ni acentos, y el paso conserva su texto antiguo (no el de la entrada).
+  - El sufijo `(reabierto: motivo)` no cuenta para la coincidencia: el paso conserva su línea, con su sufijo, venga o no en la entrada.
   - Un paso hecho con sufijo de evidencia solo conserva su estado si la entrada trae el texto completo, con la evidencia; sin ella queda pendiente.
   - Si varias líneas de la entrada parecen el paso de cierre (p. ej. «Documentar cierre de la fase 2»), solo cuenta la primera; las demás se ignoran con un `Aviso:` que dice cuáles (con `--json`, en `notes`).
   - Si el plan no tenía paso de cierre, se agrega uno al final.
-- `<paso>` es el **número** (posición actual, desde 1) o **parte del texto**, igual que en `step`. Los números cambian al agregar, quitar o mover pasos: la salida muestra el plan resultante numerado.
+- `<paso>` es el **número** (posición actual, desde 1) o **parte del texto**, igual que en `step` (sin contar el sufijo de reabierto). Los números cambian al agregar, quitar o mover pasos: la salida muestra el plan resultante numerado.
 - «Qué falta» y «Próximo paso concreto» se ponen al día con la misma regla que `step`: solo si siguen con el texto que puso el script. Si alguien los escribió, no se pisan: se avisa y se cambian con `edit --missing` / `--next`.
 - `--add` y `--rename` rechazan (error, exit 1) un texto que es el del paso de cierre: en `--add` solo si el plan ya lo tiene; en `--rename` siempre. Si el paso de cierre ya estaba hecho, `--add` agrega igual el paso pendiente antes de él y avisa.
 - Sin tarea en curso o sin plan es un error. Solo `--add` acepta un valor que empieza con `-`, pasado como `--add=- texto` (ojo: se quita un `- ` inicial, así que el paso queda como `texto`). El texto de `--rename` es posicional y no puede empezar con `-`.

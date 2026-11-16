@@ -81,6 +81,8 @@ export interface Strings {
   allDone: string;
   /** «Próximo paso concreto» cuando ya no queda ningún paso pendiente. */
   planDone: string;
+  /** Etiqueta del sufijo `(reabierto: <motivo>)` que `step --undo --reason` añade a un paso reabierto. */
+  reopened: string;
   // Lo que escribe `unblock`: `[Resuelto el <fecha>] — era <bloqueo original>`.
   resolved: string;
   was: string;
@@ -129,6 +131,7 @@ export const STRINGS: Record<Lang, Strings> = {
     pendingSteps: "Pasos pendientes:",
     allDone: "Todos los pasos del plan están hechos; falta cerrar la tarea.",
     planDone: "Plan completo: falta cerrar la tarea.",
+    reopened: "reabierto",
     resolved: "Resuelto el",
     was: "era",
     raisedWhenClosing: (task, number) => `Surgió al cerrar la ${task} ${number}; falta detallarla.`,
@@ -170,6 +173,7 @@ export const STRINGS: Record<Lang, Strings> = {
     pendingSteps: "Pending steps:",
     allDone: "All the plan steps are done; the task is left to close.",
     planDone: "Plan complete: the task is left to close.",
+    reopened: "reopened",
     resolved: "Resolved on",
     was: "was",
     raisedWhenClosing: (task, number) => `Raised when closing ${task} ${number}; still to be detailed.`,

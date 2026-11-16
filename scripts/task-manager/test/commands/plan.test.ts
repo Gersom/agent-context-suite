@@ -425,6 +425,48 @@ describe("plan", () => {
     });
   });
 
+  describe("pasos reabiertos (`(reabierto: motivo)`): el sufijo no cuenta para buscar ni para los textos generados", () => {
+    /** Proyecto con el paso 1 reabierto con un motivo. */
+    async function reopened(): Promise<Project> {
+      const p = await started();
+      await exec(["step", "1", "--apply"], p);
+      await exec(["step", "1", "--undo", "--reason", "falló la prueba", "--apply"], p);
+      expect(steps(p)[0]).toBe("- [ ] Paso 1 — Escribir (reabierto: falló la prueba)");
+      return p;
+    }
+
+    test("un paso se encuentra por su texto sin el sufijo, en plan igual que en step", async () => {
+      const p = await reopened();
+      expect((await exec(["plan", "--rename", "falló la prueba", "x", "--apply"], p)).err).toContain("Ningún paso del plan");
+      const { code } = await exec(["plan", "--move", "Paso 1 — Escribir", "--to", "2", "--apply"], p);
+      expect(code).toBe(0);
+      expect(steps(p)[1]).toBe("- [ ] Paso 1 — Escribir (reabierto: falló la prueba)");
+    });
+
+    test("«Qué falta» y «Próximo paso concreto» salen sin el sufijo", async () => {
+      const p = await reopened();
+      await exec(["plan", "--add", "Paso nuevo", "--at", "1", "--apply"], p);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso nuevo\n- Paso 1 — Escribir\n- Paso 2 — Probar\n");
+      expect(handoff(p)).toContain("### Próximo paso concreto\n\nPaso nuevo\n");
+      expect(handoff(p)).not.toContain("- Paso 1 — Escribir (reabierto");
+    });
+
+    test("--set - conserva el estado y la línea (con su sufijo) comparando sin el sufijo, venga o no en la entrada", async () => {
+      const p = await reopened();
+      await exec(["step", "2", "--apply"], p);
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Paso 2 — Probar (reabierto: otro)\nPaso 1 — Escribir\nNuevo" });
+      expect(steps(p)).toEqual(["- [x] Paso 2 — Probar", "- [ ] Paso 1 — Escribir (reabierto: falló la prueba)", "- [ ] Nuevo", FIRST[3]]);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 1 — Escribir\n- Nuevo\n");
+    });
+
+    test("--rename reemplaza todo el texto, también el sufijo", async () => {
+      const p = await reopened();
+      await exec(["plan", "--rename", "1", "Escribir de nuevo", "--apply"], p);
+      expect(steps(p)[0]).toBe("- [ ] Escribir de nuevo");
+      expect(handoff(p)).not.toContain("reabierto");
+    });
+  });
+
   test("--json: dice qué cambió y no imprime el diff", async () => {
     const p = await started();
     const pending = JSON.parse((await exec(["plan", "--add", "Paso extra", "--json"], p)).out);

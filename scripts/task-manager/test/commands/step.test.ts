@@ -19,6 +19,7 @@ afterAll(() => projects.forEach((p) => p.cleanup()));
 const IDLE = { contents: { "handoff.md": HANDOFF_IDLE, "backlog.md": BACKLOG_RICH, "history.md": HISTORY_RICH }, teamBacklogText: TEAM_RICH };
 const PLAN = "Paso 1 — Escribir\nPaso 2 — Probar\nPaso 3 — Cerrar el hilo";
 const handoff = (p: Project) => readIn(p, "gersom", "handoff.md");
+const write = (p: Project, text: string) => writeFileSync(join(p.agents, "gersom", "handoff.md"), text);
 
 /** Proyecto con la Tarea 1 empezada con un plan de 3 pasos (más el de cierre). */
 async function started(plan = PLAN): Promise<Project> {
@@ -217,6 +218,160 @@ describe("step", () => {
     const applied = JSON.parse((await exec(["step", "2", "--json", "--apply"], p)).out);
     expect(applied).toMatchObject({ applied: true, pending: false, files: [{ file: "docs/agents/gersom/handoff.md", changed: true, written: true }] });
     expect(applied.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar", done: true, changed: true });
+  });
+
+  describe("--undo --reason: el paso reabierto queda con su motivo (Regla 7)", () => {
+    const LINE_1 = "- [ ] Paso 1 — Escribir";
+    /** Proyecto empezado con los pasos indicados ya hechos. */
+    async function withDone(...done: string[]): Promise<Project> {
+      const p = await started();
+      expect((await exec(["step", ...done, "--apply"], p)).code).toBe(0);
+      return p;
+    }
+
+    test("añade ` (reabierto: <motivo>)` al final de la línea, y «Qué falta» / «Próximo paso» llevan el texto sin el sufijo", async () => {
+      const p = await withDone("1");
+      const { code, out } = await exec(["step", "1", "--undo", "--reason", "falló la prueba", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("Paso 1 desmarcado: «Paso 1 — Escribir» (reabierto: falló la prueba).");
+      expect(out).not.toContain("Aviso");
+      const text = handoff(p);
+      expect(text).toContain(`${LINE_1} (reabierto: falló la prueba)\n- [ ] Paso 2 — Probar\n`);
+      expect(text).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 1 — Escribir\n- Paso 2 — Probar\n");
+      expect(text).toContain("### Próximo paso concreto\n\nPaso 1 — Escribir\n");
+      expect(text).not.toContain("- Paso 1 — Escribir (reabierto");
+    });
+
+    test("sin --reason funciona como antes pero avisa que la Regla 7 pide un motivo (también en --json, en `notes`)", async () => {
+      const p = await withDone("1", "2");
+      const { code, out } = await exec(["step", "1", "--undo", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("Paso 1 desmarcado");
+      expect(out).toContain("Aviso: La Regla 7 pide un motivo al reabrir: usa --reason.");
+      expect(handoff(p)).toContain(`${LINE_1}\n`);
+      expect(handoff(p)).not.toContain("reabierto");
+
+      const json = JSON.parse((await exec(["step", "2", "--undo", "--json", "--apply"], p)).out);
+      expect(json.notes).toEqual(["La Regla 7 pide un motivo al reabrir: usa --reason."]);
+      expect(json.steps[1]).not.toHaveProperty("reopened");
+    });
+
+    test("--reason sin --undo, vacío, de varias líneas o con el marcador del sufijo: error de uso y no escribe nada", async () => {
+      const p = await withDone("1");
+      const before = snapshot(p.root);
+      const noUndo = await exec(["step", "2", "--reason", "porque sí", "--apply"], p);
+      expect(noUndo.code).toBe(2);
+      expect(noUndo.err).toContain("--reason solo va con --undo");
+      expect((await exec(["step", "1", "--undo", "--reason", "", "--apply"], p)).code).toBe(2);
+      const lines = await exec(["step", "1", "--undo", "--reason", "uno\ndos", "--apply"], p);
+      expect(lines.code).toBe(2);
+      expect(lines.err).toContain("--reason debe ser una sola línea");
+      expect((await exec(["step", "1", "--undo", "--reason", "ver (reabierto: antes)", "--apply"], p)).code).toBe(2);
+      expect((await exec(["step", "1", "--undo", "--reason", "see (reopened: before)", "--apply"], p)).code).toBe(2);
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("un sufijo previo se reemplaza, no se acumula (también uno en inglés o con paréntesis)", async () => {
+      const p = await withDone("1", "2", "3");
+      write(p, handoff(p).replace("- [x] Paso 1 — Escribir", "- [x] Paso 1 — Escribir (reabierto: viejo)").replace("- [x] Paso 2 — Probar", "- [x] Paso 2 — Probar (reopened: old)").replace("- [x] Paso 3 — Cerrar el hilo", "- [x] Paso 3 — Cerrar el hilo (reabierto: falla (ver #3))"));
+      await exec(["step", "1", "2", "3", "--undo", "--reason", "nuevo", "--apply"], p);
+      const text = handoff(p);
+      expect(text).toContain("- [ ] Paso 1 — Escribir (reabierto: nuevo)\n- [ ] Paso 2 — Probar (reabierto: nuevo)\n- [ ] Paso 3 — Cerrar el hilo (reabierto: nuevo)\n");
+      expect(text).not.toContain("viejo");
+      expect(text).not.toContain("old");
+      expect(text).not.toContain("falla");
+    });
+
+    test("un motivo con paréntesis se escribe tal cual y se reconoce al reemplazarlo", async () => {
+      const p = await withDone("1");
+      await exec(["step", "1", "--undo", "--reason", "falla (ver #3)", "--apply"], p);
+      expect(handoff(p)).toContain(`${LINE_1} (reabierto: falla (ver #3))\n`);
+      const json = JSON.parse((await exec(["step", "1", "--json"], p)).out);
+      expect(json.steps[0]).toMatchObject({ text: "Paso 1 — Escribir", done: true });
+      await exec(["step", "1", "--apply"], p);
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir\n");
+    });
+
+    test("un paso que ya estaba pendiente avisa y no cambia (tampoco recibe el motivo); los demás sí", async () => {
+      const p = await withDone("1");
+      const before = snapshot(p.root);
+      const same = await exec(["step", "2", "--undo", "--reason", "x", "--apply"], p);
+      expect(same.code).toBe(0);
+      expect(same.out).toContain("Aviso: El paso 2 ya estaba pendiente");
+      expect(snapshot(p.root)).toEqual(before);
+
+      const { out } = await exec(["step", "1", "2", "--undo", "--reason", "x", "--apply"], p);
+      expect(out).toContain("Aviso: El paso 2 ya estaba pendiente");
+      expect(handoff(p)).toContain(`${LINE_1} (reabierto: x)\n- [ ] Paso 2 — Probar\n`);
+    });
+
+    test("marcar de nuevo el paso quita el sufijo", async () => {
+      const p = await withDone("1");
+      await exec(["step", "1", "--undo", "--reason", "falló", "--apply"], p);
+      const { out } = await exec(["step", "1", "--apply"], p);
+      expect(out).toContain("Paso 1 marcado como hecho: «Paso 1 — Escribir».");
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir\n- [ ] Paso 2 — Probar\n");
+      expect(handoff(p)).not.toContain("reabierto");
+    });
+
+    test("la búsqueda por texto ignora el sufijo (y no lo encuentra a él)", async () => {
+      const p = await withDone("1", "2");
+      await exec(["step", "1", "2", "--undo", "--reason", "falló la prueba", "--apply"], p);
+      expect((await exec(["step", "falló la prueba"], p)).err).toContain("Ningún paso del plan");
+      expect((await exec(["step", "reabierto"], p)).err).toContain("Ningún paso del plan");
+      // El texto completo del paso, tal como se ve sin el sufijo, coincide exacto.
+      expect((await exec(["step", "Paso 1 — Escribir", "--apply"], p)).code).toBe(0);
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir\n- [ ] Paso 2 — Probar (reabierto: falló la prueba)\n");
+      // Y la lista de coincidencias ambiguas tampoco lo muestra.
+      const ambiguous = await exec(["step", "Paso", "--undo"], p);
+      expect(ambiguous.err).toContain("  2. Paso 2 — Probar\n");
+    });
+
+    test("varios pasos reabiertos: «Qué falta» los lista sin sufijo", async () => {
+      const p = await withDone("1", "2");
+      await exec(["step", "1", "2", "--undo", "--reason", "falló", "--apply"], p);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 1 — Escribir\n- Paso 2 — Probar\n- Paso 3 — Cerrar el hilo\n- Documentar cierre de tarea\n\n###");
+      await exec(["step", "3", "--apply"], p);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 1 — Escribir\n- Paso 2 — Probar\n- Documentar cierre de tarea\n");
+      expect(handoff(p)).not.toContain("- Paso 2 — Probar (reabierto");
+    });
+
+    test("--json: `reopened` por paso y el aviso en `notes`", async () => {
+      const p = await withDone("1", "2");
+      const json = JSON.parse((await exec(["step", "1", "--undo", "--reason", "falló", "--json", "--apply"], p)).out);
+      expect(json.notes).toEqual([]);
+      expect(json.steps[0]).toEqual({ index: 1, text: "Paso 1 — Escribir", done: false, changed: true, reopened: "falló" });
+      expect(json.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar", done: true, changed: false });
+      // Un paso que ya traía el sufijo y no se tocó también lo informa.
+      const later = JSON.parse((await exec(["step", "3", "--json"], p)).out);
+      expect(later.steps[0]).toMatchObject({ text: "Paso 1 — Escribir", reopened: "falló" });
+    });
+
+    test("un proyecto en inglés escribe `(reopened: …)` y reconoce ambas etiquetas", async () => {
+      const p = project({ folders: ["gersom"], contents: { "handoff.md": HANDOFF_IDLE_EN, "backlog.md": BACKLOG_EN, "history.md": HISTORY_EN } });
+      await exec(["start", "4", "--plan", "-", "--apply"], p, { stdin: "Step 1 — write\nStep 2 — test" });
+      await exec(["step", "1", "--apply"], p);
+      await exec(["step", "1", "--undo", "--reason", "it failed", "--apply"], p);
+      expect(handoff(p)).toContain("- [ ] Step 1 — write (reopened: it failed)\n");
+      write(p, handoff(p).replace("(reopened: it failed)", "(reabierto: it failed)"));
+      await exec(["step", "write", "--apply"], p);
+      await exec(["step", "1", "--undo", "--reason", "again", "--apply"], p);
+      expect(handoff(p)).toContain("- [ ] Step 1 — write (reopened: again)\n");
+      expect(handoff(p)).not.toContain("reabierto");
+    });
+
+    test("archivos CRLF siguen siendo CRLF", async () => {
+      const crlf = (text: string) => text.replace(/\n/g, "\r\n");
+      const p = project({ folders: ["gersom"], contents: { "handoff.md": crlf(HANDOFF_IDLE), "backlog.md": crlf(BACKLOG_RICH), "history.md": crlf(HISTORY_RICH) } });
+      await exec(["start", "1", "--plan", "-", "--apply"], p, { stdin: PLAN });
+      await exec(["step", "1", "--apply"], p);
+      expect((await exec(["step", "1", "--undo", "--reason", "falló", "--apply"], p)).code).toBe(0);
+      expect(handoff(p).replace(/\r\n/g, "")).not.toContain("\n");
+      expect(handoff(p)).toContain("- [ ] Paso 1 — Escribir (reabierto: falló)\r\n- [ ] Paso 2 — Probar\r\n");
+      await exec(["step", "1", "--apply"], p);
+      expect(handoff(p)).toContain("- [x] Paso 1 — Escribir\r\n- [ ] Paso 2 — Probar\r\n");
+      expect(handoff(p).replace(/\r\n/g, "")).not.toContain("\n");
+    });
   });
 
   describe("errores: no se escribe nada", () => {
