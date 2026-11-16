@@ -2,7 +2,8 @@
 // textos de handoff.md que dependen del avance (Regla 7 de rules.md): «Qué falta» y «Próximo paso
 // concreto». Esos dos se reescriben solos únicamente si siguen con el texto que dejó el script
 // (el de `start` o el que `step` mismo generó); un texto que alguien escribió no se toca: para
-// cambiarlo a mano está `edit` (`--missing`, `--next`). Un paso reabierto con `--undo --reason` queda
+// cambiarlo a mano está `edit` (`--missing`, `--next`). Excepción: al marcar, un «Próximo paso
+// concreto» escrito a mano igual al texto de un paso que se marca se pone al día igual. Un paso reabierto con `--undo --reason` queda
 // con el sufijo ` (reabierto: <motivo>)` (write/suffix.ts); al marcarlo de nuevo se quita. Al marcar
 // un paso, `--evidence` y `--commit` anotan al final de su línea `· <evidencia> · commit <hash>`; sobre
 // un paso ya hecho reemplazan esos campos y reabrirlo los quita. Sin `--apply` solo muestra el diff.
@@ -115,7 +116,9 @@ export const step: Command = {
     const pendingBefore = steps.filter((s) => !s.done).map((s) => stepBase(s.text));
     // Un paso que se reabre lleva todavía su evidencia en la línea de hoy: se lee con su estado de hoy (hecho).
     const pendingAfter = steps.filter((s, i) => (toggled.includes(i) ? !want : !s.done)).map((s) => stepBase(s.text, s.done));
-    const progress = progressUpdates({ text: handoff.text, subsections, S, taskNumber: task.number, pendingBefore, pendingAfter });
+    // Al marcar, un «Próximo paso concreto» escrito a mano igual a un paso recién marcado (su texto pendiente, sin sufijos) también se pone al día.
+    const markedTexts = want ? toggled.map((i) => stepBase(steps[i].text)) : [];
+    const progress = progressUpdates({ text: handoff.text, subsections, S, taskNumber: task.number, pendingBefore, pendingAfter, markedTexts });
     const { updated, stale } = progress;
     edits.push(...progress.edits);
 

@@ -143,6 +143,98 @@ describe("step", () => {
     expect(json.notes[1]).toContain("`edit 1 --next`");
   });
 
+  describe("«Próximo paso concreto» escrito a mano que coincide con un paso que se marca", () => {
+    const nextOf = (p: Project) => handoff(p).match(/### Próximo paso concreto\n\n([\s\S]*?)\n\n/)![1];
+
+    test("igual al paso marcado: se actualiza al siguiente pendiente y «Qué falta» propio se conserva", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--missing", "Texto propio.", "--next", "Paso 2 — Probar", "--apply"], p);
+      const { out } = await exec(["step", "2", "--apply"], p);
+      expect(out).toContain("Actualizado: Próximo paso concreto.");
+      expect(out).toContain("Aviso: «Qué falta» tiene un texto propio y no lo toqué");
+      expect(out).not.toContain("«Próximo paso concreto» tiene un texto propio");
+      expect(nextOf(p)).toBe("Paso 1 — Escribir");
+      expect(handoff(p)).toContain("### Qué falta\n\nTexto propio.\n");
+    });
+
+    test("igual con otro caso o acentos: también se actualiza", async () => {
+      const p = await started("Paso 1 — Revisión del diseño\nPaso 2 — Probar");
+      await exec(["edit", "1", "--next", "paso 1 — REVISION DEL diseño", "--apply"], p);
+      const { out } = await exec(["step", "1", "--apply"], p);
+      expect(out).toContain("Actualizado: Qué falta, Próximo paso concreto.");
+      expect(nextOf(p)).toBe("Paso 2 — Probar");
+    });
+
+    test("el texto base ignora los sufijos del paso (evidencia y commit)", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--next", "Paso 2 — Probar", "--apply"], p);
+      await exec(["step", "2", "--evidence", "bun test", "--commit", "abc1234", "--apply"], p);
+      expect(handoff(p)).toContain("- [x] Paso 2 — Probar · bun test · commit abc1234");
+      expect(nextOf(p)).toBe("Paso 1 — Escribir");
+    });
+
+    test("texto distinto: se conserva y avisa", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--next", "Paso 1 — Escribir con calma", "--apply"], p);
+      const { out } = await exec(["step", "1", "--apply"], p);
+      expect(out).toContain("Aviso: «Próximo paso concreto» tiene un texto propio y no lo toqué");
+      expect(out).toContain("`edit 1 --next`");
+      expect(out).not.toContain("Actualizado: Próximo paso concreto");
+      expect(nextOf(p)).toBe("Paso 1 — Escribir con calma");
+    });
+
+    test("igual a un paso que no se marca en esta invocación: se conserva y avisa", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--next", "Paso 3 — Cerrar el hilo", "--apply"], p);
+      const { out } = await exec(["step", "1", "--apply"], p);
+      expect(out).toContain("Aviso: «Próximo paso concreto» tiene un texto propio y no lo toqué");
+      expect(nextOf(p)).toBe("Paso 3 — Cerrar el hilo");
+    });
+
+    test("con --undo no se toca, aunque coincida con el paso que se reabre", async () => {
+      const p = await started();
+      await exec(["step", "1", "--apply"], p);
+      await exec(["edit", "1", "--next", "Paso 1 — Escribir", "--apply"], p);
+      const { out } = await exec(["step", "1", "--undo", "--reason", "falla", "--apply"], p);
+      expect(out).toContain("Aviso: «Próximo paso concreto» tiene un texto propio y no lo toqué");
+      expect(nextOf(p)).toBe("Paso 1 — Escribir");
+    });
+
+    test("varios pasos a la vez: coincide con cualquiera de los marcados", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--next", "Paso 2 — Probar", "--apply"], p);
+      const { out } = await exec(["step", "1", "2", "--apply"], p);
+      expect(out).toContain("Actualizado: Qué falta, Próximo paso concreto.");
+      expect(nextOf(p)).toBe("Paso 3 — Cerrar el hilo");
+    });
+
+    test("sin siguiente pendiente: el texto de plan completo", async () => {
+      const p = await started("Paso 1 — Escribir");
+      await exec(["edit", "1", "--next", "Documentar cierre de tarea", "--apply"], p);
+      await exec(["step", "1", "--apply"], p);
+      const { out } = await exec(["step", "Documentar cierre", "--apply"], p);
+      expect(out).toContain("Actualizado: Qué falta, Próximo paso concreto.");
+      expect(nextOf(p)).toBe("Plan completo: falta cerrar la tarea.");
+    });
+
+    test("--json: aparece en `updated` y no hay nota de texto propio", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--missing", "Texto propio.", "--next", "Paso 2 — Probar", "--apply"], p);
+      const json = JSON.parse((await exec(["step", "2", "--json", "--apply"], p)).out);
+      expect(json.updated).toEqual(["Próximo paso concreto"]);
+      expect(json.notes).toHaveLength(1);
+      expect(json.notes[0]).toContain("`edit 1 --missing`");
+    });
+
+    test("`plan` no cambia: un próximo paso escrito a mano igual al paso afectado sigue siendo propio", async () => {
+      const p = await started();
+      await exec(["edit", "1", "--next", "Paso 2 — Probar", "--apply"], p);
+      const { out } = await exec(["plan", "--remove", "2", "--apply"], p);
+      expect(out).toContain("Aviso: «Próximo paso concreto» tiene un texto propio y no lo toqué");
+      expect(nextOf(p)).toBe("Paso 2 — Probar");
+    });
+  });
+
   describe("avisa de líneas del plan que `close` rechazaría (sin bloquear)", () => {
     /** Proyecto empezado con una nota suelta entre los pasos del plan. */
     async function withLooseLine(): Promise<Project> {

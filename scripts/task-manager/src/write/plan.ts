@@ -1,7 +1,8 @@
 // Lo que comparten `step` y `plan` del «Plan» de la tarea en curso: cómo se resuelve «qué paso es» y
 // cómo se ponen al día «Qué falta» y «Próximo paso concreto» (Regla 7 de rules.md) cuando cambian
 // los pasos pendientes. Esos dos textos se reescriben solos únicamente si siguen con el que dejó el
-// script (el de `start` o el que se generó antes); un texto que alguien escribió no se toca.
+// script (el de `start` o el que se generó antes); un texto que alguien escribió no se toca (salvo el
+// «Próximo paso concreto» que `step` encuentra igual a un paso que acaba de marcar).
 
 import type { PlanStep, Range, Subsection } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
@@ -71,6 +72,8 @@ export function staleNotice({ label, command }: StaleText): string {
  * Las ediciones que ponen al día «Qué falta» y «Próximo paso concreto» cuando los pasos pendientes
  * pasan de `pendingBefore` a `pendingAfter`. Si no cambian, no hay nada que poner al día. Un texto
  * que no es el de `start` ni el generado para `pendingBefore` es propio: no se toca y se informa en `stale`.
+ * Excepción, solo para «Próximo paso concreto»: con `markedTexts` (los textos base de los pasos que `step` acaba de
+ * marcar), un texto propio que coincide con alguno (sin distinguir mayúsculas ni acentos) se trata como el del script.
  * @param text handoff.md (LF), el mismo que se parseó
  */
 export function progressUpdates(opts: {
@@ -80,8 +83,10 @@ export function progressUpdates(opts: {
   taskNumber: number;
   pendingBefore: string[];
   pendingAfter: string[];
+  markedTexts?: string[];
 }): { edits: Edit[]; updated: string[]; stale: StaleText[] } {
-  const { text, subsections, S, taskNumber, pendingBefore, pendingAfter } = opts;
+  const { text, subsections, S, taskNumber, pendingBefore, pendingAfter, markedTexts = [] } = opts;
+  const marked = markedTexts.map(normalizeTitle);
   const edits: Edit[] = [];
   const updated: string[] = [];
   const stale: StaleText[] = [];
@@ -94,7 +99,8 @@ export function progressUpdates(opts: {
     if (!sub) continue;
     // Sigue con el texto del script (el de `start` o el generado antes): se pone al día.
     const current = sub.body.trim();
-    if (current !== before[part] && !defaults(part).includes(current)) {
+    const isMarked = part === "next" && marked.includes(normalizeTitle(current));
+    if (current !== before[part] && !defaults(part).includes(current) && !isMarked) {
       stale.push({ label: sub.title, command: `edit ${taskNumber} --${part}` });
       continue;
     }
