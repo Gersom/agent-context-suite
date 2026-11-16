@@ -4,45 +4,17 @@
 // (el de `start` o el que `step` mismo generó); un texto que alguien escribió no se toca: para
 // cambiarlo a mano está `edit` (`--missing`, `--next`). Sin `--apply` solo muestra el diff.
 
-import type { PlanStep } from "../../../_shared/types.ts";
 import { CliError, UsageError } from "../cli/errors.ts";
 import type { Command } from "../cli/types.ts";
 import { replaceRange, type Edit } from "../edit/edits.ts";
-import { replaceSubsectionBody } from "../edit/layout.ts";
-import { normalizeTitle } from "../query/find.ts";
 import { relFile } from "../query/format.ts";
 import { requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
-import { findPart, invalidPlanLineMessages, invalidPlanLines, structureProblemMessage, structureProblems } from "../write/handoff.ts";
+import { invalidPlanLineMessages, invalidPlanLines, structureProblemMessage, structureProblems } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
-import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
+import { detectLanguage, STRINGS } from "../write/language.ts";
+import { progressUpdates, resolveStep, staleNotice } from "../write/plan.ts";
 import { headerLabels } from "../write/samples.ts";
-
-/** Qué paso es el que se pidió: un número (posición, desde 1) o parte del texto del paso. */
-function resolveStep(arg: string, steps: PlanStep[]): number {
-  const wanted = arg.trim();
-  if (/^\d+$/.test(wanted)) {
-    const index = Number(wanted);
-    if (index < 1 || index > steps.length) throw new CliError(`El plan tiene ${steps.length} pasos: no existe el paso ${index}. No se escribió nada.`);
-    return index - 1;
-  }
-  const query = normalizeTitle(wanted);
-  const exact = steps.flatMap((step, i) => (normalizeTitle(step.text) === query ? [i] : []));
-  const found = exact.length ? exact : steps.flatMap((step, i) => (query && normalizeTitle(step.text).includes(query) ? [i] : []));
-  if (!found.length) throw new CliError(`Ningún paso del plan tiene «${wanted}» en su texto. Usa el número del paso (1 a ${steps.length}). No se escribió nada.`);
-  if (found.length > 1) {
-    throw new CliError(`«${wanted}» coincide con ${found.length} pasos; usa su número:\n${found.map((i) => `  ${i + 1}. ${steps[i].text}`).join("\n")}\nNo se escribió nada.`);
-  }
-  return found[0];
-}
-
-/** Los textos que `step` escribe solo (y por lo tanto reconoce como suyos) según los pasos pendientes. */
-function generated(S: Strings, pending: string[]): Record<"missing" | "next", string> {
-  return {
-    missing: pending.length ? `${S.pendingSteps}\n${pending.map((text) => `- ${text}`).join("\n")}` : S.allDone,
-    next: pending[0] ?? S.planDone,
-  };
-}
 
 export const step: Command = {
   name: "step",
@@ -83,27 +55,9 @@ export const step: Command = {
 
     const pendingBefore = steps.filter((s) => !s.done).map((s) => s.text);
     const pendingAfter = steps.filter((s, i) => (toggled.includes(i) ? !want : !s.done)).map((s) => s.text);
-    const before = generated(S, pendingBefore);
-    const after = generated(S, pendingAfter);
-    const defaults = (part: "missing" | "next"): string[] =>
-      Object.values(STRINGS).flatMap((strings) => (part === "missing" ? [strings.missingWithPlan, strings.missingNoPlan] : [strings.nextNoPlan]));
-
-    const updated: string[] = [];
-    const stale: Array<{ label: string; command: string }> = [];
-    for (const part of ["missing", "next"] as const) {
-      const sub = findPart(subsections, part);
-      if (!toggled.length || !sub) continue;
-      // Sigue con el texto del script (el de `start` o el generado antes por `step`): se pone al día.
-      const current = sub.body.trim();
-      if (current !== before[part] && !defaults(part).includes(current)) {
-        stale.push({ label: sub.title, command: `edit ${task.number} --${part}` });
-        continue;
-      }
-      const text = after[part];
-      if (current === text) continue;
-      edits.push(replaceSubsectionBody(handoff.text, sub.range!, text));
-      updated.push(sub.title);
-    }
+    const progress = progressUpdates({ text: handoff.text, subsections, S, taskNumber: task.number, pendingBefore, pendingAfter });
+    const { updated, stale } = progress;
+    edits.push(...progress.edits);
 
     const result = ctx.commit([{ doc: handoff, edits }], { quiet: flags.json === true });
     const done = steps.filter((s, i) => (toggled.includes(i) ? want : s.done)).length;
@@ -123,6 +77,6 @@ export const step: Command = {
       if (steps.length) io.out(`Plan ${done}/${steps.length}${pendingAfter[0] ? ` — siguiente: ${pendingAfter[0]}` : " — completo"} (${relFile(ws, handoff.path)}).`);
       if (updated.length) io.out(`Actualizado: ${updated.join(", ")}.`);
     }
-    for (const { label, command } of stale) io.out(`Aviso: «${label}» tiene un texto propio y no lo toqué; si ya no vale, actualízalo con \`${command}\` (Regla 7).`);
+    for (const text of stale) io.out(`Aviso: ${staleNotice(text)}`);
   },
 };

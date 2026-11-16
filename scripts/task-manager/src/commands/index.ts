@@ -16,6 +16,7 @@ import { groupEject } from "./group-eject.ts";
 import { mode } from "./mode.ts";
 import { next } from "./next.ts";
 import { pause } from "./pause.ts";
+import { plan } from "./plan.ts";
 import { resume } from "./resume.ts";
 import { show } from "./show.ts";
 import { start } from "./start.ts";
@@ -24,4 +25,4 @@ import { step } from "./step.ts";
 import { unblock } from "./unblock.ts";
 import { whoami } from "./whoami.ts";
 
-export const COMMANDS: Command[] = [whoami, anchors, status, next, show, add, start, step, mode, pause, resume, block, unblock, close, edit, groupCreate, groupEject, groupAdd, groupEdit, groupDissolve];
+export const COMMANDS: Command[] = [whoami, anchors, status, next, show, add, start, step, plan, mode, pause, resume, block, unblock, close, edit, groupCreate, groupEject, groupAdd, groupEdit, groupDissolve];
