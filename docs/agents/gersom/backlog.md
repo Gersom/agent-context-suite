@@ -56,15 +56,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Agregada:** 2026-11-16.
 
-### Tarea 154 — step --undo --reason: reabrir un paso con motivo
-
-- **Descripción:** La regla 7 pide dejar un paso reabierto como `- [ ] Paso N — … (reabierto: <motivo>)`, pero `step --undo` solo desmarca, sin motivo.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Origen: issue de otro agente. Propuesta: `step <N> --undo --reason <texto>` agrega el sufijo «(reabierto: <motivo>)»; sin --reason, avisa de que la regla lo pide. Hecho cuando: el sufijo queda en la línea del paso y se quita al volver a marcarlo como hecho.
-- **Agregada:** 2026-11-16.
-
 ### Tarea 155 — step --evidence/--commit: registrar evidencia y commit del paso
 
 - **Descripción:** La regla 7 pide anotar al final de cada paso hecho «· evidencia · commit abc1234», pero `step` no tiene flags para eso (confirmado en su ayuda): la anotación queda a mano o se omite.

@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 154 — step --undo --reason: reabrir un paso con motivo
+
+- `step <N> --undo --reason <texto>` deja el paso como «- [ ] texto (reabierto: motivo)»: reemplaza un sufijo previo, se quita al marcar el paso como hecho y, sin --reason, avisa de la Regla 7. La búsqueda por texto y los textos generados de «Qué falta» y «Próximo paso concreto» ignoran el sufijo (módulo src/write/suffix.ts, preparado para T-155).
+- Commit: 8b4589e. bun test 1936 pass, typecheck y acsuite check sin errores; revisión independiente sin problemas bloqueantes. Menores conocidos: plan --json y planProgress.nextStep aún muestran el sufijo, y un texto que termine en «(reabierto: …)» se trata como sufijo.
+
 ## 2026-11-16 — ✅ Tarea 153 — task plan: modificar el plan de una tarea en curso
 
 - Nuevo comando `acsuite task plan`: agrega (--add/--at), quita (--remove), renombra (--rename), mueve (--move/--to) o reemplaza (--set -) los pasos del plan de la tarea en curso sin editar handoff.md a mano; el paso «Documentar cierre de tarea» queda siempre al final.
