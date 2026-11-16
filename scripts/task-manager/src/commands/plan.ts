@@ -19,7 +19,7 @@ import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
 import { progressUpdates, resolveStep, staleNotice, stepTextRange } from "../write/plan.ts";
 import { closingStepRe, parsePlan } from "../write/render.ts";
 import { headerLabels } from "../write/samples.ts";
-import { stepBase } from "../write/suffix.ts";
+import { parseStepText, stepBase } from "../write/suffix.ts";
 
 const OPERATIONS = ["add", "remove", "rename", "move", "set"] as const;
 type Operation = (typeof OPERATIONS)[number];
@@ -49,7 +49,7 @@ export const plan: Command = {
     add: { type: "string", valueName: "texto", description: "Agrega el paso `- [ ] texto`: por defecto justo antes del paso de cierre." },
     at: { type: "string", valueName: "pos", description: "Con --add: posición (desde 1) del paso nuevo. Si cae después del paso de cierre, va justo antes." },
     remove: { type: "string", valueName: "paso", description: "Quita un paso (número o texto, como en `step`), también uno ya hecho. El paso de cierre no se quita." },
-    rename: { type: "string", valueName: "paso", description: "Cambia todo el texto de un paso (número o texto), también su sufijo `(reabierto: …)`, por el argumento que sigue: `--rename 2 \"texto nuevo\"`. Conserva si está hecho. No aplica al paso de cierre." },
+    rename: { type: "string", valueName: "paso", description: "Cambia todo el texto de un paso (número o texto), también sus sufijos (`(reabierto: …)`, evidencia y commit: para conservarlos, inclúyelos en el texto nuevo), por el argumento que sigue: `--rename 2 \"texto nuevo\"`. Conserva si está hecho. No aplica al paso de cierre." },
     move: { type: "string", valueName: "paso", description: "Mueve un paso (número o texto) a la posición de --to. El paso de cierre no se mueve ni nada pasa después de él." },
     to: { type: "string", valueName: "pos", description: "Con --move: posición (desde 1) en la que queda el paso." },
     set: {
@@ -112,7 +112,7 @@ export const plan: Command = {
       ...invalidPlanLineMessages(invalidPlanLines(handoff.text, subsections), lang),
       ...structureProblems(handoff.text, handoff.parsed, lang).map(structureProblemMessage),
     ];
-    // Los textos generados llevan el paso sin el sufijo de reabierto.
+    // Los textos generados llevan el paso sin sufijos (reabierto, evidencia, commit).
     const pendingBefore = steps.filter((step) => !step.done).map((step) => stepBase(step.text));
     const pendingAfter = outcome.after.filter((item) => !item.done).map((item) => stepBase(item.text));
     const progress = progressUpdates({ text: handoff.text, subsections, S, taskNumber: task.number, pendingBefore, pendingAfter });
@@ -124,7 +124,11 @@ export const plan: Command = {
       emitWriteJson(ctx, "plan", result, {
         task: { number: task.number, title: task.title },
         operation: op,
-        steps: outcome.after.map((item, i) => ({ index: i + 1, text: item.text, done: item.done })),
+        // El texto va sin sufijos; el motivo de reabierto, la evidencia y el commit, aparte y solo si el paso los trae.
+        steps: outcome.after.map((item, i) => {
+          const { base, reopened, evidence, commit } = parseStepText(item.text, item.done);
+          return { index: i + 1, text: base, done: item.done, ...(reopened ? { reopened } : {}), ...(evidence ? { evidence } : {}), ...(commit ? { commit } : {}) };
+        }),
         plan: { done, total: outcome.after.length, nextStep: pendingAfter[0] ?? null },
         updated: progress.updated,
         notes: [...notes, ...stale],
@@ -228,7 +232,7 @@ function planRename({ text, steps, closing, S }: Context, arg: string, newText: 
     throw new CliError(`No se puede renombrar el paso ${i + 1} a «${newText}»: ese texto es el del paso de cierre, que va siempre al final. No se escribió nada.`);
   }
   return {
-    // Reemplaza todo el texto del paso, también un sufijo (`(reabierto: …)`).
+    // Reemplaza todo el texto del paso, también sus sufijos (`(reabierto: …)`, `· evidencia`, `· commit …`): para conservarlos, van en el texto nuevo.
     edits: [replaceRange(stepTextRange(text, steps[i]), newText)],
     after: steps.map((step, j) => ({ text: j === i ? newText : step.text, done: step.done })),
     message: `paso ${i + 1} renombrado de «${steps[i].text}» a «${newText}»`,
@@ -261,16 +265,28 @@ function planSet({ text, steps, closing, S }: Context, lines: string[]): Outcome
   const existing = new Map<string, Array<{ step: PlanStep; i: number }>>();
   steps.forEach((step, i) => {
     if (i === closing) return;
-    // Se compara sin el sufijo de reabierto: el paso conserva su línea (y su sufijo) venga o no en la entrada.
-    const key = normalizeTitle(stepBase(step.text));
+    // Se compara sin sufijos (reabierto, evidencia, commit): el paso conserva su línea (y sus sufijos) venga o no en la entrada.
+    const key = normalizeTitle(stepBase(step.text, step.done));
     existing.set(key, [...(existing.get(key) ?? []), { step, i }]);
   });
 
   // Cada paso conserva su línea original si ya existía (y con ella su estado); los demás nacen pendientes.
   const kept: string[] = [];
   const list: Array<Item & { line: string }> = [];
-  for (const line of lines.filter((candidate) => !isClosing.test(candidate))) {
-    const match = existing.get(normalizeTitle(stepBase(line)))?.shift();
+  const wanted = lines.filter((candidate) => !isClosing.test(candidate));
+  // Dos pasadas, para que una línea no le robe su paso a otra que lo nombra exacto. Primera: la línea leída como pendiente
+  // (su texto completo, sin interpretar evidencia; solo un commit al final se quita) contra cualquier paso restante.
+  const matches = wanted.map((line) => existing.get(normalizeTitle(stepBase(line)))?.shift());
+  // Segunda, para las que quedaron sin paso: la línea de la entrada puede traer la evidencia de un paso hecho (`texto · evidencia`),
+  // así que se lee como hecha, pero solo contra los pasos hechos que siguen sin línea.
+  wanted.forEach((line, n) => {
+    if (matches[n]) return;
+    const candidates = existing.get(normalizeTitle(stepBase(line, true)));
+    const at = candidates?.findIndex(({ step }) => step.done) ?? -1;
+    if (at >= 0) matches[n] = candidates!.splice(at, 1)[0];
+  });
+  for (const [n, line] of wanted.entries()) {
+    const match = matches[n];
     if (match) {
       kept.push(match.step.text);
       list.push({ text: match.step.text, done: match.step.done, line: lineText(text, match.step) });

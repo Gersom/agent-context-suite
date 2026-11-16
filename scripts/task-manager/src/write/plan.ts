@@ -21,7 +21,7 @@ export function stepTextRange(text: string, step: PlanStep): Pick<Range, "start"
 
 /**
  * Qué paso es el que se pidió: un número (posición, desde 1) o parte del texto del paso. El texto
- * se busca sin el sufijo de reabierto (`stepBase`): el motivo no es parte del nombre del paso.
+ * se busca sin sufijos (`stepBase`): ni el motivo de reabierto ni la evidencia y el commit son parte del nombre del paso.
  */
 export function resolveStep(arg: string, steps: PlanStep[]): number {
   const wanted = arg.trim();
@@ -31,11 +31,11 @@ export function resolveStep(arg: string, steps: PlanStep[]): number {
     return index - 1;
   }
   const query = normalizeTitle(wanted);
-  const exact = steps.flatMap((step, i) => (normalizeTitle(stepBase(step.text)) === query ? [i] : []));
-  const found = exact.length ? exact : steps.flatMap((step, i) => (query && normalizeTitle(stepBase(step.text)).includes(query) ? [i] : []));
+  const exact = steps.flatMap((step, i) => (normalizeTitle(stepBase(step.text, step.done)) === query ? [i] : []));
+  const found = exact.length ? exact : steps.flatMap((step, i) => (query && normalizeTitle(stepBase(step.text, step.done)).includes(query) ? [i] : []));
   if (!found.length) throw new CliError(`Ningún paso del plan tiene «${wanted}» en su texto. Usa el número del paso (1 a ${steps.length}). No se escribió nada.`);
   if (found.length > 1) {
-    throw new CliError(`«${wanted}» coincide con ${found.length} pasos; usa su número:\n${found.map((i) => `  ${i + 1}. ${stepBase(steps[i].text)}`).join("\n")}\nNo se escribió nada.`);
+    throw new CliError(`«${wanted}» coincide con ${found.length} pasos; usa su número:\n${found.map((i) => `  ${i + 1}. ${stepBase(steps[i].text, steps[i].done)}`).join("\n")}\nNo se escribió nada.`);
   }
   return found[0];
 }

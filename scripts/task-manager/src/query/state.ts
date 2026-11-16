@@ -13,6 +13,7 @@ import { findTaskRefs, type TaskIndex } from "../../../_shared/tasks/task-refs.t
 import type { Field, Group, InProgress, PlanStep, Task, TeamTask } from "../../../_shared/types.ts";
 import type { Docs } from "../workspace/docs.ts";
 import { requireDoc } from "../workspace/docs.ts";
+import { stepBase } from "../write/suffix.ts";
 import { findNextTaskNumber } from "./next-number.ts";
 
 /** Cuántas entradas de history.md entran en el estado (las más nuevas, que van arriba del archivo). */
@@ -135,7 +136,8 @@ export function fieldValue(fields: Field[], label: RegExp): string | null {
 export function planProgress(steps: PlanStep[]): PlanProgress | null {
   if (!steps.length) return null;
   const done = steps.filter((s) => s.done).length;
-  return { done, total: steps.length, nextStep: steps.find((s) => !s.done)?.text ?? null };
+  const next = steps.find((s) => !s.done);
+  return { done, total: steps.length, nextStep: next ? stepBase(next.text) : null };
 }
 
 /** «Próximo paso concreto» de la tarea en curso (ver `CurrentInfo.nextConcreteStep`). */

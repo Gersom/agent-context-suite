@@ -204,7 +204,7 @@ describe("resume", () => {
     expect(handoff(p)).toBe(before);
   });
 
-  test("la evidencia al final de la línea de un paso (checks y commit) sobrevive a pause, resume y step", async () => {
+  test("la evidencia al final de la línea de un paso (checks y commit) sobrevive a pause y resume, pero `step --undo` la quita", async () => {
     const p = project({ folders: ["gersom"], ...IDLE });
     const evidence = "Paso 1 — Escribir · bun test 779 pass · commit abc1234";
     await exec(["start", "1", "--plan", "-", "--mode", "step-by-step", "--apply"], p, { stdin: `${evidence}\nPaso 2 — Probar` });
@@ -215,8 +215,10 @@ describe("resume", () => {
     expect(handoff(p)).toContain(`  - [x] ${evidence}`);
     await exec(["resume", "1", "--apply"], p);
     expect(handoff(p)).toBe(before);
+    // Reabrir el paso quita la evidencia y el commit (ya no valen).
     await exec(["step", "1", "--undo", "--apply"], p);
-    expect(handoff(p)).toContain(`- [ ] ${evidence}`);
+    expect(handoff(p)).toContain("- [ ] Paso 1 — Escribir\n- [ ] Paso 2 — Probar\n");
+    expect(handoff(p)).not.toContain("- [ ] Paso 1 — Escribir ·");
   });
 
   test("ida y vuelta con `Origen`, textos propios y la tarea en medio de varias pausadas", async () => {

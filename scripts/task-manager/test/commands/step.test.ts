@@ -1,6 +1,7 @@
 // `step`: marca pasos del plan de la tarea en curso y pone al día «Qué falta» y «Próximo paso
 // concreto». Contra proyectos temporales: nunca se tocan los docs reales.
 
+import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, test } from "bun:test";
@@ -371,6 +372,247 @@ describe("step", () => {
       await exec(["step", "1", "--apply"], p);
       expect(handoff(p)).toContain("- [x] Paso 1 — Escribir\r\n- [ ] Paso 2 — Probar\r\n");
       expect(handoff(p).replace(/\r\n/g, "")).not.toContain("\n");
+    });
+  });
+
+  describe("--evidence y --commit: `· evidencia · commit hash` al final de la línea del paso (Regla 7)", () => {
+    const LINE_1 = "- [x] Paso 1 — Escribir";
+    /** Vuelve repo git el proyecto temporal, con un commit; devuelve el hash corto de HEAD. */
+    function gitRepo(p: Project, commit = true): string {
+      const git = (...args: string[]) => spawnSync("git", ["-C", p.root, "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" });
+      expect(git("init", "-q").status).toBe(0);
+      if (!commit) return "";
+      expect(git("commit", "-q", "--allow-empty", "-m", "inicial").status).toBe(0);
+      return git("rev-parse", "--short", "HEAD").stdout.trim();
+    }
+
+    test("solo evidencia, solo commit y ambos: siempre en el orden `texto · evidencia · commit hash`", async () => {
+      const p = await started();
+      const only = await exec(["step", "1", "--evidence", "bun test 779 pass", "--apply"], p);
+      expect(only.code).toBe(0);
+      expect(only.out).toContain("Paso 1 marcado como hecho: «Paso 1 — Escribir» (evidencia: bun test 779 pass).");
+      expect(handoff(p)).toContain(`${LINE_1} · bun test 779 pass\n- [ ] Paso 2 — Probar\n`);
+      await exec(["step", "2", "--commit", "abc1234", "--apply"], p);
+      expect(handoff(p)).toContain("- [x] Paso 2 — Probar · commit abc1234\n");
+      const both = await exec(["step", "3", "--commit", "ABCDEF1234", "--evidence", "ok", "--apply"], p);
+      expect(both.out).toContain("(evidencia: ok, commit abcdef1234)");
+      expect(handoff(p)).toContain("- [x] Paso 3 — Cerrar el hilo · ok · commit abcdef1234\n");
+    });
+
+    test("«Qué falta» y «Próximo paso concreto» no llevan la evidencia ni el commit, y el paso se sigue encontrando por su texto", async () => {
+      const p = await started();
+      await exec(["step", "1", "--evidence", "bun test 779 pass", "--commit", "abc1234", "--apply"], p);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 2 — Probar\n");
+      expect(handoff(p)).toContain("### Próximo paso concreto\n\nPaso 2 — Probar\n");
+      expect(handoff(p)).not.toContain("- Paso 2 — Probar ·");
+      const state = JSON.parse((await exec(["status", "--json"], p)).out);
+      expect(state.current.plan.nextStep).toBe("Paso 2 — Probar");
+      // Buscar por el texto de la evidencia no encuentra nada; por el texto del paso, sí.
+      expect((await exec(["step", "bun test"], p)).err).toContain("Ningún paso del plan");
+      expect((await exec(["step", "commit abc1234"], p)).err).toContain("Ningún paso del plan");
+      expect((await exec(["step", "Paso 1 — Escribir", "--undo", "--reason", "falló", "--apply"], p)).code).toBe(0);
+      expect(handoff(p)).toContain("- [ ] Paso 1 — Escribir (reabierto: falló)\n");
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 1 — Escribir\n- Paso 2 — Probar\n");
+      expect(handoff(p)).toContain("### Próximo paso concreto\n\nPaso 1 — Escribir\n");
+    });
+
+    test("--commit auto usa `git rev-parse --short HEAD` en la raíz del proyecto", async () => {
+      const p = await started();
+      const head = gitRepo(p);
+      const { code, out } = await exec(["step", "1", "--commit", "auto", "--evidence", "ok", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain(`commit ${head}`);
+      expect(handoff(p)).toContain(`${LINE_1} · ok · commit ${head}\n`);
+    });
+
+    test("--commit auto fuera de un repo git, o sin commits: error de dominio (exit 1) y no escribe nada", async () => {
+      const outside = await started();
+      const before = snapshot(outside.root);
+      const none = await exec(["step", "1", "--commit", "auto", "--apply"], outside);
+      expect(none.code).toBe(1);
+      expect(none.err).toContain("--commit auto: no se pudo leer el commit actual");
+      expect(none.err).toContain("No se escribió nada");
+      expect(snapshot(outside.root)).toEqual(before);
+
+      const empty = await started();
+      gitRepo(empty, false);
+      const beforeEmpty = snapshot(empty.root);
+      expect((await exec(["step", "1", "--commit", "auto", "--apply"], empty)).code).toBe(1);
+      expect(snapshot(empty.root)).toEqual(beforeEmpty);
+    });
+
+    test("repetir sobre un paso hecho no duplica: reemplaza solo los campos pasados y dice «actualizado»", async () => {
+      const p = await started();
+      await exec(["step", "1", "--evidence", "viejo", "--commit", "abc1234", "--apply"], p);
+      const evidence = await exec(["step", "1", "--evidence", "nuevo", "--apply"], p);
+      expect(evidence.out).toContain("Paso 1 actualizado: «Paso 1 — Escribir» (evidencia: nuevo, commit abc1234).");
+      expect(evidence.out).not.toContain("ya estaba hecho");
+      expect(handoff(p)).toContain(`${LINE_1} · nuevo · commit abc1234\n`);
+      await exec(["step", "1", "--commit", "def5678", "--apply"], p);
+      expect(handoff(p)).toContain(`${LINE_1} · nuevo · commit def5678\n`);
+      expect(handoff(p).match(/commit /g)).toHaveLength(1);
+      // El mismo valor otra vez, o sin flags: no cambia nada y avisa.
+      for (const argv of [["step", "1", "--commit", "def5678", "--apply"], ["step", "1", "--apply"]]) {
+        const before = snapshot(p.root);
+        const same = await exec(argv, p);
+        expect(same.code).toBe(0);
+        expect(same.out).toContain("Aviso: El paso 1 ya estaba hecho");
+        expect(snapshot(p.root)).toEqual(before);
+      }
+      // Un paso hecho a mano, sin sufijos, recibe la evidencia al repetir.
+      await exec(["step", "2", "--apply"], p);
+      expect((await exec(["step", "2", "--evidence", "tarde", "--apply"], p)).out).toContain("Paso 2 actualizado");
+      expect(handoff(p)).toContain("- [x] Paso 2 — Probar · tarde\n");
+    });
+
+    test("varios pasos a la vez reciben la misma evidencia; los ya hechos se actualizan y los pendientes se marcan", async () => {
+      const p = await started();
+      await exec(["step", "1", "--apply"], p);
+      const { out } = await exec(["step", "1", "2", "--evidence", "ok", "--apply"], p);
+      expect(out).toContain("Paso 1 actualizado");
+      expect(out).toContain("Paso 2 marcado como hecho");
+      expect(handoff(p)).toContain(`${LINE_1} · ok\n- [x] Paso 2 — Probar · ok\n`);
+    });
+
+    test("marcar un paso reabierto quita el sufijo de reabierto y las flags añaden la evidencia", async () => {
+      const p = await started();
+      await exec(["step", "1", "--apply"], p);
+      await exec(["step", "1", "--undo", "--reason", "falló", "--apply"], p);
+      await exec(["step", "1", "--evidence", "bun test 780 pass", "--commit", "abc1234", "--apply"], p);
+      expect(handoff(p)).toContain(`${LINE_1} · bun test 780 pass · commit abc1234\n`);
+      expect(handoff(p)).not.toContain("reabierto");
+    });
+
+    test("--undo con --evidence o --commit: error de uso (exit 2) y no escribe nada", async () => {
+      const p = await started();
+      await exec(["step", "1", "--evidence", "ok", "--apply"], p);
+      const before = snapshot(p.root);
+      for (const flags of [["--evidence", "x"], ["--commit", "abc1234"], ["--commit", "auto"], ["--evidence", "x", "--commit", "abc1234"]]) {
+        const { code, err } = await exec(["step", "1", "--undo", ...flags, "--apply"], p);
+        expect(code).toBe(2);
+        expect(err).toContain("solo va al marcar un paso como hecho, no con --undo");
+      }
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("--undo quita la evidencia y el commit del paso (con o sin motivo)", async () => {
+      const p = await started();
+      await exec(["step", "1", "2", "--evidence", "ok", "--commit", "abc1234", "--apply"], p);
+      const withReason = await exec(["step", "1", "--undo", "--reason", "falló", "--apply"], p);
+      expect(withReason.out).toContain("Paso 1 desmarcado: «Paso 1 — Escribir» (reabierto: falló).");
+      expect(handoff(p)).toContain("- [ ] Paso 1 — Escribir (reabierto: falló)\n");
+      const bare = await exec(["step", "2", "--undo", "--apply"], p);
+      expect(bare.out).toContain("Paso 2 desmarcado: «Paso 2 — Probar».");
+      expect(handoff(p)).toContain("- [ ] Paso 2 — Probar\n");
+      expect(handoff(p)).not.toContain("commit");
+      expect(handoff(p)).not.toContain("· ok");
+    });
+
+    test("hash inválido, evidencia con ` · `, vacío o de varias líneas: error de uso (exit 2) y no escribe nada", async () => {
+      const p = await started();
+      const before = snapshot(p.root);
+      const cases: Array<[string[], string]> = [
+        [["--commit", "abc123"], "no es un hash"],
+        [["--commit", "a".repeat(41)], "no es un hash"],
+        [["--commit", "xyz1234"], "no es un hash"],
+        [["--commit", ""], "--commit está vacío"],
+        [["--commit", "  "], "--commit está vacío"],
+        [["--commit", "abc1234\nabc1235"], "--commit debe ser una sola línea"],
+        [["--evidence", "a · b"], "--evidence no puede contener « · »"],
+        [["--evidence", ""], "--evidence está vacío"],
+        [["--evidence", "uno\ndos"], "--evidence debe ser una sola línea"],
+        [["--evidence", "ver (reabierto: antes)"], "--evidence no puede contener"],
+        [["--evidence", "commit abc1234"], "--evidence no puede ser `commit <hash>`"],
+        [["--evidence", "· foo"], "--evidence no puede empezar ni terminar con «·»"],
+        [["--evidence", "   ·foo"], "--evidence no puede empezar ni terminar con «·»"],
+        [["--evidence", "·"], "--evidence no puede empezar ni terminar con «·»"],
+        [["--evidence", "foo ·"], "--evidence no puede empezar ni terminar con «·»"],
+      ];
+      for (const [flags, message] of cases) {
+        const { code, err } = await exec(["step", "1", ...flags, "--apply"], p);
+        expect([code, flags]).toEqual([2, flags]);
+        expect(err).toContain(message);
+      }
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("un texto con ` · ` en un paso pendiente queda intacto: se muestra, se busca y se lista entero", async () => {
+      const p = await started();
+      write(p, handoff(p).replace("- [ ] Paso 2 — Probar", "- [ ] Paso 2 — Probar · con detalle"));
+      await exec(["step", "1", "--evidence", "ok", "--apply"], p);
+      expect(handoff(p)).toContain("- [ ] Paso 2 — Probar · con detalle\n");
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso 2 — Probar · con detalle\n");
+      const json = JSON.parse((await exec(["step", "3", "--json"], p)).out);
+      expect(json.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar · con detalle", done: false, changed: false });
+      expect((await exec(["step", "Probar · con detalle", "--evidence", "listo", "--apply"], p)).code).toBe(0);
+      // Una vez hecho, el último tramo es la evidencia y el resto sigue siendo el texto del paso.
+      expect(handoff(p)).toContain("- [x] Paso 2 — Probar · con detalle · listo\n");
+      const done = JSON.parse((await exec(["step", "3", "--json"], p)).out);
+      expect(done.steps[1]).toMatchObject({ text: "Paso 2 — Probar · con detalle", done: true, evidence: "listo" });
+    });
+
+    test("una evidencia con un `·` en medio (sin espacios alrededor) sigue valiendo y repetir no hace crecer la línea", async () => {
+      const p = await started();
+      expect((await exec(["step", "1", "--evidence", "a·b", "--apply"], p)).code).toBe(0);
+      expect((await exec(["step", "1", "--evidence", "a·b", "--apply"], p)).code).toBe(0);
+      expect(handoff(p)).toContain(`${LINE_1} · a·b\n`);
+    });
+
+    test("marcar sin evidencia ni commit un paso pendiente con ` · ` en su texto avisa de que el último tramo se leerá como evidencia", async () => {
+      const p = await started();
+      write(p, handoff(p).replace("- [ ] Paso 2 — Probar", "- [ ] Paso 2 — Probar · con detalle"));
+      const { code, out } = await exec(["step", "2"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("Aviso: El paso 2 lleva « · » en su texto");
+      expect(out).toContain("«con detalle») se leerá como evidencia");
+      expect(out).toContain("--undo");
+      const json = JSON.parse((await exec(["step", "2", "--json"], p)).out);
+      expect(json.notes.some((note: string) => note.includes("se leerá como evidencia"))).toBe(true);
+      // Sin aviso: con evidencia o commit, sin ` · ` en el texto, o al reabrir.
+      for (const argv of [["step", "2", "--evidence", "ok"], ["step", "2", "--commit", "abc1234"], ["step", "1"]]) {
+        expect((await exec(argv, p)).out).not.toContain("se leerá como evidencia");
+      }
+      await exec(["step", "2", "--apply"], p);
+      expect((await exec(["step", "2", "--undo", "--reason", "x"], p)).out).not.toContain("se leerá como evidencia");
+      // Un paso que ya estaba hecho no vuelve a avisar.
+      expect((await exec(["step", "2"], p)).out).not.toContain("se leerá como evidencia");
+    });
+
+    test("--json: `evidence` y `commit` por paso, solo si los trae; `changed` también al actualizar", async () => {
+      const p = await started();
+      const marked = JSON.parse((await exec(["step", "1", "--evidence", "ok", "--commit", "abc1234", "--json", "--apply"], p)).out);
+      expect(marked.steps[0]).toEqual({ index: 1, text: "Paso 1 — Escribir", done: true, changed: true, evidence: "ok", commit: "abc1234" });
+      expect(marked.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar", done: false, changed: false });
+      const updated = JSON.parse((await exec(["step", "1", "--commit", "def5678", "--json", "--apply"], p)).out);
+      expect(updated.steps[0]).toEqual({ index: 1, text: "Paso 1 — Escribir", done: true, changed: true, evidence: "ok", commit: "def5678" });
+      expect(updated.notes).toEqual([]);
+      const reopened = JSON.parse((await exec(["step", "1", "--undo", "--reason", "x", "--json", "--apply"], p)).out);
+      expect(reopened.steps[0]).toEqual({ index: 1, text: "Paso 1 — Escribir", done: false, changed: true, reopened: "x" });
+      // Sin --apply informa lo mismo y no escribe.
+      const pending = JSON.parse((await exec(["step", "2", "--evidence", "ok", "--json"], p)).out);
+      expect(pending).toMatchObject({ applied: false, pending: true });
+      expect(pending.steps[1]).toMatchObject({ done: true, evidence: "ok" });
+      expect(handoff(p)).toContain("- [ ] Paso 2 — Probar\n");
+    });
+
+    test("un proyecto en inglés y archivos CRLF: mismo sufijo (`commit` no se traduce) y los saltos de línea se respetan", async () => {
+      const crlf = (text: string) => text.replace(/\n/g, "\r\n");
+      const p = project({ folders: ["gersom"], contents: { "handoff.md": crlf(HANDOFF_IDLE_EN), "backlog.md": crlf(BACKLOG_EN), "history.md": crlf(HISTORY_EN) } });
+      await exec(["start", "4", "--plan", "-", "--apply"], p, { stdin: "Step 1 — write\nStep 2 — test" });
+      expect((await exec(["step", "1", "--evidence", "bun test 779 pass", "--commit", "abc1234", "--apply"], p)).code).toBe(0);
+      expect(handoff(p)).toContain("- [x] Step 1 — write · bun test 779 pass · commit abc1234\r\n- [ ] Step 2 — test\r\n");
+      expect(handoff(p).replace(/\r\n/g, "")).not.toContain("\n");
+      expect(handoff(p)).toContain("### What's left\r\n\r\nPending steps:\r\n- Step 2 — test\r\n");
+      await exec(["step", "1", "--undo", "--reason", "it failed", "--apply"], p);
+      expect(handoff(p)).toContain("- [ ] Step 1 — write (reopened: it failed)\r\n");
+      expect(handoff(p).replace(/\r\n/g, "")).not.toContain("\n");
+    });
+
+    test("la ayuda de step documenta --evidence y --commit", async () => {
+      const p = await started();
+      const { out } = await exec(["help", "step"], p);
+      expect(out).toContain("--evidence");
+      expect(out).toContain("--commit");
     });
   });
 

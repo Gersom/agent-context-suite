@@ -197,6 +197,15 @@ describe("next", () => {
     ]);
   });
 
+  test("el siguiente paso de `status` y `next` es el texto base: sin los sufijos de reabierto, evidencia ni commit", async () => {
+    const handoff = HANDOFF_CURRENT.replace("- [ ] Paso 3 — Probar", "- [ ] Paso 3 — Probar · bun test 779 pass · commit abc1234 (reabierto: falló)");
+    const p = project({ folders: ["gersom"], ...RICH, contents: { ...RICH.contents, "handoff.md": handoff } });
+    expect((await exec(["status"], p)).out).toContain("Plan 2/4 — siguiente: Paso 3 — Probar\n");
+    expect((await exec(["next"], p)).lines[1]).toBe("  Siguiente paso (2/4 hechos): Paso 3 — Probar");
+    expect(JSON.parse((await exec(["next", "--json"], p)).out).current.plan.nextStep).toBe("Paso 3 — Probar");
+    expect(JSON.parse((await exec(["status", "--json"], p)).out).current.plan.nextStep).toBe("Paso 3 — Probar");
+  });
+
   test("con el plan completo: dice que falta cerrar", async () => {
     const handoff = HANDOFF_CURRENT.replace("- [ ] Paso 3 — Probar", "- [x] Paso 3 — Probar").replace("- [ ] Cerrar", "- [x] Cerrar");
     const p = project({ folders: ["gersom"], ...RICH, contents: { ...RICH.contents, "handoff.md": handoff } });

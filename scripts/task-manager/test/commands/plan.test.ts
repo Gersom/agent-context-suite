@@ -467,6 +467,87 @@ describe("plan", () => {
     });
   });
 
+  describe("pasos con evidencia y commit (`· evidencia · commit hash`): no cuentan para buscar ni para los textos generados", () => {
+    const LINE_1 = "- [x] Paso 1 — Escribir · bun test 779 pass · commit abc1234";
+    /** Proyecto con el paso 1 hecho con evidencia y commit. */
+    async function proven(): Promise<Project> {
+      const p = await started();
+      await exec(["step", "1", "--evidence", "bun test 779 pass", "--commit", "abc1234", "--apply"], p);
+      expect(steps(p)[0]).toBe(LINE_1);
+      return p;
+    }
+
+    test("un paso se encuentra por su texto sin la evidencia, y --move conserva la línea completa", async () => {
+      const p = await proven();
+      expect((await exec(["plan", "--rename", "bun test", "x", "--apply"], p)).err).toContain("Ningún paso del plan");
+      expect((await exec(["plan", "--move", "Paso 1 — Escribir", "--to", "2", "--apply"], p)).code).toBe(0);
+      expect(steps(p)[1]).toBe(LINE_1);
+    });
+
+    test("--set - conserva el estado y la línea (con evidencia y commit) comparando por el texto base, venga o no en la entrada", async () => {
+      const p = await proven();
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Paso 2 — Probar\nPaso 1 — Escribir\nNuevo" });
+      expect(steps(p)).toEqual(["- [ ] Paso 2 — Probar", LINE_1, "- [ ] Nuevo", FIRST[3]]);
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Paso 1 — Escribir · bun test 779 pass · commit abc1234\nPaso 2 — Probar" });
+      expect(steps(p)).toEqual([LINE_1, "- [ ] Paso 2 — Probar", FIRST[3]]);
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Paso 1 — Escribir · bun test 779 pass\nPaso 2 — Probar" });
+      expect(steps(p)).toEqual([LINE_1, "- [ ] Paso 2 — Probar", FIRST[3]]);
+    });
+
+    test("--set - no confunde un paso pendiente con ` · ` en el texto: se conserva igual", async () => {
+      const p = await started("Paso 1 — Escribir · con detalle\nPaso 2 — Probar");
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Paso 2 — Probar\nPaso 1 — Escribir · con detalle" });
+      expect(steps(p)).toEqual(["- [ ] Paso 2 — Probar", "- [ ] Paso 1 — Escribir · con detalle", FIRST[3]]);
+    });
+
+    test("--set - empareja primero por el texto completo leído como pendiente: `Fix X · Y` no le roba la línea a un paso hecho `Fix X · ok`", async () => {
+      const p = await started("Fix X\nPaso 2");
+      await exec(["step", "1", "--evidence", "ok", "--apply"], p);
+      expect(steps(p)[0]).toBe("- [x] Fix X · ok");
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Fix X · Y\nFix X\nPaso 2" });
+      expect(steps(p)).toEqual(["- [ ] Fix X · Y", "- [x] Fix X · ok", "- [ ] Paso 2", FIRST[3]]);
+    });
+
+    test("--set - sin coincidencia por el texto completo, la lectura «hecha» solo vale contra pasos hechos", async () => {
+      const p = await started("Fix X\nPaso 2");
+      // Un paso pendiente `Fix X` no se empareja con `Fix X · Y` (el tramo no es evidencia en un paso pendiente).
+      await exec(["plan", "--set", "-", "--apply"], p, { stdin: "Fix X · Y\nPaso 2" });
+      expect(steps(p)).toEqual(["- [ ] Fix X · Y", "- [ ] Paso 2", FIRST[3]]);
+      // Con el paso hecho, `Fix X · Y` (sin otro candidato) sí lo conserva con su línea.
+      const q = await started("Fix X\nPaso 2");
+      await exec(["step", "1", "--evidence", "ok", "--apply"], q);
+      await exec(["plan", "--set", "-", "--apply"], q, { stdin: "Fix X · Y\nPaso 2" });
+      expect(steps(q)).toEqual(["- [x] Fix X · ok", "- [ ] Paso 2", FIRST[3]]);
+    });
+
+    test("--rename reemplaza todo el texto: borra la evidencia y el commit, salvo que vayan en el texto nuevo", async () => {
+      const p = await proven();
+      await exec(["plan", "--rename", "1", "Escribir de nuevo", "--apply"], p);
+      expect(steps(p)[0]).toBe("- [x] Escribir de nuevo");
+      await exec(["plan", "--rename", "1", "Escribir otra vez · bun test 780 pass · commit def5678", "--apply"], p);
+      expect(steps(p)[0]).toBe("- [x] Escribir otra vez · bun test 780 pass · commit def5678");
+    });
+
+    test("«Qué falta» sale sin la evidencia ni el commit (también de un paso pendiente que ya trae un commit)", async () => {
+      const p = await started("Paso 1 — Escribir · bun test 779 pass · commit abc1234\nPaso 2 — Probar");
+      await exec(["plan", "--add", "Paso nuevo", "--at", "1", "--apply"], p);
+      expect(handoff(p)).toContain("### Qué falta\n\nPasos pendientes:\n- Paso nuevo\n- Paso 1 — Escribir\n- Paso 2 — Probar\n");
+      expect(handoff(p)).not.toContain("- Paso 1 — Escribir ·");
+    });
+
+    test("--json: `text` va sin sufijos y `evidence` / `commit` aparte, solo si el paso los trae", async () => {
+      const p = await proven();
+      const json = JSON.parse((await exec(["plan", "--add", "Paso extra", "--json"], p)).out);
+      expect(json.steps[0]).toEqual({ index: 1, text: "Paso 1 — Escribir", done: true, evidence: "bun test 779 pass", commit: "abc1234" });
+      expect(json.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar", done: false });
+      await exec(["step", "2", "--commit", "def5678", "--apply"], p);
+      await exec(["step", "2", "--undo", "--reason", "falló", "--apply"], p);
+      const later = JSON.parse((await exec(["plan", "--add", "Paso extra", "--json"], p)).out);
+      expect(later.steps[1]).toEqual({ index: 2, text: "Paso 2 — Probar", done: false, reopened: "falló" });
+      expect(later.plan.nextStep).toBe("Paso 2 — Probar");
+    });
+  });
+
   test("--json: dice qué cambió y no imprime el diff", async () => {
     const p = await started();
     const pending = JSON.parse((await exec(["plan", "--add", "Paso extra", "--json"], p)).out);
