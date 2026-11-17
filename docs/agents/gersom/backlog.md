@@ -56,15 +56,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Agregada:** 2026-11-16.
 
-### Tarea 158 — close: reducir el aviso «Para revisar a mano»
-
-- **Descripción:** Cada cierre imprime la lista completa de tareas bloqueadas o postergadas cuyo motivo no nombra una tarea propia, aunque no tengan relación con la cerrada (siete líneas repetidas en dos cierres seguidos).
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Origen: issue de otro agente. Propuesta: mostrar ese bloque solo con --verbose, o limitarlo a las tareas bloqueadas cuyo motivo mencione la tarea cerrada. Hecho cuando: el reporte de cierre muestra solo lo relevante a la tarea cerrada.
-- **Agregada:** 2026-11-16.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 

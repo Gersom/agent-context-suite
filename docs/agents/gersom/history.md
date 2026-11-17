@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 158 — close: reducir el aviso «Para revisar a mano»
+
+- `close` ya no imprime por defecto el aviso «Para revisar a mano» (tareas bloqueadas o pospuestas cuyo motivo no nombra una tarea): era ruido sin relación con la tarea cerrada, y filtrar por la cerrada lo habría dejado siempre vacío. Ahora solo sale con el flag nuevo `close --verbose`; `--json` no cambia.
+- block y unblock conservan su propio bloque. Cubierto con 4 tests nuevos y el README; bun test 2008 pass, typecheck sin errores.
+- Commit: 69bf869.
+
 ## 2026-11-16 — ✅ Tarea 157 — close --commits: agregar los commits de la tarea a history.md
 
 - `close --done --commits auto|<h1,h2>` agrega a la entrada de history.md la línea «Commit(s): …» sin pasar los hashes a mano (Regla 6). `auto` toma los commits del proyecto con el scope «(T-N)» en el título, del más antiguo al más nuevo, con hashes de 7 caracteres y sin merges; con una lista explícita se guardan tal cual (7 a 40 hex).
