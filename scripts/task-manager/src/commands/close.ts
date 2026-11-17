@@ -11,7 +11,8 @@
 // - `backlog.md`: si la tarea aún figura ahí (siempre, si es una tarea sin empezar), se saca; `--new "<título>"` (repetible) agrega tareas
 //   nuevas con los números de «Próximo número de tarea»; y se revisan las bloqueadas (Regla 8): las
 //   que dependían de tareas ya cerradas (contando esta) pasan a «Tareas libres» con `Bloqueos` →
-//   `[Resuelto el <fecha>] — <motivo original>`; las de texto libre se listan para revisar a mano.
+//   `[Resuelto el <fecha>] — <motivo original>`; las de texto libre
+//   se listan para revisar a mano solo con `--verbose` (el `--json` las trae siempre en `manualReview`).
 // Con `--done --commits <h1,h2,...|auto>` la entrada ✅ termina con la viñeta `- Commit: h1.` o
 // `- Commits: h1, h2.`; `auto` toma los commits del repo cuyo asunto lleva el scope `(T-N)` de la tarea.
 // Imprime el reporte de cierre (Regla 9). No cierra nada ambiguo: contenido ajeno en «Tarea en
@@ -74,7 +75,7 @@ export const close: Command = {
   name: "close",
   summary: "Cierra la tarea en curso, una pausada o (solo --discarded) una sin empezar del backlog: entrada en history.md, «Sin tarea en curso», bloqueadas y reporte de cierre; escribe con --apply",
   usage:
-    "close [<N | T-N>] --done --summary <texto> [--commits <h1,h2,... | auto>]   |   close [<N | T-N>] --discarded --reason <texto>   (N puede ser una tarea libre o bloqueada, sin empezarla)   [--new <título>]... [--json] [--apply]",
+    "close [<N | T-N>] --done --summary <texto> [--commits <h1,h2,... | auto>]   |   close [<N | T-N>] --discarded --reason <texto>   (N puede ser una tarea libre o bloqueada, sin empezarla)   [--new <título>]... [--verbose] [--json] [--apply]",
   writes: true,
   flags: {
     done: { type: "boolean", description: "La tarea se hizo (entrada ✅ Hecha). Exactamente uno de --done y --discarded." },
@@ -103,6 +104,7 @@ export const close: Command = {
       multiple: true,
       description: "Agrega una tarea nueva a «Tareas libres» (surgió al cerrar esta); recibe el siguiente número. Para detallarla, `add`.",
     },
+    verbose: { type: "boolean", description: "Imprime también «Para revisar a mano»: las bloqueadas cuyo motivo no nombra una tarea (sin relación con la que se cierra). Por defecto no se imprime; --json las trae siempre en `manualReview`." },
     json: JSON_FLAG,
   },
   run(ctx) {
@@ -290,7 +292,7 @@ export const close: Command = {
       io.out();
       for (const line of renderReport(S, report)) io.out(line);
     }
-    if (manual.length) {
+    if (flags.verbose === true && manual.length) {
       io.out(`Para revisar a mano (el motivo no nombra una tarea propia): si ya no aplica, \`unblock <N>\`:`);
       for (const info of manual) io.out(`  ${blockedText(info)}`);
     }

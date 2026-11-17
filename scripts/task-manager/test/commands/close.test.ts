@@ -70,8 +70,6 @@ describe("close --done", () => {
         "**Tareas desbloqueadas:**",
         "- Tarea 6 — Publicar el sitio",
         "- Tarea 16 — Revisar la licencia",
-        "Para revisar a mano (el motivo no nombra una tarea propia): si ya no aplica, `unblock <N>`:",
-        "  Tarea 17 — Migrar a otro host [postergada] → hasta nuevo aviso del operador.",
       ].join("\n"),
     );
     expect(history(p)).toBe(HISTORY_RICH.replace("## 2026-10-07 — ✅ Tarea 11", "## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n\n## 2026-10-07 — ✅ Tarea 11"));
@@ -808,6 +806,40 @@ describe("--json", () => {
     const out = JSON.parse((await exec(["close", "--discarded", "--reason", "No hace falta.", "--json", "--apply"], p)).out);
     expect(out.report.discarded).toEqual([{ number: 1, title: "Probar el flujo completo", reason: "No hace falta." }]);
     expect(out.report.resolved).toEqual([]);
+  });
+});
+
+describe("--verbose", () => {
+  const MANUAL = "Para revisar a mano (el motivo no nombra una tarea propia): si ya no aplica, `unblock <N>`:\n  Tarea 17 — Migrar a otro host [postergada] → hasta nuevo aviso del operador.";
+
+  test("sin --verbose no imprime «Para revisar a mano»; con --verbose sí, tras el reporte", async () => {
+    const quiet = await exec([...DONE, "--apply"], await started());
+    expect(quiet.out).toContain("**Tareas desbloqueadas:**\n- Tarea 6 — Publicar el sitio\n- Tarea 16 — Revisar la licencia");
+    expect(quiet.out).not.toContain("Para revisar a mano");
+    expect(quiet.out).not.toContain("Tarea 17");
+    const verbose = await exec([...DONE, "--verbose", "--apply"], await started());
+    expect(verbose.out).toContain("- Tarea 16 — Revisar la licencia\n" + MANUAL);
+  });
+
+  test("con --discarded rige igual", async () => {
+    const discarded = ["close", "--discarded", "--reason", "No hace falta."];
+    expect((await exec([...discarded, "--apply"], await started())).out).not.toContain("Para revisar a mano");
+    expect((await exec([...discarded, "--verbose", "--apply"], await started())).out).toContain(MANUAL);
+  });
+
+  test("--json es igual con y sin --verbose", async () => {
+    const without = JSON.parse((await exec([...DONE, "--json", "--apply"], await started("3"))).out);
+    const withFlag = JSON.parse((await exec([...DONE, "--verbose", "--json", "--apply"], await started("3"))).out);
+    expect(without.manualReview.map((t: { number: number }) => t.number)).toEqual([17]);
+    expect(withFlag).toEqual(without);
+  });
+
+  test("sin bloqueadas con motivo sin tarea, --verbose no imprime nada", async () => {
+    const p = await started();
+    await exec(["unblock", "17", "--apply"], p);
+    const { out } = await exec([...DONE, "--verbose", "--apply"], p);
+    expect(out).not.toContain("Para revisar a mano");
+    expect(out).toContain("**Tareas resueltas:**");
   });
 });
 
