@@ -2,6 +2,29 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.3.0
+
+Comandos nuevos y mejoras para llevar el plan de una tarea sin editar `handoff.md` a mano: cambiar el plan en curso, reabrir un paso con motivo, anotar evidencia y commit, y listar los commits al cerrar. No rompe nada para quien ya usa la suite, y no cambia el formato de los archivos: las reglas que automatizan (la 6 y la 7 de `rules.md`) ya estaban en la skill.
+
+### Cómo pasar de la 2.2.x a la 2.3.0
+
+Actualiza el paquete: `npm install -g agent-context-suite@latest`. No hay nada más que hacer. Los proyectos con la skill 2.4.x siguen siendo compatibles.
+
+### Lo nuevo
+
+- **`acsuite task plan`:** agrega (`--add`, con `--at`), quita (`--remove`), renombra (`--rename`), mueve (`--move --to`) o reemplaza (`--set -`) los pasos del plan de la tarea en curso. «Documentar cierre de tarea» queda siempre al final. El plan inicial se sigue definiendo en `start --plan`.
+- **`step --undo --reason <texto>`:** al reabrir un paso deja `(reabierto: <motivo>)` al final de su línea (Regla 7); se quita al volver a marcarlo. Sin `--reason`, avisa de que la regla lo pide.
+- **`step --evidence <texto> [--commit <hash|auto>]`:** anota `· evidencia · commit <hash>` al final del paso hecho. `--commit auto` usa el hash corto de `HEAD`. Repetir el comando reemplaza los campos pasados, sin duplicar.
+- **`step` y «Próximo paso concreto»:** si ese texto coincide con el paso que se acaba de marcar, `step` lo actualiza al siguiente pendiente aunque lo haya escrito una persona. Un texto distinto se conserva con el aviso de siempre.
+- **`close --done --commits auto|<h1,h2>`:** agrega a la entrada de `history.md` la línea `Commit: …` o `Commits: …`. `auto` toma los commits del proyecto con el scope `(T-N)` en el título, sin merges.
+- **`plan --json`, `status` y `next`:** muestran el texto base del paso, sin los sufijos de reabierto, evidencia ni commit.
+
+### Cambios de comportamiento
+
+- **`close`** ya no imprime por defecto el aviso «Para revisar a mano» (tareas bloqueadas cuyo motivo no nombra una tarea). Se ve con `close --verbose`; `--json` no cambia.
+- **`step --undo`** quita la evidencia y el commit del paso, porque ya no valen.
+- En un paso hecho sin commit, el último tramo tras ` · ` se lee como evidencia. `step` avisa al marcar un paso cuyo texto ya lleva ` · `.
+
 ## 2.2.2
 
 Solo documentación: el README ahora está en inglés (`README.md`) y en español (`README.es.md`), con selector de idioma. No cambia ningún comando ni el formato de los archivos.
