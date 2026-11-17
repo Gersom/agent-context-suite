@@ -2,6 +2,7 @@
 // nunca se tocan los docs reales.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { APPLY_NOTICE } from "../../src/cli/dispatch.ts";
@@ -118,6 +119,239 @@ describe("close --done", () => {
     await exec(["start", "1", "--plan", "-", "--apply"], p, { stdin: "Paso 1\nPaso 2" });
     const { out } = await exec([...DONE, "--apply"], p);
     expect(out).toContain("Aviso: El plan de la Tarea 1 tenía 2 paso(s) sin marcar: «Paso 1», «Paso 2».");
+  });
+});
+
+describe("close --done --commits", () => {
+  const ENTRY = "## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n";
+
+  /** Vuelve repo git el proyecto temporal con un commit vacío por asunto; devuelve el hash corto de cada uno. */
+  function gitRepo(p: Project, subjects: string[]): string[] {
+    const git = (...args: string[]) => spawnSync("git", ["-C", p.root, "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" });
+    expect(git("init", "-q").status).toBe(0);
+    return subjects.map((subject) => {
+      expect(git("commit", "-q", "--allow-empty", "-m", subject).status).toBe(0);
+      return git("rev-parse", "--short", "HEAD").stdout.trim();
+    });
+  }
+
+  test("un hash: la entrada termina con `- Commit: <hash>.` después de las viñetas del resumen", async () => {
+    const p = await started();
+    const { code, err } = await exec([...DONE, "--commits", "abc1234", "--apply"], p);
+    expect(err).toBe("");
+    expect(code).toBe(0);
+    expect(history(p)).toContain(`${ENTRY}- Commit: abc1234.\n\n## 2026-10-07 — ✅ Tarea 11`);
+    expect((await exec(["anchors"], p)).code).toBe(0);
+  });
+
+  test("varios: `- Commits: h1, h2.`; recorta, pasa a minúsculas y quita duplicados conservando el orden", async () => {
+    const p = await started();
+    const { code } = await exec(["close", "--done", "--summary", "Qué.\nPor qué.", "--commits", " DEF5678 ,abc1234,def5678, ABC1234", "--apply"], p);
+    expect(code).toBe(0);
+    expect(history(p)).toContain("- Qué.\n- Por qué.\n- Commits: def5678, abc1234.\n\n## 2026-10-07 — ✅ Tarea 11");
+  });
+
+  test("con `Origen: team-backlog` la línea sigue al resumen", async () => {
+    const p = project({ folders: ["gersom"], ...IDLE });
+    await exec(["start", "--team", "Migrar el CI", "--apply"], p);
+    await exec([...DONE, "--commits", "a".repeat(40), "--apply"], p);
+    expect(history(p)).toContain(`- **Origen:** team-backlog\n- Se hizo lo pedido.\n- Commit: ${"a".repeat(40)}.\n`);
+  });
+
+  test("sin --apply muestra la línea en el diff y no escribe nada", async () => {
+    const p = await started();
+    const before = snapshot(p.root);
+    const { code, out } = await exec([...DONE, "--commits", "abc1234,def5678"], p);
+    expect(code).toBe(0);
+    expect(out).toContain("+- Commits: abc1234, def5678.");
+    expect(snapshot(p.root)).toEqual(before);
+  });
+
+  test("sin --commits la entrada queda como siempre", async () => {
+    const p = await started();
+    await exec([...DONE, "--apply"], p);
+    expect(history(p)).not.toContain("Commit");
+  });
+
+  test("un hash inválido, una lista vacía o `auto` mezclado con hashes: error de uso (2), sin escribir", async () => {
+    const p = await started();
+    const before = snapshot(p.root);
+    for (const value of ["abc123", "xyz1234", "a".repeat(41), "abc1234,zzz", "abc 1234", "auto,abc1234", "", "  ", ",", " , "]) {
+      const { code, err } = await exec([...DONE, "--commits", value, "--apply"], p);
+      expect(code).toBe(2);
+      expect(err).toContain("--commits");
+    }
+    expect(snapshot(p.root)).toEqual(before);
+  });
+
+  test("con --discarded es un error de uso (2), sin escribir", async () => {
+    const p = await started();
+    const before = snapshot(p.root);
+    const { code, err } = await exec(["close", "--discarded", "--reason", "No hace falta.", "--commits", "abc1234", "--apply"], p);
+    expect(code).toBe(2);
+    expect(err).toContain("--commits es de --done");
+    expect(snapshot(p.root)).toEqual(before);
+  });
+
+  test("si el resumen ya trae una línea `Commit:`/`Commits:` (viñeta o no) no agrega otra y avisa", async () => {
+    for (const line of ["- Commit: 1234567.", "Commits: 1234567, 7654321.", "  - commit: 1234567"]) {
+      const p = await started();
+      const { code, out } = await exec(["close", "--done", "--summary", `Hecho.\n${line}`, "--commits", "abc1234", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("Aviso: El resumen ya trae commits; no se agregó la línea.");
+      expect(history(p)).not.toContain("abc1234");
+      expect(history(p).match(/ommits?:/gi)).toHaveLength(1);
+    }
+  });
+
+  test("también reconoce `**Commit:**`/`**Commits:**` y `Commits (etiqueta): ...` (repos múltiples), con o sin viñeta", async () => {
+    const lines = ["**Commit:** 1234567", "- **Commits:** 1234567, 7654321", "* **Commits**: 1234567", "Commits (skill): 1234567.", "- Commit (skill): 1234567.", "- **Commits (skill):** 1234567"];
+    for (const line of lines) {
+      const p = await started();
+      const { code, out } = await exec(["close", "--done", "--summary", `Hecho.\n${line}`, "--commits", "abc1234", "--apply"], p);
+      expect(code).toBe(0);
+      expect(out).toContain("Aviso: El resumen ya trae commits; no se agregó la línea.");
+      expect(history(p)).not.toContain("abc1234");
+    }
+  });
+
+  test("una palabra que solo empieza como «Commit» no cuenta como línea de commits", async () => {
+    const p = await started();
+    const { out } = await exec(["close", "--done", "--summary", "Commitear los cambios.\nSe hizo un commit: bien.", "--commits", "abc1234", "--apply"], p);
+    expect(out).not.toContain("El resumen ya trae commits");
+    expect(history(p)).toContain("- Commitear los cambios.\n- Se hizo un commit: bien.\n- Commit: abc1234.\n");
+  });
+
+  test("--json: `commits` y `notes` en los datos del comando; sin --commits no aparecen", async () => {
+    const p = await started();
+    const plain = JSON.parse((await exec([...DONE, "--json"], p)).out);
+    expect(plain).not.toHaveProperty("commits");
+    expect(plain).not.toHaveProperty("notes");
+    const out = JSON.parse((await exec([...DONE, "--commits", "ABC1234,def5678", "--json", "--apply"], p)).out);
+    expect(out).toMatchObject({ applied: true, commits: ["abc1234", "def5678"], notes: [] });
+    const dup = await started();
+    const again = JSON.parse((await exec(["close", "--done", "--summary", "Commit: 1234567.", "--commits", "abc1234", "--json", "--apply"], dup)).out);
+    expect(again.notes).toEqual(["El resumen ya trae commits; no se agregó la línea."]);
+  });
+
+  test("inglés y CRLF: `Commits` y los finales de línea se conservan", async () => {
+    const crlf = (text: string) => text.replace(/\n/g, "\r\n");
+    const p = project({ folders: ["gersom"], contents: { "handoff.md": crlf(HANDOFF_IDLE_EN), "backlog.md": crlf(BACKLOG_EN), "history.md": crlf(HISTORY_EN) } });
+    await exec(["start", "4", "--apply"], p);
+    const { code } = await exec(["close", "--done", "--summary", "Translated.", "--commits", "abc1234,def5678", "--apply"], p);
+    expect(code).toBe(0);
+    const text = history(p);
+    expect(text.replace(/\r\n/g, "")).not.toContain("\n");
+    expect(text).toContain("## 2026-10-07 — ✅ Task 4 — Translate the glossary\r\n\r\n- Translated.\r\n- Commits: abc1234, def5678.\r\n\r\n## 2026-10-02 — ✅ Task 5");
+  });
+
+  describe("auto", () => {
+    test("toma los commits del repo cuyo asunto lleva `(T-N)` exacto, del más antiguo al más nuevo", async () => {
+      const p = await started();
+      const [first, , third] = gitRepo(p, ["feat(T-1): a", "fix(T-12): b", "docs(T-1): c", "chore: sin tarea"]);
+      const { code, err } = await exec([...DONE, "--commits", "auto", "--apply"], p);
+      expect(err).toBe("");
+      expect(code).toBe(0);
+      expect(history(p)).toContain(`${ENTRY}- Commits: ${first}, ${third}.\n\n## 2026-10-07 — ✅ Tarea 11`);
+    });
+
+    test("un solo commit: `- Commit: <hash>.`; `AUTO` en mayúsculas también vale; --json lista los hashes", async () => {
+      const p = await started();
+      const [, only] = gitRepo(p, ["chore: inicial", "feat(T-1): a"]);
+      const out = JSON.parse((await exec([...DONE, "--commits", "AUTO", "--json", "--apply"], p)).out);
+      expect(out.commits).toEqual([only]);
+      expect(history(p)).toContain(`- Commit: ${only}.\n`);
+    });
+
+    test("el asunto debe llevar el scope: `T-1` en el cuerpo o sin paréntesis no cuenta", async () => {
+      const p = await started();
+      const [kept] = gitRepo(p, ["feat(T-1): a", "fix: arregla T-1 y (T-10)", "refactor(t-1): minúscula"]);
+      spawnSync("git", ["-C", p.root, "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "chore: x", "-m", "cuerpo (T-1)"]);
+      await exec([...DONE, "--commits", "auto", "--apply"], p);
+      expect(history(p)).toContain(`- Commit: ${kept}.\n`);
+    });
+
+    test("no depende de `core.abbrev`: los hashes salen siempre de 7 caracteres", async () => {
+      const p = await started();
+      gitRepo(p, ["feat(T-1): a", "fix(T-1): b"]);
+      const git = (...args: string[]) => spawnSync("git", ["-C", p.root, ...args], { encoding: "utf8" });
+      expect(git("config", "core.abbrev", "4").status).toBe(0);
+      const full = git("rev-list", "--reverse", "HEAD").stdout.trim().split("\n");
+      const out = JSON.parse((await exec([...DONE, "--commits", "auto", "--json", "--apply"], p)).out);
+      expect(out.commits).toEqual(full.map((hash) => hash.slice(0, 7)));
+    });
+
+    test("orden por ancestría aunque las fechas estén desordenadas (el más antiguo primero)", async () => {
+      const p = await started();
+      const git = (env: Record<string, string>, ...args: string[]) =>
+        spawnSync("git", ["-C", p.root, "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8", env: { ...process.env, ...env } });
+      expect(git({}, "init", "-q").status).toBe(0);
+      const dates = ["2030-01-01T00:00:00", "2020-01-01T00:00:00", "2025-01-01T00:00:00"];
+      const hashes = dates.map((date, i) => {
+        expect(git({ GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }, "commit", "-q", "--allow-empty", "-m", `feat(T-1): paso ${i}`).status).toBe(0);
+        return git({}, "rev-parse", "--short=7", "HEAD").stdout.trim();
+      });
+      const out = JSON.parse((await exec([...DONE, "--commits", "auto", "--json", "--apply"], p)).out);
+      expect(out.commits).toEqual(hashes);
+    });
+
+    test("no incluye los commits de merge aunque su asunto lleve `(T-N)`", async () => {
+      const p = await started();
+      const git = (...args: string[]) => spawnSync("git", ["-C", p.root, "-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" });
+      const commit = (subject: string) => {
+        expect(git("commit", "-q", "--allow-empty", "-m", subject).status).toBe(0);
+        return git("rev-parse", "--short=7", "HEAD").stdout.trim();
+      };
+      expect(git("init", "-q").status).toBe(0);
+      commit("chore: base");
+      const trunk = git("rev-parse", "--abbrev-ref", "HEAD").stdout.trim();
+      expect(git("checkout", "-q", "-b", "lateral").status).toBe(0);
+      const side = commit("feat(T-1): lateral");
+      expect(git("checkout", "-q", trunk).status).toBe(0);
+      const main = commit("feat(T-1): principal");
+      expect(git("merge", "-q", "--no-ff", "lateral", "-m", "Merge lateral (T-1)").status).toBe(0);
+      const out = JSON.parse((await exec([...DONE, "--commits", "auto", "--json", "--apply"], p)).out);
+      expect([...out.commits].sort()).toEqual([main, side].sort());
+      expect(history(p)).not.toContain("Merge lateral");
+    });
+
+    test("sin coincidencias: error de dominio (1), sin escribir", async () => {
+      const p = await started();
+      gitRepo(p, ["feat(T-12): a", "fix(T-10): b"]);
+      const before = snapshot(p.root);
+      const { code, err } = await exec([...DONE, "--commits", "auto", "--apply"], p);
+      expect(code).toBe(1);
+      expect(err).toContain("--commits auto");
+      expect(err).toContain("(T-1)");
+      expect(err).toContain("No se escribió nada");
+      expect(snapshot(p.root)).toEqual(before);
+    });
+
+    test("fuera de un repo git o sin commits: error de dominio (1), sin escribir", async () => {
+      const outside = await started();
+      const before = snapshot(outside.root);
+      const none = await exec([...DONE, "--commits", "auto", "--apply"], outside);
+      expect(none.code).toBe(1);
+      expect(none.err).toContain("--commits auto: no se pudo leer el historial de git");
+      expect(none.err).toContain("No se escribió nada");
+      expect(snapshot(outside.root)).toEqual(before);
+
+      const empty = await started();
+      gitRepo(empty, []);
+      const beforeEmpty = snapshot(empty.root);
+      expect((await exec([...DONE, "--commits", "auto", "--apply"], empty)).code).toBe(1);
+      expect(snapshot(empty.root)).toEqual(beforeEmpty);
+    });
+
+    test("sin --apply muestra la línea y no escribe", async () => {
+      const p = await started();
+      const [hash] = gitRepo(p, ["feat(T-1): a"]);
+      const before = snapshot(p.root);
+      const { code, out } = await exec([...DONE, "--commits", "auto"], p);
+      expect(code).toBe(0);
+      expect(out).toContain(`+- Commit: ${hash}.`);
+      expect(snapshot(p.root)).toEqual(before);
+    });
   });
 });
 

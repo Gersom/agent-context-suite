@@ -91,6 +91,9 @@ export interface Strings {
   raisedWhenClosing(task: string, number: number): string;
   /** Títulos del reporte de cierre (Regla 9 de rules.md). */
   report: { done: string; discarded: string; unblocked: string; created: string };
+  /** Etiqueta de la línea `- Commit: h1.` / `- Commits: h1, h2.` que `close --commits` agrega a la entrada de history.md. */
+  commit: string;
+  commits: string;
   /** Tags de bloqueo que `block` escribe en `Bloqueos` (`` `[dependencia]` motivo ``). */
   tags: { dependency: string; postponed: string };
 }
@@ -136,6 +139,8 @@ export const STRINGS: Record<Lang, Strings> = {
     was: "era",
     raisedWhenClosing: (task, number) => `Surgió al cerrar la ${task} ${number}; falta detallarla.`,
     report: { done: "Tareas resueltas", discarded: "Tareas descartadas", unblocked: "Tareas desbloqueadas", created: "Tareas nuevas" },
+    commit: "Commit",
+    commits: "Commits",
     tags: { dependency: "dependencia", postponed: "postergada" },
   },
   en: {
@@ -178,6 +183,8 @@ export const STRINGS: Record<Lang, Strings> = {
     was: "was",
     raisedWhenClosing: (task, number) => `Raised when closing ${task} ${number}; still to be detailed.`,
     report: { done: "Resolved tasks", discarded: "Discarded tasks", unblocked: "Unblocked tasks", created: "New tasks" },
+    commit: "Commit",
+    commits: "Commits",
     tags: { dependency: "dependency", postponed: "postponed" },
   },
 };

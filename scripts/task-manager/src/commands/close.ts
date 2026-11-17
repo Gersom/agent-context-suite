@@ -12,12 +12,15 @@
 //   nuevas con los números de «Próximo número de tarea»; y se revisan las bloqueadas (Regla 8): las
 //   que dependían de tareas ya cerradas (contando esta) pasan a «Tareas libres» con `Bloqueos` →
 //   `[Resuelto el <fecha>] — <motivo original>`; las de texto libre se listan para revisar a mano.
+// Con `--done --commits <h1,h2,...|auto>` la entrada ✅ termina con la viñeta `- Commit: h1.` o
+// `- Commits: h1, h2.`; `auto` toma los commits del repo cuyo asunto lleva el scope `(T-N)` de la tarea.
 // Imprime el reporte de cierre (Regla 9). No cierra nada ambiguo: contenido ajeno en «Tarea en
 // progreso» es un error, como en `pause`. Sin `--apply` solo muestra el diff.
 
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import type { ParsedBacklog, ParsedHandoff } from "../../../_shared/types.ts";
 import { CliError, UsageError } from "../cli/errors.ts";
-import type { Command } from "../cli/types.ts";
+import type { Command, FlagValue } from "../cli/types.ts";
 import { type Edit, replaceRange } from "../edit/edits.ts";
 import { blockSeparator, removeBlock } from "../edit/layout.ts";
 import { describeKnownNumbers, findTask, parseTarget, type TaskLocation } from "../query/find.ts";
@@ -35,6 +38,7 @@ import { renderBacklogTask } from "../write/new-task.ts";
 import { reserveNextNumbers } from "../write/numbering.ts";
 import { closingStepRe, formatLocalDate } from "../write/render.ts";
 import { headerLabels } from "../write/samples.ts";
+import { isCommitHash } from "../write/suffix.ts";
 import { insertIntoFree, planUnblock, reviewBlocked } from "../write/unblocking.ts";
 
 /** Tras la que se corta la última línea de un motivo en el reporte («motivo breve»). */
@@ -45,6 +49,12 @@ const GROUPING_LIMIT = 15;
 const ORIGIN_LINE_RE = /^[-*]\s+\*\*(?:origen|origin)(?::\*\*|\*\*:)/i;
 const ORIGIN_LABEL_RE = /^(origen|origin)$/i;
 const STEP_RE = /^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/;
+/** Una línea del resumen que ya lista commits (`Commit: ...`, `- Commits: ...`, `**Commits:** ...`, `Commits (skill): ...`). */
+const COMMITS_LINE_RE = /^\s*(?:[-*]\s+)?(?:\*\*commits?(?:\s*\([^)]*\))?(?::\*\*|\*\*:)|commits?(?:\s*\([^)]*\))?:)/i;
+/** El valor de `--commits` que pide los commits de la tarea en vez de una lista de hashes. */
+const AUTO = "auto";
+/** Tiempo máximo de `git log` sobre el historial del proyecto. */
+const GIT_LOG_TIMEOUT = 30000;
 
 /** Lo que `close` necesita de la tarea que cierra, venga de «Tarea en progreso» o de «Tareas pausadas». */
 interface Closing {
@@ -64,7 +74,7 @@ export const close: Command = {
   name: "close",
   summary: "Cierra la tarea en curso, una pausada o (solo --discarded) una sin empezar del backlog: entrada en history.md, «Sin tarea en curso», bloqueadas y reporte de cierre; escribe con --apply",
   usage:
-    "close [<N | T-N>] --done --summary <texto>   |   close [<N | T-N>] --discarded --reason <texto>   (N puede ser una tarea libre o bloqueada, sin empezarla)   [--new <título>]... [--json] [--apply]",
+    "close [<N | T-N>] --done --summary <texto> [--commits <h1,h2,... | auto>]   |   close [<N | T-N>] --discarded --reason <texto>   (N puede ser una tarea libre o bloqueada, sin empezarla)   [--new <título>]... [--json] [--apply]",
   writes: true,
   flags: {
     done: { type: "boolean", description: "La tarea se hizo (entrada ✅ Hecha). Exactamente uno de --done y --discarded." },
@@ -80,6 +90,12 @@ export const close: Command = {
       valueName: "texto",
       stdin: true,
       description: "Con --discarded, obligatorio: por qué se descarta (queda para que no se vuelva a proponer sin verlo).",
+    },
+    commits: {
+      type: "string",
+      valueName: "hashes",
+      description:
+        "Solo con --done: los commits de la tarea, hashes de 7 a 40 hex separados por comas, o `auto` (los commits del repo cuyo asunto lleva `(T-N)` de esta tarea, del más antiguo al más nuevo). La entrada termina con la viñeta `- Commit: h1.` o `- Commits: h1, h2.`; si el resumen ya trae una línea `Commit:`/`Commits:`, no se agrega otra.",
     },
     new: {
       type: "string",
@@ -99,6 +115,7 @@ export const close: Command = {
     if (done && textFlag(flags, "reason")) throw new UsageError("--reason es de --discarded; con --done el texto va en --summary.");
     if (discarded && textFlag(flags, "summary")) throw new UsageError("--summary es de --done; con --discarded el texto va en --reason.");
     const text = requiredFlag(flags, done ? "summary" : "reason");
+    const commitsArg = commitsFlag(flags, done);
     const newTitles = (Array.isArray(flags.new) ? flags.new : []).map((title) => {
       const clean = singleLine("new", title.trim());
       if (!clean) throw new UsageError("--new necesita un título.");
@@ -209,8 +226,17 @@ export const close: Command = {
     }
     if (moved.length && !insertedInFree) backlogEdits.push(insertIntoFree(backlog, moved));
 
+    // `--commits auto` se resuelve con la tarea ya validada: si git falla no se escribe nada.
+    const commits = commitsArg === AUTO ? taskCommits(ws.projectDir, number) : commitsArg;
+    const notes: string[] = [];
+    let entryText = text;
+    if (commits) {
+      if (text.split("\n").some((line) => COMMITS_LINE_RE.test(line))) notes.push("El resumen ya trae commits; no se agregó la línea.");
+      else entryText = `${text}\n${commits.length === 1 ? S.commit : S.commits}: ${commits.join(", ")}.`;
+    }
+
     const handoffEdit = closing.remove ? closing.remove(S.noTask, S.emptySection) : null;
-    const entry = renderHistoryEntry({ date, outcome, label: closing.label, number, title: closing.title, text, origin: closing.origin });
+    const entry = renderHistoryEntry({ date, outcome, label: closing.label, number, title: closing.title, text: entryText, origin: closing.origin });
     const result = ctx.commit(
       [
         ...(handoffEdit ? [{ doc: handoff, edits: [handoffEdit] }] : []),
@@ -250,6 +276,7 @@ export const close: Command = {
         stillBlocked: waiting.map(row),
         freeTasks: freeAfter,
         warnings,
+        ...(commits ? { commits, notes } : {}),
       });
       return;
     }
@@ -267,9 +294,56 @@ export const close: Command = {
       io.out(`Para revisar a mano (el motivo no nombra una tarea propia): si ya no aplica, \`unblock <N>\`:`);
       for (const info of manual) io.out(`  ${blockedText(info)}`);
     }
+    for (const note of notes) io.out(`Aviso: ${note}`);
     for (const warning of warnings) io.out(`Aviso: ${warning}`);
   },
 };
+
+/**
+ * `--commits`: solo con `--done`; `auto` o una lista de hashes (7 a 40 hex) separados por comas, que se
+ * guardan en minúsculas, recortados y sin repetir (en su orden). `undefined` si no se pasó. @throws UsageError
+ */
+function commitsFlag(flags: Record<string, FlagValue>, done: boolean): string[] | typeof AUTO | undefined {
+  if (typeof flags.commits !== "string") return undefined;
+  if (!done) throw new UsageError("--commits es de --done: los commits de una tarea descartada no van en su entrada.");
+  const value = textFlag(flags, "commits");
+  if (!value) throw new UsageError("--commits está vacío: pasa los hashes separados por comas (`--commits abc1234,def5678`) o `auto`.");
+  singleLine("commits", value);
+  if (value.toLowerCase() === AUTO) return AUTO;
+  const hashes = value
+    .split(",")
+    .map((hash) => hash.trim())
+    .filter(Boolean);
+  if (!hashes.length) throw new UsageError("--commits está vacío: pasa los hashes separados por comas (`--commits abc1234,def5678`) o `auto`.");
+  const invalid = hashes.find((hash) => !isCommitHash(hash));
+  if (invalid !== undefined) throw new UsageError(`--commits «${invalid}» no es un hash: pasa de 7 a 40 caracteres hexadecimales separados por comas, o \`auto\` solo.`);
+  return [...new Set(hashes.map((hash) => hash.toLowerCase()))];
+}
+
+/**
+ * Los commits alcanzables desde HEAD en la raíz del proyecto cuyo asunto lleva `(T-N)` (N exacto: `(T-1)` no
+ * coincide con `(T-12)`), sin merges, con hash de 7 caracteres y del más antiguo al más nuevo (por ancestría). @throws CliError si no es un repo git o falla git, o no hay ninguno
+ */
+function taskCommits(projectDir: string, number: number): string[] {
+  const fail = (why: string) => new CliError(`--commits auto: no se pudo leer el historial de git en ${projectDir} (${why}). Pasa los hashes con --commits <h1,h2>. No se escribió nada.`);
+  let out: SpawnSyncReturns<string>;
+  try {
+    // `--abbrev=7` fija el largo del hash corto (si no, manda `core.abbrev` del usuario); `--topo-order --reverse`
+    // da un orden por ancestría (el más antiguo primero) aunque las fechas de los commits estén desordenadas.
+    out = spawnSync("git", ["-C", projectDir, "log", "--no-show-signature", "--no-merges", "--topo-order", "--reverse", "--abbrev=7", "--format=%h%x09%s", "HEAD", "--"], { encoding: "utf8", timeout: GIT_LOG_TIMEOUT, maxBuffer: 256 * 1024 * 1024 });
+  } catch {
+    throw fail("no se pudo ejecutar git");
+  }
+  if (out.error) throw fail("no se pudo ejecutar git");
+  if (out.status !== 0) throw fail("¿es un repo git con al menos un commit?");
+  const scope = new RegExp(`\\(T-${number}\\)`);
+  const hashes = out.stdout.split("\n").flatMap((line) => {
+    const [hash, ...subject] = line.replace(/\r$/, "").split("\t");
+    return isCommitHash(hash) && scope.test(subject.join("\t")) ? [hash.toLowerCase()] : [];
+  });
+  if (!hashes.length) throw new CliError(`--commits auto: ningún commit de ${projectDir} lleva «(T-${number})» en su asunto. Pasa los hashes con --commits <h1,h2> o cierra sin --commits. No se escribió nada.`);
+  return [...new Set(hashes)];
+}
 
 /** Primera línea del motivo, sin la viñeta, recortada: es lo que sale en el reporte (el texto completo queda en history.md). */
 function shortReason(text: string): string {
