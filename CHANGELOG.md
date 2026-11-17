@@ -2,6 +2,22 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.4.0
+
+Un comando nuevo de solo lectura para listar y buscar tareas, sin tener que leer `history.md` entero ni recurrir a `grep`. No rompe nada y no cambia el formato de los archivos.
+
+### Cómo pasar de la 2.3.x a la 2.4.0
+
+Actualiza el paquete: `npm install -g agent-context-suite@latest`. No hay nada más que hacer. Los proyectos con la skill 2.4.x siguen siendo compatibles.
+
+### Lo nuevo
+
+- **`acsuite task list [--status <s>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]`:** lista las tareas de todos los lugares (en curso, pausadas, libres, agrupadas, bloqueadas, cerradas y las del `team-backlog.md`), de la más reciente a la más antigua. Ejemplos: `list --last 10`, `list --status discarded --last 20` y `list --search migración --last 15`.
+- **Claves de `--status`**, siempre en inglés: `free`, `blocked`, `postponed`, `in-progress`, `paused`, `done` y `discarded`. Se puede repetir o separar por comas.
+- **`--search`** ignora mayúsculas y acentos y mira el título, los campos de la tarea y, en las cerradas, el cuerpo de su entrada de `history.md`.
+- **Límite y recorte:** sin `--last` salen 20 tareas, con una nota si hay más. En el texto, los títulos se recortan a 100 caracteres (`show <N>` muestra la tarea completa); `--json` los trae enteros.
+- Con `--operator <carpeta>` se lista el de otro operador, igual que en el resto de comandos de lectura.
+
 ## 2.3.0
 
 Comandos nuevos y mejoras para llevar el plan de una tarea sin editar `handoff.md` a mano: cambiar el plan en curso, reabrir un paso con motivo, anotar evidencia y commit, y listar los commits al cerrar. No rompe nada para quien ya usa la suite, y no cambia el formato de los archivos: las reglas que automatizan (la 6 y la 7 de `rules.md`) ya estaban en la skill.
