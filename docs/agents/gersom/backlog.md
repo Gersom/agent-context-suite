@@ -56,15 +56,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Agregada:** 2026-11-16.
 
-### Tarea 157 — close --commits: agregar los commits de la tarea a history.md
-
-- **Descripción:** La regla 6 pide que la entrada de history.md diga qué commits contienen la tarea, pero `close --summary` no los agrega y hay que pasarlos a mano en el texto.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Origen: issue de otro agente. Propuesta: `close --commits auto|<h1,h2>`; con auto busca en `git log` los commits con scope (T-N) de esa tarea y los agrega a la entrada, sin el commit de cierre (aún no existe). Hecho cuando: la entrada lista los commits de la tarea sin pasarlos a mano.
-- **Agregada:** 2026-11-16.
-
 ### Tarea 158 — close: reducir el aviso «Para revisar a mano»
 
 - **Descripción:** Cada cierre imprime la lista completa de tareas bloqueadas o postergadas cuyo motivo no nombra una tarea propia, aunque no tengan relación con la cerrada (siete líneas repetidas en dos cierres seguidos).

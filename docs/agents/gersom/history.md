@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 157 — close --commits: agregar los commits de la tarea a history.md
+
+- `close --done --commits auto|<h1,h2>` agrega a la entrada de history.md la línea «Commit(s): …» sin pasar los hashes a mano (Regla 6). `auto` toma los commits del proyecto con el scope «(T-N)» en el título, del más antiguo al más nuevo, con hashes de 7 caracteres y sin merges; con una lista explícita se guardan tal cual (7 a 40 hex).
+- Solo mira el repo del proyecto: para repos anidados como skill/ los hashes se pasan a mano. Avisa y no duplica si el resumen ya trae commits (también «Commits (kit): …»). Cubierto con tests, README y una revisión independiente con sus hallazgos corregidos; bun test 2004 pass, typecheck y acsuite check sin errores.
+- Commit: 16a9c16.
+
 ## 2026-11-16 — ✅ Tarea 156 — step: sincronizar «Próximo paso concreto» con el siguiente pendiente
 
 - `step` ahora reescribe «Próximo paso concreto» cuando su texto, aunque lo haya escrito el operador, coincide con un paso recién marcado (sin distinguir mayúsculas ni acentos): pasa al siguiente pendiente o al texto de plan completo. Un texto distinto se conserva con el aviso de texto propio; `--undo` y `plan` no cambian.
