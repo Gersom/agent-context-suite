@@ -1,6 +1,6 @@
 # task-manager
 
-Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `plan`, `mode`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
+Gestiona las tareas de un proyecto que usa la skill `agent-context-skill` editando de forma **quirúrgica** sus archivos (`handoff.md`, `backlog.md`, `history.md` y, en modo multi-operador, `team-backlog.md`), en lugar de que un agente o una persona los edite a mano. Los comandos de negocio se van sumando por etapas; hoy están la infraestructura, dos comandos de diagnóstico, los de lectura (`status`, `next`, `show`, `list`) y los de escritura que llevan una tarea por todo su ciclo de vida (`add`, `edit`, `start`, `step`, `plan`, `mode`, `pause`, `resume`, `block`, `unblock` y `close`, que la cierra con las Reglas 6 a 9 de `rules.md`) y los de grupos de tareas del backlog (`group-create`, `group-eject`, `group-add`, `group-edit` y `group-dissolve`).
 
 Es **opcional** y es una herramienta de este repo, no parte de la skill: no se copia a los repos destino (principio 4 de [`docs/philosophy.md`](../../docs/philosophy.md)). Sin ella, los archivos se editan a mano igual.
 
@@ -23,6 +23,7 @@ bun run task anchors                  # verifica las anclas de sección de cada 
 bun run task status                   # foto compacta: en curso, pausadas, libres, bloqueadas, últimas cerradas
 bun run task next                     # qué hacer ahora
 bun run task show 24                  # el bloque completo de la Tarea 24, viva donde esté
+bun run task list --last 10           # las 10 tareas más recientes, de cualquier estado
 bun run task status --json            # lo mismo, estructurado, para otros scripts
 bun run task add --title "..." --description "..."          # muestra el diff; NO escribe
 bun run task add --title "..." --description "..." --apply  # ahora sí escribe
@@ -49,6 +50,7 @@ bun run task <comando> --agents D:/proyectos/mi-app --operator ana
 | `status` | Foto compacta del operador: tarea en curso, pausadas, libres, bloqueadas, últimas 3 cerradas, team-backlog. |
 | `next` | Qué hacer ahora: el siguiente paso de la tarea en curso o, sin ella, lo que se puede tomar. |
 | `show <N>` | El bloque completo de una tarea y de dónde salió. |
+| `list` | Una línea por tarea (en curso, pausadas, libres, bloqueadas, cerradas y del team-backlog), las más recientes primero; filtra con `--status`, `--search`, `--group` y `--last`. |
 | `add` `*` | Agrega una tarea a tu `backlog.md` (con el siguiente número) o, con `--team`, al `team-backlog.md`. |
 | `start <N>` `*` | Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el `handoff.md`. Con `--team "<título>"`, la toma del `team-backlog.md`. |
 | `step <N \| texto>...` `*` | Marca pasos del plan de la tarea en curso, con `--evidence <texto>` y `--commit <hash\|auto>` anotados en el paso (o con `--undo [--reason <texto>]` los desmarca, dejando el motivo), y pone al día «Qué falta» y «Próximo paso concreto». |
@@ -88,7 +90,7 @@ EOF
 
 ## Comandos de lectura
 
-Pensados para un agente que quiere ahorrar tokens: en vez de leer `history.md` entero o todo el backlog, pide lo que necesita. Ninguno escribe, y de `history.md` solo imprimen la cabecera de las entradas (`status`) o la entrada pedida (`show`), nunca el archivo entero. Todos aceptan los flags globales (`--agents`, `--operator`) y, salvo `whoami` y `anchors`, `--json`. Las secciones vacías no se imprimen.
+Pensados para un agente que quiere ahorrar tokens: en vez de leer `history.md` entero o todo el backlog, pide lo que necesita. Ninguno escribe, y de `history.md` solo imprimen la cabecera de las entradas (`status`) o la entrada pedida (`show`), y `list` una sola línea por tarea, nunca el archivo entero. Todos aceptan los flags globales (`--agents`, `--operator`) y, salvo `whoami` y `anchors`, `--json`. Las secciones vacías no se imprimen.
 
 ### `status`
 
@@ -126,9 +128,47 @@ Variantes del argumento:
 - **Número inexistente:** error claro con los números conocidos (`Números conocidos: 1 a 31 (30 tareas).`) y el próximo número de tarea.
 - **Número en más de un lugar** (ej. en history y aún en el backlog por error): se muestran todos con su origen y se avisa.
 
+### `list`
+
+```sh
+bun run task list [--status <estado>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]
+```
+
+Todas las tareas del operador en una sola lista, una línea por tarea y sin leer bloques enteros: `T-153 · done · 2026-11-16 · título`. Es el comando para «las últimas N», filtradas o no, sin abrir `history.md` ni el backlog. Reúne la tarea en curso, las pausadas, las libres (también las de un grupo, con ` [grupo]` al final), las bloqueadas o pospuestas, las cerradas de `history.md` y, si existe, las del `team-backlog.md` (sin número: `team · free · 2026-11-16 · título`). Una entrada de history sin número sale con `—` en su lugar. Va con `--operator <carpeta>` como el resto (lee los archivos de ese operador; el team-backlog es compartido) y un operador «solo team-backlog» solo ve las del team. No escribe nada.
+
+| Flag | Qué hace |
+|---|---|
+| `--status <estado>` | Solo las tareas en ese estado. Se repite (`--status done --status discarded`) o se separa con comas (`--status done,discarded`). Un valor desconocido es un error de uso (código 2) que lista los válidos. |
+| `--search <texto>` | Solo las que contienen el texto. Un texto en blanco, o que queda vacío al normalizarlo (por ejemplo solo marcas combinantes), es un error de uso (código 2). |
+| `--group <nombre>` | Solo las tareas de un grupo cuyo título contiene el texto (las tareas de grupo son siempre `free`). Mismo error de uso con un texto vacío. |
+| `--last <N>` | Muestra solo las primeras `N` (entero ≥ 1), después de filtrar y ordenar. |
+| `--json` | Salida estructurada (ver «Esquema `--json`»). |
+
+**Claves de `--status`** (siempre en inglés, sea cual sea el idioma del proyecto): `free`, `blocked`, `postponed`, `in-progress`, `paused`, `done` y `discarded`. En «bloqueadas / pospuestas», la tarea cuyo tag vigente es `postergada`/`postponed` es `postponed`; con `dependencia`/`dependency`, con otro tag o sin tag, es `blocked`. Las del team-backlog se clasifican igual (`free`, `blocked`, `postponed`). Las tareas de un grupo cuentan como `free`.
+
+**Orden:** la más reciente primero. Primero la tarea en curso y las pausadas; después el resto por fecha descendente y, al final, las que no tienen fecha (en el orden del archivo). La fecha de una cerrada es la de su cabecera en `history.md`; la de una de backlog o del team, la de su campo `Agregada`/`Added` (solo la fecha: `2026-10-01 por gersom` vale `2026-10-01`); la tarea en curso y las pausadas no tienen. Con la misma fecha, van primero las cerradas (en el orden de `history.md`, que ya trae las nuevas arriba), luego las de backlog por número descendente y al final las del team.
+
+**Búsqueda:** `--search` no distingue mayúsculas ni acentos y busca por subcadena en el título y, además, en los valores de **todos los campos** (descripción, decisiones, detalles, bloqueos...) de las tareas de backlog y del team; en el **cuerpo completo** de las cerradas (sin su cabecera); y en el cuerpo de la tarea en curso y de las pausadas. Con `--json`, cada tarea trae `matched` (`title`, `fields` y/o `body`) para saber dónde coincidió; en texto no se muestra.
+
+**Límite:** sin `--last` se muestran las 20 primeras y, si hay más, una última línea `Hay M más: usa --last <N> o filtra con --status/--search.`. Con `--last` no hay nota. La cabecera dice cuántas se muestran (`5 de 20 tareas (--last 5)`) y qué filtros hay; sin coincidencias imprime `Ninguna tarea coincide.` (código 0).
+
+**Flags repetidos:** `--search`, `--group` y `--last` repetidos usan el último valor; solo `--status` se acumula.
+
+**Títulos largos:** en texto, un título de más de 100 caracteres se recorta a 100 (por caracteres, sin partir un emoji) y termina en `…`; uno de exactamente 100 queda igual. Si se recortó alguno, la última línea es ``Títulos recortados a 100 caracteres: `show <N>` muestra la tarea completa.`` (una sola vez). Con `--json` el título va siempre completo.
+
+Ejemplos:
+
+```sh
+bun run task list --last 10                              # las 10 últimas, de cualquier estado
+bun run task list --status discarded --last 20           # las 20 últimas descartadas
+bun run task list --search "migración" --last 15         # las 15 últimas que mencionan «migración» (o «migracion»)
+bun run task list --status free --group docs             # las libres de los grupos con «docs» en su título
+bun run task list --operator ana --status in-progress    # la tarea en curso de ana (solo lectura)
+```
+
 ### Esquema `--json`
 
-La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un campo cambia de forma o de significado, agregar campos no la sube) y `command`. Los campos ausentes son `null` o una lista vacía, nunca se omiten. Las rutas `file` son relativas a la raíz del proyecto y con `/`; las líneas son 1-based.
+La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un campo cambia de forma o de significado, agregar campos no la sube) y `command`. Los campos ausentes son `null` o una lista vacía, nunca se omiten (salvo los que se documentan como condicionales, como `matched` en `list`, que solo sale con `--search`). Las rutas `file` son relativas a la raíz del proyecto y con `/`; las líneas son 1-based.
 
 `status`:
 
@@ -171,6 +211,21 @@ La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un c
   "file": "docs/agents/gersom/history.md", "path": "D:/.../history.md",
   "startLine": 120, "endLine": 131,
   "text": "## 2026-10-06 — ✅ Tarea 23 — ..."   // el fragmento, con finales de línea LF
+}
+```
+
+`list`: `{ schema, command, operator, filters, total, shown, tasks }`. `filters` repite lo pedido (`status` es la lista de estados o `null`; `search`, `last` y `group`, `null` si no se pasaron); `total` cuenta las tareas que cumplen los filtros y `shown` las de `tasks` (tras `--last` o el límite de 20). Cada elemento de `tasks`:
+
+```jsonc
+{
+  "number": 153,          // null en las del team-backlog y en las entradas de history sin número
+  "title": "...",
+  "status": "done",       // free | blocked | postponed | in-progress | paused | done | discarded
+  "date": "2026-11-16",   // null si no hay (en curso, pausadas, sin «Agregada» o con una fecha mal escrita)
+  "group": null,          // título del grupo si es agrupada
+  "team": false,          // true si es del team-backlog.md
+  "file": "docs/agents/gersom/history.md", "startLine": 120,
+  "matched": ["title", "body"]   // solo con --search: title | fields | body
 }
 ```
 

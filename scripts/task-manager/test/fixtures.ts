@@ -148,6 +148,78 @@ export const BACKLOG_RICH = `# Backlog
 - **Descripción:** límites.
 `;
 
+/**
+ * Backlog para `list`: tareas con «Agregada» (dos el mismo día, una con «por <operador>»), una sin
+ * fecha, un grupo, y bloqueadas con tag `dependencia`, `postergada`, uno ya resuelto y uno ajeno.
+ */
+export const BACKLOG_DATED = `# Backlog
+
+**Próximo número de tarea:** 30
+
+---
+
+<!-- agent-context-skill:section=free -->
+## Tareas libres
+
+### Tarea 21 — Reescribir la guía
+
+- **Descripción:** Mejorar la documentación del instalador CUERPO-21.
+- **Agregada:** 2026-10-06.
+
+### Tarea 22 — Ordenar los scripts
+
+- **Descripción:** Mover los scripts de \`bin/\`.
+- **Agregada:** 2026-10-06 por ana
+
+### Grupo — Pulir el sitio (Tareas 23, 24)
+
+- **Resumen:** todo lo visual.
+
+### Tarea 25 — Sin fecha
+
+- **Descripción:** Esta tarea no trae fecha.
+
+<!-- agent-context-skill:section=blocked -->
+## Tareas bloqueadas / pospuestas
+
+### Tarea 26 — Publicar el sitio
+
+- **Descripción:** Subir todo.
+- **Bloqueos:** \`[dependencia]\` depende de la Tarea 11.
+- **Agregada:** 2026-10-05.
+
+### Tarea 27 — Cambiar el logo
+
+- **Descripción:** Un logo nuevo.
+- **Bloqueos:** \`[postergada]\` hasta nuevo aviso.
+- **Agregada:** 2026-10-04.
+
+### Tarea 28 — Revisar el contrato
+
+- **Bloqueos:** \`[Resuelto el 2026-10-01]\` — era \`[dependencia]\`.
+- **Agregada:** 2026-10-01.
+
+### Tarea 29 — Esperar al legal
+
+- **Bloqueos:** \`[legal]\` pendiente de revisión.
+- **Agregada:** 2026-09-30.
+
+<!-- agent-context-skill:section=grouped -->
+## Tareas agrupadas
+
+### Grupo — Pulir el sitio
+
+#### Tarea 23 — Ajustar los colores
+
+- **Descripción:** Una paleta más ÁCIDA.
+- **Agregada:** 2026-10-08.
+
+#### Tarea 24 — Revisar la tipografía
+
+- **Descripción:** Probar otras fuentes.
+- **Agregada:** 2026-10-03.
+`;
+
 /** Backlog sin tareas en ninguna sección. */
 export const BACKLOG_EMPTY = `# Backlog
 
