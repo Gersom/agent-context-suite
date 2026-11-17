@@ -56,15 +56,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador pregunte por tareas pendientes.
 - **Agregada:** 2026-11-16.
 
-### Tarea 156 — step: sincronizar «Próximo paso concreto» con el siguiente pendiente
-
-- **Descripción:** Al marcar un paso, `step` actualiza «Qué falta» pero deja «Próximo paso concreto» con texto anterior y solo avisa; un chat nuevo leería un próximo paso ya hecho.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Detalles:** Origen: issue de otro agente. Opciones: (a) sincronizar siempre con el siguiente paso pendiente, o (b) hacerlo solo si el texto actual coincide con el paso recién marcado y avisar si no. Recomendada: (b), porque no pisa un texto escrito a propósito por el operador. Hecho cuando: tras marcar un paso, el próximo paso concreto coincide con el siguiente pendiente, salvo que el operador haya escrito un texto distinto.
-- **Agregada:** 2026-11-16.
-
 ### Tarea 157 — close --commits: agregar los commits de la tarea a history.md
 
 - **Descripción:** La regla 6 pide que la entrada de history.md diga qué commits contienen la tarea, pero `close --summary` no los agrega y hay que pasarlos a mano en el texto.

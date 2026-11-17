@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-16 — ✅ Tarea 156 — step: sincronizar «Próximo paso concreto» con el siguiente pendiente
+
+- `step` ahora reescribe «Próximo paso concreto» cuando su texto, aunque lo haya escrito el operador, coincide con un paso recién marcado (sin distinguir mayúsculas ni acentos): pasa al siguiente pendiente o al texto de plan completo. Un texto distinto se conserva con el aviso de texto propio; `--undo` y `plan` no cambian.
+- Es la opción (b) del issue: la (a) habría pisado textos escritos a propósito. Cubierto con 10 tests nuevos y el README.
+- Commit: b44ed96. bun test 1983 pass, typecheck sin errores. Sin revisión independiente (cambio acotado a una condición de progressUpdates).
+
 ## 2026-11-16 — ✅ Tarea 155 — step --evidence/--commit: registrar evidencia y commit del paso
 
 - `step <N> --evidence <texto> [--commit <hash|auto>]` anota al final de la línea del paso «· evidencia · commit <hash>» (Regla 7); repetir el comando reemplaza solo los campos pasados sin duplicar, y `--undo` quita evidencia y commit. `--commit auto` usa el hash corto de HEAD.
