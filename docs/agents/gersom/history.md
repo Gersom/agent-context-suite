@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ✅ Tarea 159 — task list: listar y buscar tareas por estado, palabra y cantidad
+
+- Nuevo comando de solo lectura `acsuite task list [--status <s>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]`: lista y busca tareas en todos los lugares (en curso, pausadas, libres, agrupadas, bloqueadas, cerradas y team-backlog), de la más reciente a la más antigua; evita que el agente lea history.md entero o recurra a grep. Responde «las últimas 10», «las 20 últimas descartadas» y «las 15 últimas con <palabra>».
+- Claves de --status en inglés (free, blocked, postponed, in-progress, paused, done, discarded); la búsqueda ignora mayúsculas y acentos y mira título, campos y, en las cerradas, el cuerpo; límite por defecto de 20; títulos recortados a 100 caracteres en el texto (el --json los trae completos). Reutiliza el flag global --operator.
+- Fuera de alcance: búsqueda por tema, etiquetas, prioridad o responsable, porque las tareas no tienen esos campos. Revisión independiente sin problemas bloqueantes; contraste con grep: 171 hechas y 4 descartadas, igual que en history.md. bun test 2047 pass, typecheck y acsuite check sin errores.
+- Commit: 641730d.
+
 ## 2026-11-17 — ❌ Tarea 152 — Implementar `acsuite task batch` (JSON con actions por stdin o --file, todo o nada); antes, medir llamadas seguidas por sesión y confirmar que commit encadena varias operaciones
 
 - Se descarta construir `acsuite task batch`: la medición sobre 377 sesiones (48 con acsuite task, 1115 llamadas) mostró que el 65 % de las llamadas va en rachas de 2 o más, pero el ahorro posible es de turnos del modelo (tope teórico 41 %), no de tokens: lo que el agente escribe es casi igual y las salidas ya son cortas, a diferencia de Code Mode y programmatic tool calling, que ahorran filtrando resultados grandes.
