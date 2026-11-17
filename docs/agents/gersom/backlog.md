@@ -48,14 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 152 — Implementar `acsuite task batch` (JSON con actions por stdin o --file, todo o nada); antes, medir llamadas seguidas por sesión y confirmar que commit encadena varias operaciones
-
-- **Descripción:** Surgió al cerrar la Tarea 151; falta detallarla.
-- **Decisiones/temas a definir antes de empezar:** Ninguno.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Agregada:** 2026-11-16.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 

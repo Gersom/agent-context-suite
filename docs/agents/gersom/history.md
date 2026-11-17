@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ❌ Tarea 152 — Implementar `acsuite task batch` (JSON con actions por stdin o --file, todo o nada); antes, medir llamadas seguidas por sesión y confirmar que commit encadena varias operaciones
+
+- Se descarta construir `acsuite task batch`: la medición sobre 377 sesiones (48 con acsuite task, 1115 llamadas) mostró que el 65 % de las llamadas va en rachas de 2 o más, pero el ahorro posible es de turnos del modelo (tope teórico 41 %), no de tokens: lo que el agente escribe es casi igual y las salidas ya son cortas, a diferencia de Code Mode y programmatic tool calling, que ahorran filtrando resultados grandes.
+- Quedaría solo la atomicidad (todo o nada) y algo de latencia, que no justifican el costo: cada comando escribe al disco en el acto, así que hacía falta construir snapshot y rollback. Si se retoma, el formato acordado era { "actions": [ { "action": …, "args": […], "flags": {…} } ] } con las referencias entre acciones como primera ampliación.
+
 ## 2026-11-16 — ✅ Tarea 158 — close: reducir el aviso «Para revisar a mano»
 
 - `close` ya no imprime por defecto el aviso «Para revisar a mano» (tareas bloqueadas o pospuestas cuyo motivo no nombra una tarea): era ruido sin relación con la tarea cerrada, y filtrar por la cerrada lo habría dejado siempre vacío. Ahora solo sale con el flag nuevo `close --verbose`; `--json` no cambia.
