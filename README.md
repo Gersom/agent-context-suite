@@ -65,6 +65,10 @@ Usage, shortcuts and how it reads the files: [`board` README](./scripts/task-tra
 
 <!-- ![acsuite board](docs/board.gif) -->
 
+#### Double-click launcher (Windows)
+
+The skill's non-technical profile installs `open-board.bat` in the folder. Double-clicking it runs `cd` to its own folder and then `acsuite board`. It requires `npm install -g agent-context-suite` (Node 20 or higher).
+
 #### Follow Claude's active project
 
 If you work with several Claude Code sessions at once, the board can switch by itself to the project you mark from Claude. Press `o` with the board open to turn on observer mode (it is remembered for next time):

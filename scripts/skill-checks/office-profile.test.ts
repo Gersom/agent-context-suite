@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { VERSION_MARKER_RE } from "../_shared/markers.ts";
@@ -40,7 +40,8 @@ describe.skipIf(!hasSkill)("perfil no técnico: estructura", () => {
 describe.skipIf(!hasSkill)("perfil no técnico: tamaños en bytes", () => {
   const limits: [file: string, max: number, measured: (text: string) => string][] = [
     ["docs/office-git.md", 1500, (t) => t],
-    ["docs/office-profile.md", 2000, (t) => t],
+    // Tope subido de 2000 a 2300: la viñeta de open-board.bat y el aviso de acsuite (paso 5) no caben sin quitar instrucciones útiles.
+    ["docs/office-profile.md", 2300, (t) => t],
     ["template/office/AGENTS.md", 1500, withoutComments],
     ["template/office/rules.md", 5500, (t) => t],
   ];
@@ -175,6 +176,93 @@ describe.skipIf(!hasSkill)("perfil no técnico: contenido de gitignore.txt", () 
   });
 });
 
+// --- open-board.bat (lanzador del tablero, solo Windows) --------------------------------------
+
+const BAT = "template/office/open-board.bat";
+
+describe.skipIf(!hasSkill)("perfil no técnico: lanzador open-board.bat", () => {
+  /** Bytes crudos: `readSkill` normaliza CRLF y aquí justo se comprueba. */
+  const raw = () => readFileSync(join(SKILL_DIR, BAT));
+
+  test("existe en template/office", () => {
+    expect(exists(BAT), `falta ${BAT} en la skill`).toBe(true);
+  });
+
+  test("es solo ASCII (todos los bytes < 128)", () => {
+    const offending = [...raw()].findIndex((byte) => byte >= 128);
+    expect(offending, `${BAT} tiene un byte no ASCII en la posición ${offending}`).toBe(-1);
+  });
+
+  test("tiene CRLF en todas sus líneas", () => {
+    const text = raw().toString("latin1");
+    const lf = (text.match(/\n/g) ?? []).length;
+    const cr = (text.match(/\r/g) ?? []).length;
+    const crlf = (text.match(/\r\n/g) ?? []).length;
+    expect(lf, `${BAT} no tiene saltos de línea`).toBeGreaterThan(0);
+    expect(crlf, `${BAT} tiene ${lf} LF pero solo ${crlf} CRLF`).toBe(lf);
+    expect(cr, `${BAT} tiene un CR suelto`).toBe(crlf);
+    expect(text.endsWith("\r\n"), `${BAT} no termina en CRLF`).toBe(true);
+  });
+
+  test('hace cd /d "%~dp0" y abre `acsuite board` sin ruta', () => {
+    const lines = raw().toString("latin1").split(/\r?\n/).map((line) => line.trim());
+    expect(lines, `${BAT} no tiene cd /d "%~dp0"`).toContain('cd /d "%~dp0"');
+    expect(lines, `${BAT} no termina ejecutando «acsuite board» sin ruta`).toContain("acsuite board");
+  });
+
+  test("office-profile.md lo menciona", () => {
+    expect(readSkill("docs/office-profile.md")).toContain("`office/open-board.bat`");
+  });
+});
+
+// En Windows se ejecuta de verdad; en otros sistemas, o sin cmd, se salta.
+describe.skipIf(!hasSkill || process.platform !== "win32")("perfil no técnico: open-board.bat se ejecuta", () => {
+  let base = "";
+  let bat = "";
+  let elsewhere = "";
+  let fakeBin = "";
+  const system32 = join(process.env.SystemRoot ?? "C:\\Windows", "System32");
+
+  beforeAll(() => {
+    base = mkdtempSync(join(tmpdir(), "office-bat-"));
+    fakeBin = join(base, "bin");
+    const folder = join(base, "carpeta");
+    elsewhere = join(base, "otra");
+    for (const dir of [fakeBin, folder, elsewhere]) mkdirSync(dir);
+    writeFileSync(join(fakeBin, "acsuite.cmd"), "@echo BOARD-OK\r\n");
+    bat = join(folder, "open-board.bat");
+    writeFileSync(bat, readFileSync(join(SKILL_DIR, BAT)));
+  });
+
+  afterAll(() => {
+    if (base) rmSync(base, { recursive: true, force: true });
+  });
+
+  /** Lanza el .bat con `cmd /c` desde otra carpeta y con un PATH propio (en Windows la variable puede llamarse `Path`). */
+  const run = (path: string) => {
+    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toLowerCase() !== "path"));
+    return spawnSync(process.env.ComSpec ?? join(system32, "cmd.exe"), ["/c", bat], {
+      cwd: elsewhere,
+      encoding: "utf8",
+      env: { ...env, PATH: path },
+      input: "", // `pause` lee de stdin: con la entrada vacía no se queda esperando
+      timeout: 10_000,
+    });
+  };
+
+  test("con acsuite en el PATH, lo ejecuta desde su carpeta (BOARD-OK)", () => {
+    const result = run(`${fakeBin};${system32}`);
+    expect(result.stdout, `salida: ${result.stdout} ${result.stderr}`).toContain("BOARD-OK");
+  });
+
+  test("sin acsuite en el PATH, avisa «Falta instalar» y sale con código 1", () => {
+    const result = run(system32);
+    expect(result.stdout, `salida: ${result.stdout} ${result.stderr}`).toContain("Falta instalar el programa de tareas (acsuite).");
+    expect(result.stdout).not.toContain("BOARD-OK");
+    expect(result.status).toBe(1);
+  });
+});
+
 // --- gitignore.txt con git real ---------------------------------------------------------------
 
 const gitVersion = spawnSync("git", ["--version"], { encoding: "utf8" });
@@ -215,7 +303,7 @@ describe.skipIf(!hasSkill || !hasGit)("perfil no técnico: gitignore.txt con git
     ready = git("init").status === 0;
     if (!ready) return; // git no puede crear el repo aquí: no hay nada que comprobar
     write(".gitignore", readSkill("template/office/gitignore.txt"));
-    for (const file of [...NOT_IGNORED.filter((f) => f !== ".gitignore"), ...IGNORED]) write(file);
+    for (const file of [...NOT_IGNORED.filter((f) => f !== ".gitignore"), ...IGNORED, "open-board.bat"]) write(file);
   });
 
   afterAll(() => {
@@ -234,6 +322,11 @@ describe.skipIf(!hasSkill || !hasGit)("perfil no técnico: gitignore.txt con git
     for (const file of IGNORED) {
       expect(git("check-ignore", "-q", "--", file).status, `${file} debería ignorarse y el .gitignore lo deja pasar`).toBe(0);
     }
+  });
+
+  test("ignora open-board.bat en la raíz (exit 0)", () => {
+    if (!ready) return;
+    expect(git("check-ignore", "-q", "--", "open-board.bat").status, "open-board.bat debería ignorarse y el .gitignore lo deja pasar").toBe(0);
   });
 
   test("git add de la documentación y git status --short no listan los ignorados", () => {

@@ -65,6 +65,10 @@ Uso, atajos y cómo lee los archivos: [README de `board`](./scripts/task-tracker
 
 <!-- ![acsuite board](docs/board.gif) -->
 
+#### Lanzador con doble clic (Windows)
+
+El perfil no técnico de la skill instala `open-board.bat` en la carpeta. Al hacerle doble clic, hace `cd` a su propia carpeta y ejecuta `acsuite board`. Requiere `npm install -g agent-context-suite` (Node 20 o superior).
+
 #### Seguir el proyecto activo de Claude
 
 Si trabajas con varias sesiones de Claude Code a la vez, el board puede cambiar solo al proyecto que marques desde Claude. Pulsa `o` con el board abierto para activar el modo observador (se recuerda para la próxima vez):
