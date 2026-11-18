@@ -7,9 +7,9 @@ import { gitToplevel } from "../../_shared/git.ts";
 import { startApp } from "./app.ts";
 import { parseArgs, resolveOptions } from "./cli/args.ts";
 import { printResolveError } from "./cli/resolve-error.ts";
-import { invocationDir, resolveAgentsDir } from "./io/paths.ts";
+import { invocationDir, isSkillMissing, resolveAgentsDir } from "./io/paths.ts";
 import { loadBoardSettings } from "./io/settings.ts";
-import type { ResolveOk } from "./shared/types.ts";
+import type { ResolveError, ResolveOk } from "./shared/types.ts";
 
 /** Ayuda de `acsuite board`. */
 export const HELP: string[] = [
@@ -20,7 +20,8 @@ export const HELP: string[] = [
   "",
   "  [ruta]        Raíz del proyecto, carpeta de agentes (docs/agents) o carpeta de un operador.",
   "                Por defecto, el proyecto de la carpeta actual; si no tiene documentación,",
-  "                la lista de proyectos (↑/↓ eligen, Enter abre).",
+  "                la lista de proyectos (↑/↓ eligen, Enter abre). Con una ruta a una carpeta que existe",
+  "                pero no tiene la skill, también abre la lista, con un aviso.",
   "                Con un proyecto abierto, la tecla p lleva a la lista de proyectos.",
   "  [operador]    Con ruta, abre de frente el panel de ese operador (modo multi-operador).",
   "  --once        Pinta una sola vez y sale.",
@@ -51,15 +52,34 @@ export function main(argv: string[]): void {
   const { compact, arrows, follow } = resolveOptions({ saved: saved.settings, hasPath: pathArg != null, once });
 
   // `null`: sin proyecto al que abrir de frente, se muestra la lista de proyectos.
-  const target = pathArg != null ? resolveFromArg(pathArg, operator) : resolveFromCwd();
+  const { target, notice } = pathArg != null ? resolveFromArg(pathArg, operator) : { target: resolveFromCwd(), notice: null };
 
-  startApp({ target, compact, arrows, follow, once, settingsWarning: saved.warning });
+  startApp({ target, compact, arrows, follow, once, settingsWarning: saved.warning, projectsNotice: notice });
 }
 
-/** Ruta pasada por argumento: si no es válida, se informa y se sale con código 1. */
-function resolveFromArg(input: string, operatorArg: string | undefined): ResolveOk {
+/**
+ * `true` si `result` (el de `resolveAgentsDir` sobre `dir`) dice que la carpeta existe pero no tiene
+ * documentación de la skill: ni handoff.md ni carpetas de operador ni carpeta de agentes. Con la
+ * carpeta de agentes presente (aunque esté vacía o mal) no: eso es un error que se debe informar.
+ */
+function lacksSkill(dir: string, result: ResolveError): boolean {
+  if (!isSkillMissing(result.error)) return false;
+  return !["docs/agents", "agent-context/agents"].some((sub) => existsSync(join(dir, sub)));
+}
+
+/**
+ * Ruta pasada por argumento: si no existe o su documentación está mal, se informa y se sale con
+ * código 1. Si la carpeta existe pero no tiene la skill, devuelve `target` `null` (se abre la lista
+ * de proyectos) y el `notice` que lo explica.
+ */
+function resolveFromArg(input: string, operatorArg: string | undefined): { target: ResolveOk | null; notice: string | null } {
   const result = resolveAgentsDir(input, undefined, { operator: operatorArg });
-  if (result.ok) return result;
+  if (result.ok) return { target: result, notice: null };
+  // `tried[0]` es la carpeta pedida, ya resuelta a ruta absoluta.
+  const dir = result.tried[0];
+  if (lacksSkill(dir, result)) {
+    return { target: null, notice: `La carpeta no tiene la skill, se muestra la lista de proyectos: ${dir}` };
+  }
   printResolveError(result);
   process.exit(1);
 }

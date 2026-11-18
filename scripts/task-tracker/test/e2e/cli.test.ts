@@ -144,12 +144,62 @@ describe("index.ts sin ruta: el proyecto de la carpeta donde se lanza", () => {
     expect(stdout).toBe("");
   });
 
-  test("con una ruta inválida no se abre la lista: código 1", async () => {
+  test("con una ruta inexistente no se abre la lista: código 1", async () => {
     const root = tempProject({ git: false, docs: false });
     const { stdout, stderr, code } = await run([join(root, "no-existe"), "--once"], root);
     expect(code).toBe(1);
     expect(stderr).toContain("No existe la carpeta");
     expect(stdout).toBe("");
+  });
+
+  test("con una ruta a una carpeta sin la skill: abre la lista de proyectos con el aviso, sin escribir en la config", async () => {
+    const root = tempProject({ git: false, docs: false });
+    const home = join(mkdtempSync(join(tmpdir(), "board-home-")), "acsuite");
+    created.push(join(home, ".."));
+    const { stdout, stderr, code } = await run([root, "--once"], undefined, home);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(stdout.startsWith("▣ PROYECTOS\n")).toBe(true);
+    expect(stdout).toContain("╭─ PROYECTOS (0)");
+    // El aviso se recorta al ancho de la terminal (100 columnas sin TTY): según el largo de la ruta, solo se ve el comienzo.
+    expect(stdout).toContain("! La carpeta ");
+    expect(stdout).toContain("no tiene la skill");
+    expect(existsSync(home)).toBe(false);
+  });
+
+  test("sin ruta, la lista de proyectos de una carpeta sin la skill no lleva el aviso", async () => {
+    const root = tempProject({ git: false, docs: false });
+    const { stdout, code } = await run(["--once"], root);
+    expect(code).toBe(0);
+    expect(stdout).not.toContain("no tiene la skill");
+  });
+
+  test("con una ruta a una carpeta con documentación mal formada (operadores sin operators.md): código 1 con el detalle", async () => {
+    const root = tempProject({ git: false, docs: false });
+    mkdirSync(join(root, "docs", "agents", "ana"), { recursive: true });
+    writeFileSync(join(root, "docs", "agents", "ana", "handoff.md"), "# Handoff\n");
+    const { stdout, stderr, code } = await run([root, "--once"], undefined);
+    expect(code).toBe(1);
+    expect(stderr).toContain("operators.md");
+    expect(stdout).toBe("");
+  });
+
+  test("con una ruta a una carpeta de agentes sin handoff.md: código 1 con el detalle", async () => {
+    const root = tempProject({ git: false, docs: false });
+    mkdirSync(join(root, "docs", "agents"), { recursive: true });
+    const { stdout, stderr, code } = await run([root, "--once"], undefined);
+    expect(code).toBe(1);
+    expect(stderr).toContain("No se encontró handoff.md");
+    expect(stdout).toBe("");
+  });
+
+  test("con una ruta a una carpeta con la skill bien iniciada: abre el tablero, sin aviso", async () => {
+    const root = tempProject({ git: false });
+    const { stdout, stderr, code } = await run([root, "--once"], undefined);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(stdout.startsWith("▣ TAREAS\n")).toBe(true);
+    expect(stdout).not.toContain("no tiene la skill");
   });
 
   test("--once en un repo con docs no escribe nada en la carpeta de config", async () => {

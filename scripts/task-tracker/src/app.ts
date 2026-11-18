@@ -40,6 +40,7 @@ type Target = Omit<ResolveOk, "ok">;
  * Las teclas `c`, `f` y `o` guardan el nuevo valor en `settings.json` (solo en una sesión interactiva);
  * arrancar con una opción ya puesta por lo guardado no escribe nada.
  * `settingsWarning`: aviso de que `settings.json` no se pudo leer (ver `loadBoardSettings`), para mostrarlo.
+ * `projectsNotice`: aviso para la lista de proyectos con la que se arranca (solo si `target` es `null`).
  */
 export function startApp({
   target: initialTarget,
@@ -49,6 +50,7 @@ export function startApp({
   follow = false,
   once,
   settingsWarning = null,
+  projectsNotice = null,
 }: {
   target: Target | null;
   listProjects?: ProjectsProvider;
@@ -60,6 +62,7 @@ export function startApp({
   follow?: boolean;
   once: boolean;
   settingsWarning?: string | null;
+  projectsNotice?: string | null;
 }): void {
   const ui = { compact, arrows };
   const watcherErrors: string[] = [];
@@ -420,6 +423,7 @@ export function startApp({
       if (initialTarget) watcherErrors.push(settingsWarning);
       else projectsNotices.push(settingsWarning);
     }
+    if (projectsNotice && !initialTarget) projectsNotices.push(projectsNotice);
     draw({ kind: "start" });
     if (once) return;
     syncWatchers();
