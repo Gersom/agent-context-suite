@@ -59,6 +59,11 @@ export function compactApplies(nav: NavState | null): boolean {
   return nav?.view.kind !== "team";
 }
 
+/** `false` si la tecla `t` (filtrar por etiqueta) no hace nada: en la vista de equipo, que es un resumen. `nav` es `null` fuera del modo multi-operador. */
+export function labelApplies(nav: NavState | null): boolean {
+  return nav?.view.kind !== "team";
+}
+
 /**
  * Ajusta el estado a la lista actual: si el operador que se mira ya no figura (o ya no tiene
  * carpeta), vuelve a la vista de equipo y lo informa en `lost`; si el elegido desapareció, elige

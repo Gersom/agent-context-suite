@@ -35,6 +35,10 @@ export const HELP: string[] = [
   "acsuite-active-project, y lo abre) se recuerdan: las teclas c, f y o las guardan en settings.json, en esa",
   "misma carpeta, y la próxima vez se arranca con ellas. Con una ruta o con --once no se arranca en modo",
   "observador, aunque esté guardado.",
+  "",
+  "La tecla t filtra las tareas por etiqueta (#): recorre todas → cada etiqueta del proyecto → todas, y el",
+  "encabezado indica el filtro activo. La tarea en progreso siempre se ve. El filtro no se guarda y se",
+  "reinicia al cambiar de proyecto. En la lista de proyectos y en la vista de equipo no hace nada.",
 ];
 
 export function main(argv: string[]): void {

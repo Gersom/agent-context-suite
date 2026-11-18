@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { filterModel, filterTeamBacklog } from "../../src/model/labels.ts";
 import { buildModel } from "../../src/model/model.ts";
 import type { RenderMeta } from "../../src/shared/types.ts";
 import { visibleLength } from "../../src/ui/format.ts";
@@ -648,5 +649,142 @@ describe("etiquetas de las tareas", () => {
     const secondary = (text: string) => `\x1b[38;5;250m${text}\x1b[39m`;
     expect(out).toContain(secondary("  #empresa1 #trabajo"));
     expect(out).toContain(secondary("Etiquetas  #empresa1 #trabajo"));
+  });
+});
+
+describe("filtro por etiqueta", () => {
+  // Los documentos etiquetados (`empresa1 trabajo` en todo) más una libre y una pausada que solo llevan `otra`.
+  const docs = {
+    ...LABELED.es,
+    handoff: `${LABELED.es.handoff}\n### Tarea 9 — Ordenar la carpeta\n\n- **Etiquetas:** otra\n`,
+    backlog: LABELED.es.backlog.replace("<!-- agent-context-skill:section=blocked -->", "### Tarea 4 — Otra libre\n\n- **Etiquetas:** otra\n\n<!-- agent-context-skill:section=blocked -->"),
+  };
+  const screenOf = (label: string | null, extra: Partial<RenderMeta> = {}) => {
+    const { model, teamBacklog } = labeledModel("es", docs);
+    return render(filterModel(model, label), { ...meta, teamBacklog: filterTeamBacklog(teamBacklog, label), labelFilter: label, ...extra });
+  };
+
+  test("sin filtro la pantalla es idéntica a la de antes (con o sin los campos del filtro en el meta)", () => {
+    const { model, teamBacklog } = labeledModel("es", docs);
+    const before = render(model, { ...meta, teamBacklog });
+    expect(screenOf(null)).toBe(before);
+    expect(render(model, { ...meta, teamBacklog, labelFilter: null, hasLabels: false })).toBe(before);
+    expect(before).not.toContain("Filtro");
+    expect(rowsOf(before, "LIBRES (2)")).toHaveLength(2);
+    expect(rowsOf(before, "PAUSADAS (2)").length).toBeGreaterThan(0);
+  });
+
+  test("el encabezado indica el filtro al final de la línea de la hora", () => {
+    expect(screenOf("trabajo").split("\n")[2]).toBe("  Última actualización 14:30:00 · al iniciar   Filtro #trabajo");
+  });
+
+  test("el filtro va en el tono secundario (gris)", () => {
+    const out = screenOf("trabajo", { color: true });
+    expect(out).toContain("  \x1b[38;5;250mÚltima actualización 14:30:00 · al iniciar   Filtro #trabajo\x1b[39m");
+  });
+
+  test("con poco ancho se recorta la hora, no el filtro", () => {
+    const line = screenOf("trabajo", { width: 50 }).split("\n")[2];
+    expect(line).toEndWith("   Filtro #trabajo");
+    expect(line).toContain("…");
+    expect(visibleLength(line)).toBeLessThanOrEqual(50);
+  });
+
+  test("libres, pausadas y los contadores de los títulos muestran solo lo filtrado", () => {
+    const out = screenOf("otra");
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-4: Otra libre  #otra"]);
+    expect(rowsOf(out, "PAUSADAS (1)")[0]).toBe("• Tarea 9 — Ordenar la carpeta");
+    const trabajo = screenOf("trabajo");
+    expect(rowsOf(trabajo, "LIBRES (1)")).toEqual(["T-3: Exportar como skill  #empresa1 #trabajo"]);
+    expect(rowsOf(trabajo, "PAUSADAS (1)")[0]).toBe("• Tarea 8 — Revisar la API");
+  });
+
+  test("bloqueadas, completadas y sin dueño también se filtran", () => {
+    const trabajo = screenOf("trabajo");
+    expect(rowsOf(trabajo, "BLOQUEADAS (1)")).toEqual(["T-5: Rehacer el README [postergada]  #empresa1 #trabajo"]);
+    expect(rowsOf(trabajo, "TAREAS COMPLETADAS (últimas 1)")).toHaveLength(1);
+    expect(rowsOf(trabajo, "SIN DUEÑO (1)")).toEqual(["• Revisar el copy  #empresa1 #trabajo"]);
+  });
+
+  test("la tarea en curso se ve siempre, aunque no lleve la etiqueta", () => {
+    const out = screenOf("otra");
+    expect(rowsOf(out, "EN PROGRESO")[0]).toBe("Tarea 12 — Implementar el parser");
+  });
+
+  test("una caja que queda vacía muestra su texto de vacío; las que ya se ocultaban sin tareas, se ocultan", () => {
+    const out = screenOf("otra");
+    expect(rowsOf(out, "SIN DUEÑO (0)")).toEqual(["Ninguna"]);
+    expect(rowsOf(out, "TAREAS COMPLETADAS (últimas 0)")).toEqual(["Ninguna"]);
+    expect(out).not.toContain("BLOQUEADAS");
+    const none = screenOf("otra", { teamBacklog: undefined });
+    expect(none).not.toContain("SIN DUEÑO");
+    const { model } = labeledModel("es", docs);
+    const emptied = render(filterModel(model, "sin-tareas"), { ...meta, labelFilter: "sin-tareas" });
+    expect(rowsOf(emptied, "LIBRES (0)")).toEqual(["Ninguna"]);
+    expect(emptied).not.toContain("PAUSADAS");
+  });
+
+  test("con el modo compacto, la fila de cada caja sale de lo filtrado", () => {
+    const out = screenOf("trabajo", { compact: true });
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Exportar como skill  #empresa1 #trabajo"]);
+    expect(rowsOf(screenOf("otra", { compact: true }), "LIBRES (1)")).toEqual(["T-4: Otra libre  #otra"]);
+  });
+
+  test("grupos: se pintan con las tareas que coinciden y el grupo sin ninguna no se muestra", () => {
+    const grouped = {
+      handoff: LABELED.es.handoff,
+      history: LABELED.es.history,
+      teamBacklog: LABELED.es.teamBacklog,
+      backlog: `# Backlog
+
+<!-- agent-context-skill:section=free -->
+## Tareas libres
+
+### Grupo — Docs (Tareas 14, 15)
+
+- **Resumen:** todo.
+
+### Grupo — Otro (Tarea 17)
+
+- **Resumen:** nada.
+
+<!-- agent-context-skill:section=blocked -->
+## Tareas bloqueadas / pospuestas
+
+<!-- agent-context-skill:section=grouped -->
+## Tareas agrupadas
+
+### Grupo — Docs
+
+#### Tarea 14 — Costos
+
+- **Etiquetas:** empresa1
+
+#### Tarea 15 — Límites
+
+- **Etiquetas:** zeta
+
+### Grupo — Otro
+
+#### Tarea 17 — Otra cosa
+
+- **Etiquetas:** zeta
+`,
+    };
+    const { model } = labeledModel("es", grouped);
+    const out = render(filterModel(model, "empresa1"), { ...meta, labelFilter: "empresa1" });
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["◇ Grupo: Docs (T-14)", "  · T-14: Costos  #empresa1"]);
+    const all = render(model, meta);
+    expect(rowsOf(all, "LIBRES (3)")).toContain("◇ Grupo: Otro (T-17)");
+  });
+
+  test("el pie ofrece [t] solo en el panel y si el proyecto tiene etiquetas", () => {
+    const keys = { controls: "keys" as const, width: 200 };
+    expect(screenOf(null, { ...keys, hasLabels: true, multiView: "operator" })).toContain("[f] ocultar flechas - [t] filtrar por etiqueta - [r] redibujar");
+    expect(screenOf(null, { ...keys, hasLabels: true })).toContain("[t] filtrar por etiqueta");
+    expect(screenOf(null, { ...keys, hasLabels: false })).not.toContain("[t]");
+    expect(screenOf(null, keys)).not.toContain("[t]");
+    expect(screenOf(null, { controls: "ctrl-c", hasLabels: true })).not.toContain("[t]");
+    expect(screenOf(null, { controls: "none", hasLabels: true })).not.toContain("[t]");
   });
 });

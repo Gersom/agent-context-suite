@@ -61,6 +61,7 @@ Solo con una terminal interactiva (sin `--once` ni salida redirigida). Las mayú
 | `p` | Ir a la lista de proyectos (se vuelve a leer al abrirla); es también la forma de dejar un repo abierto desde la lista | Equipo y panel. Se ignora con el observador activo |
 | `c` | Compactar o expandir los recuadros (ver abajo) | Panel. En el equipo no hace nada |
 | `f` | Ocultar o mostrar las flechas del flujo | Panel (el pie no la ofrece en el equipo, que no tiene flechas) |
+| `t` | Filtrar las tareas por etiqueta: recorre «todas» → cada etiqueta → «todas» (ver [Filtro por etiqueta](#filtro-por-etiqueta)). Sin etiquetas no hace nada | Panel. En la lista y en el equipo no hace nada |
 | `a` | Agregar un repo a la lista: pide su ruta (`Enter` la agrega, `Esc` cancela) | Lista |
 | `x` | Quitar de la lista el proyecto elegido, tras confirmar (`Enter` quita; `Esc` o `n` cancelan); no borra nada del repo. Sin proyectos no hace nada | Lista |
 | `o` | Activar o desactivar el [modo observador](#modo-observador) | Todas las vistas, salvo mientras se escribe una ruta o se confirma quitar un proyecto |
@@ -69,7 +70,15 @@ Con el observador activo, `p` y `e` no hacen nada: hay que salir antes con `o`. 
 
 Si la lista de proyectos o la vista de equipo no caben en el alto de la terminal, se recortan: la ventana sigue a la fila elegida con `↑`/`↓`, el pie de teclas se conserva (en proyectos, también la ruta que se escribe, la confirmación de quitar y los avisos) y las líneas ocultas se indican con `↑ N más` y `↓ N más`; «N más» cuenta líneas de pantalla, no filas. El panel de tareas no se recorta (se desplaza con la propia terminal), ni tampoco con `--once` o salida redirigida.
 
-El pie de la pantalla lista las teclas que valen en la vista actual como `[tecla] acción` (por ejemplo, en un panel de operador: `[e] equipo - [p] proyectos - [c] compactar - [f] ocultar flechas - [r] redibujar - [o] observar - [Ctrl+C o q] salir`); `c` y `f` dicen lo que harán según el estado (`[c] expandir`, `[f] mostrar flechas`), `[o]` dice `observar` o `salir del modo observador`, y si el pie no entra en el ancho se parte en dos líneas para que "salir" nunca quede recortado.
+El pie de la pantalla lista las teclas que valen en la vista actual como `[tecla] acción` (por ejemplo, en un panel de operador: `[e] equipo - [p] proyectos - [c] compactar - [f] ocultar flechas - [r] redibujar - [o] observar - [Ctrl+C o q] salir`); `c` y `f` dicen lo que harán según el estado (`[c] expandir`, `[f] mostrar flechas`), `[o]` dice `observar` o `salir del modo observador`, `[t] filtrar por etiqueta` solo aparece en el panel y si el proyecto tiene etiquetas, y si el pie no entra en el ancho se parte en dos líneas para que "salir" nunca quede recortado.
+
+### Filtro por etiqueta
+
+La tecla `t` (solo en el panel de un operador o de un repo plano, con una terminal interactiva) muestra solo las tareas que llevan una etiqueta (`Etiquetas`/`Tags`, las que el board pinta con `#`). Cada pulsación pasa a la siguiente: «todas» → cada etiqueta del panel → de vuelta a «todas». Las etiquetas se toman de lo que muestra el panel (en modo multi-operador, también las de SIN DUEÑO), sin distinguir mayúsculas (se conserva la primera forma) y en orden alfabético. Sin etiquetas, `t` no hace nada y el pie no la ofrece.
+
+- **Qué se filtra:** libres, bloqueadas, pausadas, completadas (las últimas que muestra el board) y SIN DUEÑO. La tarea EN PROGRESO se ve siempre, coincida o no. Los contadores de los títulos reflejan lo filtrado (`PAUSADAS (1)`); un grupo de libres se filtra por sus tareas y desaparece si no le queda ninguna. LIBRES, SIN DUEÑO y COMPLETADAS que se quedan sin tareas muestran su `Ninguna`; BLOQUEADAS y PAUSADAS, que ya se ocultan cuando no tienen tareas, se ocultan.
+- **Encabezado:** con un filtro activo, la línea de la hora termina con `Filtro #etiqueta`, en el tono secundario.
+- **Solo de la sesión:** no se guarda en `settings.json`. Al cambiar de proyecto (`p`, abrir otro, o el modo observador) vuelve a «todas»; si al redibujar por un cambio en los archivos la etiqueta filtrada ya no existe, también. Con `--once` no hay teclado, así que no cambia nada.
 
 ### Modo observador
 
@@ -87,7 +96,7 @@ El mod escribe `active-project.json` en la carpeta de config de la suite (`ACSUI
 - **Vista de espera:** mientras no hay marca, la pantalla es solo `▣ MODO OBSERVADOR`, con el texto «Esperando: …», sin tareas, y el título de la ventana dice `tareas · observador`. Su pie es `[o] salir del modo observador - [Ctrl+C o q] salir`; `r` redibuja, pero el pie no la ofrece. Salir con `o` sin haber abierto nada deja la lista de proyectos.
 - **Al marcar:** sube a la raíz del repo de `path`, lo agrega a la lista de proyectos (y a `projects.json`) si no estaba y abre su tablero. En un repo multi-operador abre de frente el panel del operador del `git config user.email`, como al pasar el operador en la línea de comandos; si ese correo no figura en `operators.md`, queda la vista de equipo. Si marcas el proyecto que ya está abierto, solo se redibuja.
 - **Sigue observando:** tras cada marca el modo sigue activo, y la siguiente marca vuelve a cambiar de proyecto. Mientras tanto, el encabezado del tablero lleva el sufijo ` · MODO OBSERVADOR` y, antes del pie, una línea `ℹ Observando: …`.
-- **Teclas:** con el observador activo y un tablero en pantalla, `p` y `e` se ignoran (el pie no los ofrece): no se puede salir del tablero a la lista ni, en el panel de un operador, ir al equipo. Para eso hay que salir antes del modo observador con `o`, que deja abierto el repo que estuviera en pantalla. `q`, `r`, `c` y `f` siguen valiendo, y también `↑`/`↓`/`Enter` en la vista de equipo.
+- **Teclas:** con el observador activo y un tablero en pantalla, `p` y `e` se ignoran (el pie no los ofrece): no se puede salir del tablero a la lista ni, en el panel de un operador, ir al equipo. Para eso hay que salir antes del modo observador con `o`, que deja abierto el repo que estuviera en pantalla. `q`, `r`, `c`, `f` y `t` siguen valiendo, y también `↑`/`↓`/`Enter` en la vista de equipo.
 - **Avisos:** si el repo marcado no se puede abrir, sigue observando y lo avisa en la pantalla en la que esté (la de espera, si todavía no abrió ninguno), en amarillo y con `!`. Un repo sin la skill iniciada dice `Este repo no tiene la skill iniciada: <ruta>. Instálala desde https://github.com/Gersom/agent-context-skill`; cualquier otro motivo (la carpeta ya no existe, es un archivo, falta `operators.md`…) sale como `No se pudo abrir <ruta>: <motivo>.`. Si el repo se abrió pero no se pudo guardar en `projects.json`, el aviso de guardado acompaña al tablero. Un fallo al vigilar la carpeta de config también se avisa así.
 
 ### Ajustes recordados

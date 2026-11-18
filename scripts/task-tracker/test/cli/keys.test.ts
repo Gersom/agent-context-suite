@@ -29,6 +29,11 @@ describe("parseKeys", () => {
     expect(parseKeys("fF")).toEqual(["flow", "flow"]);
   });
 
+  test("t filtra por etiqueta (mayúscula o minúscula)", () => {
+    expect(parseKeys("tT")).toEqual(["label", "label"]);
+    expect(parseKeys("ct\u001b[Bf")).toEqual(["compact", "label", "down", "flow"]);
+  });
+
   test("las flechas llegan como secuencias de varios caracteres (CSI y SS3)", () => {
     expect(parseKeys("\u001b[A")).toEqual(["up"]);
     expect(parseKeys("\u001b[B")).toEqual(["down"]);

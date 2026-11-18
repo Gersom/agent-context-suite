@@ -98,6 +98,10 @@ describe("renderTeam", () => {
     expect(renderTeam(team, { ...meta, controls: "none" })).not.toContain("↑/↓");
   });
 
+  test("el pie de equipo no ofrece [t]: la tecla no hace nada en el resumen, aunque el proyecto tenga etiquetas", () => {
+    expect(renderTeam(team, { ...meta, controls: "keys", multiView: "team", hasLabels: true })).not.toContain("[t]");
+  });
+
   test("el pie de equipo no anuncia [e], compactar/expandir ni volver a proyectos, tampoco con compact activo", () => {
     for (const compact of [false, true]) {
       const out = renderTeam(team, { ...meta, controls: "keys", multiView: "team", compact });

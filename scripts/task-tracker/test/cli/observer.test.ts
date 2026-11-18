@@ -36,7 +36,7 @@ describe("ignoredWithObserver", () => {
   });
 
   test("el resto de las teclas del tablero siguen valiendo", () => {
-    const rest: NavKey[] = ["quit", "redraw", "up", "down", "enter", "compact", "flow", "observe"];
+    const rest: NavKey[] = ["quit", "redraw", "up", "down", "enter", "compact", "flow", "label", "observe"];
     for (const key of rest) expect(ignoredWithObserver(key)).toBe(false);
   });
 });

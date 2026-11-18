@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { compactApplies, initialNav, type NavRow, type NavState, navReduce, reconcileNav, selectable } from "../../src/cli/nav.ts";
+import { compactApplies, initialNav, labelApplies, type NavRow, type NavState, navReduce, reconcileNav, selectable } from "../../src/cli/nav.ts";
 
 const ROWS: NavRow[] = [
   { folder: "ana", folderless: false },
@@ -75,6 +75,23 @@ describe("navReduce en el panel de un operador", () => {
       expect(navReduce(panel, key, ROWS)).toBe(panel);
       expect(navReduce(team("ana"), key, ROWS)).toEqual(team("ana"));
     }
+  });
+
+  test("filtrar por etiqueta no cambia la navegación, en ninguna vista", () => {
+    expect(navReduce(panel, "label", ROWS)).toBe(panel);
+    expect(navReduce(team("ana"), "label", ROWS)).toEqual(team("ana"));
+  });
+});
+
+describe("labelApplies", () => {
+  test("en la vista de equipo (un resumen) la tecla `t` no hace nada", () => {
+    expect(labelApplies(team("ana"))).toBe(false);
+    expect(labelApplies(team(null))).toBe(false);
+  });
+
+  test("en el panel de un operador y en un repo plano (sin navegación) sí aplica", () => {
+    expect(labelApplies({ view: { kind: "operator", folder: "ana" }, selected: "ana" })).toBe(true);
+    expect(labelApplies(null)).toBe(true);
   });
 });
 

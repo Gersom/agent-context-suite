@@ -109,6 +109,45 @@ describe("index.ts", () => {
     }
   });
 
+  test("--label: list y next filtran por etiqueta; una inválida o vacía sale con código 2; status no lo admite", async () => {
+    if (!hasGit) return;
+    const added = await runCli(["add", "--title", "Etiquetada del e2e", "--description", "Para filtrar", "--labels", "trabajo empresa1", "--apply"]);
+    expect(added.code).toBe(0);
+
+    const listed = await runCli(["list", "--label", "#EMPRESA1", "--label", "trabajo", "--json"]);
+    expect(listed.code).toBe(0);
+    const json = JSON.parse(listed.stdout);
+    expect(json.filters.labels).toEqual(["EMPRESA1", "trabajo"]);
+    expect(json.tasks.map((t: { title: string }) => t.title)).toEqual(["Etiquetada del e2e"]);
+    expect(json.tasks[0].labels).toEqual(["trabajo", "empresa1"]);
+    expect((await runCli(["list", "--label", "empresa1,trabajo"])).stdout).toContain("· Etiquetada del e2e #trabajo #empresa1");
+
+    // El operador del fixture tiene una tarea en curso sin etiquetas: `next` la muestra y avisa del filtro.
+    const picked = await runCli(["next", "--label", "empresa1"]);
+    expect(picked.code).toBe(0);
+    expect(picked.stdout).toContain("En curso: Tarea 12");
+    expect(picked.stdout).toContain("Nota: la tarea en curso no tiene la etiqueta #empresa1");
+
+    for (const command of ["list", "next"]) {
+      for (const value of ["café", ""]) {
+        const bad = await runCli([command, "--label", value]);
+        expect(bad.code).toBe(2);
+        expect(bad.stdout).toBe("");
+        expect(bad.stderr).toContain("--label");
+      }
+    }
+    expect((await runCli(["status", "--label", "trabajo"])).code).not.toBe(0);
+  });
+
+  test("la ayuda de list y de next documenta --label con un ejemplo", async () => {
+    for (const command of ["list", "next"]) {
+      const { stdout, code } = await runCli([command, "--help"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("--label <etiquetas>");
+      expect(stdout).toContain("Ej.: --label trabajo,#empresa1");
+    }
+  });
+
   test("la ayuda de un comando de escritura avisa de --apply", async () => {
     const { stdout, code } = await runCli(["start", "--help"]);
     expect(code).toBe(0);

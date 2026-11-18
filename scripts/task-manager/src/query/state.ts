@@ -9,11 +9,13 @@
 
 import { isPlaceholder } from "../../../_shared/parse/markdown.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
+import { fieldLabels } from "../../../_shared/tasks/labels.ts";
 import { findTaskRefs, type TaskIndex } from "../../../_shared/tasks/task-refs.ts";
 import type { Field, Group, InProgress, PlanStep, Task, TeamTask } from "../../../_shared/types.ts";
 import type { Docs } from "../workspace/docs.ts";
 import { requireDoc } from "../workspace/docs.ts";
 import { stepBase } from "../write/suffix.ts";
+import { hasLabels } from "./labels.ts";
 import { findNextTaskNumber } from "./next-number.ts";
 
 /** Cuántas entradas de history.md entran en el estado (las más nuevas, que van arriba del archivo). */
@@ -188,27 +190,29 @@ export function knownNumbers(docs: Docs): number[] {
 }
 
 /** Tareas libres en el orden del archivo, con las de cada grupo (su detalle está en «Tareas agrupadas»). */
-function freeInfos(docs: Docs, warnings: string[]): FreeInfo[] {
+function freeInfos(docs: Docs, warnings: string[], wanted: string[] | null): FreeInfo[] {
   const { free, grouped } = docs.backlog.parsed;
   const groupedTask = (number: number): Task | undefined => grouped.flatMap((g: Group) => g.tasks).find((t) => t.number === number);
   const items: Array<{ at: number; infos: FreeInfo[] }> = [];
   for (const task of free.tasks) {
+    if (!hasLabels(fieldLabels(task.fields), wanted)) continue;
     items.push({ at: task.range?.start ?? 0, infos: [{ number: task.number, title: task.title, group: null, trigger: fieldValue(task.fields, TRIGGER_LABEL_RE) }] });
   }
   for (const group of free.groups) {
-    const infos = group.taskNumbers.map((number): FreeInfo => {
+    const infos = group.taskNumbers.flatMap((number): FreeInfo[] => {
       const detail = groupedTask(number);
       if (!detail) warnings.push(`Tarea ${number}: el grupo «${group.title}» la lista pero no tiene detalle en «Tareas agrupadas».`);
-      return { number, title: detail?.title ?? "(sin detalle en «Tareas agrupadas»)", group: group.title, trigger: detail ? fieldValue(detail.fields, TRIGGER_LABEL_RE) : null };
+      if (!hasLabels(detail ? fieldLabels(detail.fields) : [], wanted)) return [];
+      return [{ number, title: detail?.title ?? "(sin detalle en «Tareas agrupadas»)", group: group.title, trigger: detail ? fieldValue(detail.fields, TRIGGER_LABEL_RE) : null }];
     });
     items.push({ at: group.range?.start ?? 0, infos });
   }
   return items.sort((a, b) => a.at - b.at).flatMap((item) => item.infos);
 }
 
-function blockedInfos(docs: Docs): BlockedInfo[] {
+function blockedInfos(docs: Docs, wanted: string[] | null): BlockedInfo[] {
   const { index, where } = buildTaskIndex(docs);
-  return docs.backlog.parsed.blocked.map((task) => {
+  return docs.backlog.parsed.blocked.filter((task) => hasLabels(fieldLabels(task.fields), wanted)).map((task) => {
     const block = blockInfo(task);
     const refs = findTaskRefs(block.reason, task.number, index).map(
       (ref): RefInfo => ({ number: ref.number, title: ref.title, state: ref.closed ? "closed" : (where.get(ref.number) ?? "unknown") }),
@@ -224,9 +228,9 @@ function blockedInfos(docs: Docs): BlockedInfo[] {
   });
 }
 
-function teamInfos(tasks: TeamTask[]): TeamTaskInfo[] {
+function teamInfos(tasks: TeamTask[], wanted: string[] | null): TeamTaskInfo[] {
   return tasks
-    .filter((task) => !task.isPlaceholder)
+    .filter((task) => !task.isPlaceholder && hasLabels(fieldLabels(task.fields), wanted))
     .map((task) => ({ title: task.title, tag: blockInfo(task).tag, trigger: fieldValue(task.fields, TRIGGER_LABEL_RE) }));
 }
 
@@ -243,11 +247,13 @@ function structureWarnings(docs: Docs): string[] {
 }
 
 /**
- * Estado completo del operador.
+ * Estado completo del operador. Con `labels`, las pausadas, libres, bloqueadas y las del team-backlog
+ * se limitan a las que traen todas esas etiquetas (sin distinguir mayúsculas); la tarea en curso, los
+ * avisos y el resto del estado no se filtran.
  * @throws CliError si falta `handoff.md` (sin él no hay estado que mostrar); backlog, history y
  *   team-backlog ausentes no son un error (el set mínimo de la skill solo trae el handoff).
  */
-export function buildState(docs: Docs): TaskState {
+export function buildState(docs: Docs, { labels = null }: { labels?: string[] | null } = {}): TaskState {
   requireDoc(docs.handoff, "handoff.md");
   const warnings = structureWarnings(docs);
   const { inProgress, paused } = docs.handoff.parsed;
@@ -285,20 +291,20 @@ export function buildState(docs: Docs): TaskState {
     else if (closed.has(number)) warnings.push(`Tarea ${number} figura cerrada en history.md pero sigue en handoff o backlog.`);
   }
 
-  const blocked = blockedInfos(docs);
+  const blocked = blockedInfos(docs, null);
   for (const task of blocked) {
     if (!task.tag) warnings.push(`Tarea ${task.number} está en «bloqueadas» sin bloqueo vigente: ¿moverla a libres? (Regla 8)`);
   }
 
   const team = docs.teamBacklog?.exists
-    ? { free: teamInfos(docs.teamBacklog.parsed.free), blocked: teamInfos(docs.teamBacklog.parsed.blocked) }
+    ? { free: teamInfos(docs.teamBacklog.parsed.free, labels), blocked: teamInfos(docs.teamBacklog.parsed.blocked, labels) }
     : null;
 
   return {
     current,
-    paused: paused.map((task) => ({ number: task.number, title: task.title, plan: planProgress(task.steps) })),
-    free: freeInfos(docs, warnings),
-    blocked,
+    paused: paused.filter((task) => hasLabels(fieldLabels(task.fields), labels)).map((task) => ({ number: task.number, title: task.title, plan: planProgress(task.steps) })),
+    free: freeInfos(docs, warnings, labels),
+    blocked: labels ? blockedInfos(docs, labels) : blocked,
     recentHistory: docs.history.parsed.entries
       .slice(0, RECENT_HISTORY)
       .map((entry) => ({ date: entry.date, status: entry.status, number: entry.number, title: entry.title })),

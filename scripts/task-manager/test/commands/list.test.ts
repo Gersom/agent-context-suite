@@ -365,13 +365,13 @@ describe("list: --json", () => {
       schema: 1,
       command: "list",
       operator: "gersom",
-      filters: { status: ["in-progress", "done"], search: "parser", last: 5, group: null },
+      filters: { status: ["in-progress", "done"], search: "parser", last: 5, group: null, labels: null },
       total: 2,
       shown: 2,
     });
     expect(json.tasks).toEqual([
-      { number: 12, title: "Implementar el parser", status: "in-progress", date: null, group: null, team: false, file: "docs/agents/gersom/handoff.md", startLine: 6, matched: ["title"] },
-      { number: 11, title: "Escribir el parser", status: "done", date: "2026-10-07", group: null, team: false, file: "docs/agents/gersom/history.md", startLine: 5, matched: ["title"] },
+      { number: 12, title: "Implementar el parser", status: "in-progress", date: null, group: null, team: false, file: "docs/agents/gersom/handoff.md", startLine: 6, labels: [], matched: ["title"] },
+      { number: 11, title: "Escribir el parser", status: "done", date: "2026-10-07", group: null, team: false, file: "docs/agents/gersom/history.md", startLine: 5, labels: [], matched: ["title"] },
     ]);
   });
 
@@ -388,7 +388,7 @@ describe("list: --json", () => {
   test("sin búsqueda no trae `matched`; con filtros ausentes van en null; las del team y de grupo", async () => {
     const p = project({ folders: ["gersom"], ...DATED });
     const json = JSON.parse((await exec(["list", "--json", "--last", "40"], p)).out);
-    expect(json.filters).toEqual({ status: null, search: null, last: 40, group: null });
+    expect(json.filters).toEqual({ status: null, search: null, last: 40, group: null, labels: null });
     expect(json).toMatchObject({ total: 20, shown: 20 });
     for (const task of json.tasks) expect("matched" in task).toBe(false);
     expect(json.tasks.find((t: { title: string }) => t.title === "Migrar el CI")).toMatchObject({

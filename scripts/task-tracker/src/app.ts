@@ -3,12 +3,14 @@
 // En modo multi-operador hay además dos vistas (el equipo y el panel de un operador) y una
 // navegación con ↑/↓, Enter y `e` (ver cli/nav.ts). Sin un repo al que abrir de frente, se
 // muestra la lista de proyectos (ver cli/projects-nav.ts): Enter abre uno y `p` vuelve a ella.
+// La tecla `t` filtra las tareas de un panel por etiqueta (ver cli/label-filter.ts).
 
 import { mkdirSync } from "node:fs";
 import { basename } from "node:path";
 import { gitToplevel } from "../../_shared/git.ts";
 import { parseKeys } from "./cli/keys.ts";
-import { compactApplies, initialNav, type NavRow, navReduce, type NavState, reconcileNav } from "./cli/nav.ts";
+import { createLabelFilter } from "./cli/label-filter.ts";
+import { compactApplies, initialNav, labelApplies, type NavRow, navReduce, type NavState, reconcileNav } from "./cli/nav.ts";
 import { ignoredWithObserver, type ObserverState, observerFailureNotice, observerStep, startObserver } from "./cli/observer.ts";
 import { projectsKeysReduce } from "./cli/projects-keys.ts";
 import { initialProjectsNav, neighborAfterRemove, type ProjectsNavState, reconcileProjects } from "./cli/projects-nav.ts";
@@ -20,9 +22,10 @@ import { type BoardSettings, saveBoardSettings } from "./io/settings.ts";
 import { createTeamReader, ROOT_WATCHED_FILES } from "./io/team.ts";
 import { configDir, failureMessage, removeProject, samePath, saveProject } from "./io/user-config.ts";
 import { watchDir } from "./io/watch.ts";
+import { filterModel, filterTeamBacklog, modelLabels } from "./model/labels.ts";
 import { buildModel } from "./model/model.ts";
 import { buildTeamModel } from "./model/team.ts";
-import type { Controls, DrawTrigger, MultiInfo, ProjectRow, RenderMeta, ResolveOk } from "./shared/types.ts";
+import type { Controls, DrawTrigger, Model, MultiInfo, ProjectRow, RenderMeta, ResolveOk, TeamBacklogModel } from "./shared/types.ts";
 import { displayProjectName } from "./ui/format.ts";
 import { render, renderObserver, renderProjects, renderTeam } from "./ui/render.ts";
 
@@ -72,6 +75,8 @@ export function startApp({
   let teamReader: ReturnType<typeof createTeamReader> | null = null;
   let nav: NavState | null = null;
   let navRows: NavRow[] = [];
+  // Filtro por etiqueta (tecla `t`): solo de la sesión (no se guarda en settings.json) y de un repo: `open` lo reinicia.
+  const labelFilter = createLabelFilter();
   let projectRows: ProjectRow[] = [];
   let projectsNav: ProjectsNavState = initialProjectsNav([]);
   let projectsNotices: string[] = [];
@@ -105,6 +110,7 @@ export function startApp({
     teamReader = next?.multi ? createTeamReader(next.agentsDir) : null;
     nav = null;
     navRows = [];
+    labelFilter.reset();
     // Esperando una marca la lista no se ve: se lee al salir del observador.
     if (!next && !observerWaiting) loadProjects();
     if (process.stdout.isTTY && !next?.multi) setTitle();
@@ -218,7 +224,8 @@ export function startApp({
           historyText: opened.snapshot.historyText,
           readErrors: [...opened.snapshot.warnings, ...watcherErrors, ...lost],
         });
-        screen = render(model, { ...meta, operator: opened.entry.folder, teamBacklog: team.teamBacklog, multiView: "operator" });
+        const shown = applyLabelFilter(model, team.teamBacklog);
+        screen = render(shown.model, { ...meta, ...shown.meta, operator: opened.entry.folder, teamBacklog: shown.teamBacklog, multiView: "operator" });
       } else {
         screen = renderTeam(
           { ...team, warnings: [...team.warnings, ...lost] },
@@ -239,12 +246,28 @@ export function startApp({
         historyText: snap.historyText,
         readErrors: [...snap.warnings, ...watcherErrors],
       });
-      screen = render(model, meta);
+      const shown = applyLabelFilter(model);
+      screen = render(shown.model, { ...meta, ...shown.meta });
     } else {
       return;
     }
 
     write(screen);
+  }
+
+  /**
+   * Registra las etiquetas del panel (y del team-backlog, en modo multi-operador) y aplica el filtro
+   * activo (si la etiqueta filtrada ya no existe, vuelve a «todas»). Devuelve lo que se pinta y lo que
+   * el encabezado y el pie necesitan saber del filtro. Sin filtro, el modelo queda tal cual.
+   */
+  function applyLabelFilter(model: Model, teamBacklog?: TeamBacklogModel): { model: Model; teamBacklog?: TeamBacklogModel; meta: Pick<RenderMeta, "labelFilter" | "hasLabels"> } {
+    labelFilter.sync(modelLabels(model, teamBacklog));
+    const label = labelFilter.active;
+    return {
+      model: filterModel(model, label),
+      teamBacklog: teamBacklog && filterTeamBacklog(teamBacklog, label),
+      meta: { labelFilter: label, hasLabels: labelFilter.available.length > 0 },
+    };
   }
 
   function write(screen: string): void {
@@ -511,6 +534,9 @@ export function startApp({
           else ui.arrows = !ui.arrows;
           persist(key === "compact" ? { compact: ui.compact } : { arrows: ui.arrows });
           draw({ kind: "redraw" });
+        } else if (key === "label") {
+          // `t` recorre las etiquetas; en la vista de equipo (un resumen) o sin etiquetas no hace nada.
+          if (labelApplies(nav) && labelFilter.cycle()) draw({ kind: "redraw" });
         } else if (target.multi && nav) {
           const next = navReduce(nav, key, navRows);
           if (next !== nav) {

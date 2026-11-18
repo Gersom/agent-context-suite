@@ -68,8 +68,8 @@ describe("projectsKeysReduce: lista", () => {
     expect(projectsKeysReduce(result.state, "\rq", CTX, 1)).toEqual({ state: list(), actions: [{ kind: "quit" }], resume: null });
   });
 
-  test("c, f, p, e, b, Esc y otras teclas se ignoran en la lista", () => {
-    for (const chunk of ["c", "C", "f", "F", "p", "P", "e", "E", "b", "B", "\u007f", "\u001b", "y", "1", "\u001b[C", "\u001b[3~"]) {
+  test("c, f, t, p, e, b, Esc y otras teclas se ignoran en la lista", () => {
+    for (const chunk of ["c", "C", "f", "F", "t", "T", "p", "P", "e", "E", "b", "B", "\u007f", "\u001b", "y", "1", "\u001b[C", "\u001b[3~"]) {
       expect(projectsKeysReduce(list(), chunk, CTX)).toEqual({ state: list(), actions: [], resume: null });
     }
   });

@@ -3,10 +3,13 @@
 // team-backlog. Funciones puras sobre lo que ya parseó `readDocs`: no tocan el disco ni escriben.
 
 import { normalizeTitle } from "../../../_shared/parse/markdown.ts";
+import { classifyPreamble, matchFieldLine } from "../../../_shared/parse/text-fields.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
-import type { Field, Range } from "../../../_shared/types.ts";
+import { fieldLabels } from "../../../_shared/tasks/labels.ts";
+import type { Field, InProgress, Range } from "../../../_shared/types.ts";
 import { UsageError } from "../cli/errors.ts";
 import type { Docs } from "../workspace/docs.ts";
+import { hasLabels } from "./labels.ts";
 
 /** Estados que admite `--status` (siempre en inglés, sea cual sea el idioma del proyecto). */
 export const LIST_STATUSES = ["free", "blocked", "postponed", "in-progress", "paused", "done", "discarded"] as const;
@@ -26,6 +29,8 @@ export interface ListedTask {
   group: string | null;
   /** `true` si es del `team-backlog.md`. */
   team: boolean;
+  /** Etiquetas del campo `Etiquetas`/`Tags` (sin `#`); `[]` si no tiene. */
+  labels: string[];
   /** Archivo del que sale (ruta absoluta) y su línea de inicio. */
   path: string;
   startLine: number;
@@ -44,6 +49,8 @@ export interface ListFilters {
   search: string | null;
   /** Texto ya validado (no vacío); `null` = todos los grupos. */
   group: string | null;
+  /** Etiquetas ya validadas que la tarea debe traer todas (sin distinguir mayúsculas); `null` = sin filtro. */
+  labels: string[] | null;
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,6 +76,15 @@ function fieldsText(fields: Field[]): string {
 function blockedStatus(task: { fields: Field[] }): ListStatus {
   const tag = blockInfo(task).tag;
   return tag && POSTPONED_TAG_RE.test(normalizeTitle(tag)) ? "postponed" : "blocked";
+}
+
+/** Etiquetas de la tarea en curso: el campo `Etiquetas`/`Tags` entre su línea y la primera subsección (o el fin de la sección). */
+function currentLabels(handoffText: string, { task, subsections }: InProgress, sectionEnd: number | undefined): string[] {
+  const start = task?.range?.end;
+  const end = subsections[0]?.range?.start ?? sectionEnd;
+  if (start === undefined || end === undefined || end <= start) return [];
+  const lines = classifyPreamble(handoffText.slice(start, end), { looseOrigin: true });
+  return fieldLabels(lines.flatMap(({ kind, text }) => (kind === "field" ? (matchFieldLine(text) ?? []) : [])));
 }
 
 /** El texto sin su primera línea (la cabecera del bloque). */
@@ -135,6 +151,7 @@ export function collectTasks(docs: Docs): ListedTask[] {
       date: null,
       path: handoff.path,
       startLine: current.range?.startLine ?? section?.bodyRange.startLine ?? 1,
+      labels: currentLabels(handoff.text, handoff.parsed.inProgress, section?.bodyRange.end),
       fieldsText: "",
       bodyText: section ? handoff.text.slice(from, section.bodyRange.end) : "",
     });
@@ -147,6 +164,7 @@ export function collectTasks(docs: Docs): ListedTask[] {
       date: null,
       path: handoff.path,
       startLine: task.range?.startLine ?? 1,
+      labels: fieldLabels(task.fields),
       fieldsText: "",
       bodyText: afterHeader(text(handoff, task.range)),
     });
@@ -161,6 +179,7 @@ export function collectTasks(docs: Docs): ListedTask[] {
       group,
       path: backlog.path,
       startLine: task.range?.startLine ?? 1,
+      labels: fieldLabels(task.fields),
       fieldsText: fieldsText(task.fields),
       bodyText: "",
     });
@@ -178,6 +197,7 @@ export function collectTasks(docs: Docs): ListedTask[] {
       date: ISO_DATE_RE.test(entry.date) ? entry.date : null,
       path: history.path,
       startLine: entry.range?.startLine ?? 1,
+      labels: entry.labels, // ya leídas con `entryLabels` al parsear history.md
       fieldsText: "",
       bodyText: afterHeader(text(history, entry.range)),
     });
@@ -192,6 +212,7 @@ export function collectTasks(docs: Docs): ListedTask[] {
         date: addedDate(task.fields),
         path: teamBacklog.path,
         startLine: task.range?.startLine ?? 1,
+        labels: fieldLabels(task.fields),
         fieldsText: fieldsText(task.fields),
         bodyText: "",
       });
@@ -212,6 +233,7 @@ export function filterTasks(tasks: ListedTask[], filters: ListFilters): ListedTa
   const result: ListedTask[] = [];
   for (const task of tasks) {
     if (filters.statuses && !filters.statuses.includes(task.status)) continue;
+    if (!hasLabels(task.labels, filters.labels)) continue;
     if (group !== null && !(task.group !== null && normalizeTitle(task.group).includes(group))) continue;
     if (needle === null) {
       result.push(task);

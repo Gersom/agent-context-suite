@@ -50,7 +50,7 @@ bun run task <comando> --agents D:/proyectos/mi-app --operator ana
 | `status` | Foto compacta del operador: tarea en curso, pausadas, libres, bloqueadas, últimas 3 cerradas, team-backlog. |
 | `next` | Qué hacer ahora: el siguiente paso de la tarea en curso o, sin ella, lo que se puede tomar. |
 | `show <N>` | El bloque completo de una tarea y de dónde salió. |
-| `list` | Una línea por tarea (en curso, pausadas, libres, bloqueadas, cerradas y del team-backlog), las más recientes primero; filtra con `--status`, `--search`, `--group` y `--last`. |
+| `list` | Una línea por tarea (en curso, pausadas, libres, bloqueadas, cerradas y del team-backlog), las más recientes primero; filtra con `--status`, `--search`, `--group`, `--label` y `--last`. |
 | `add` `*` | Agrega una tarea a tu `backlog.md` (con el siguiente número) o, con `--team`, al `team-backlog.md`. |
 | `start <N>` `*` | Empieza una tarea: la saca del backlog y arma «Tarea en progreso» en el `handoff.md`. Con `--team "<título>"`, la toma del `team-backlog.md`. |
 | `step <N \| texto>...` `*` | Marca pasos del plan de la tarea en curso, con `--evidence <texto>` y `--commit <hash\|auto>` anotados en el paso (o con `--undo [--reason <texto>]` los desmarca, dejando el motivo), y pone al día «Qué falta» y «Próximo paso concreto». |
@@ -105,10 +105,15 @@ Foto del estado del operador resuelto, en este orden:
 
 ### `next`
 
+```sh
+bun run task next [--label <etiquetas>] [--json]
+```
+
 El mínimo para decidir qué hacer; no elige por el operador.
 
 - **Con tarea en curso:** su primer paso pendiente y el próximo paso concreto (o «Plan completo: falta cerrar la tarea»). El «siguiente:» de `status` y el primer paso pendiente de `next` (y `nextStep` en `--json`) muestran el **texto base** del paso, sin los sufijos de reabierto, evidencia ni commit.
 - **Sin tarea en curso:** las pausadas (retomables), las libres en el orden del archivo, las libres del team-backlog y las bloqueadas candidatas a desbloquear, más una sugerencia. Cada libre muestra su `Disparador` si es corto (hasta 100 caracteres) y no se repite igual en otra tarea: un disparador repetido es el genérico de la plantilla y no ayuda a elegir. El campo se reconoce por su etiqueta `Disparador` o `Trigger` (las etiquetas están traducidas).
+- **`--label <etiquetas>`:** considera solo las tareas con **todas** esas etiquetas (ver «Etiquetas de una tarea»): se limitan a ellas las pausadas, las libres (también las de un grupo), las libres del team-backlog y las bloqueadas candidatas a desbloquear, en el mismo orden de siempre. Se repite (`--label a --label b`) o se separa con comas (`--label a,b`); no distingue mayúsculas y acepta un `#` inicial opcional por etiqueta. Una etiqueta inválida (que no sea solo letras ASCII y números) o un valor vacío es un error de uso (código 2) con el motivo. Si ninguna tarea por tomar las trae, no es un error: `No hay tareas libres con la etiqueta #x.` (`las etiquetas #a #b` si son varias; código 0). La **tarea en curso no se filtra** (mientras haya una no se toma otra): se muestra como siempre y, si no trae las etiquetas pedidas, una última línea `Nota:` lo avisa. `status` no lleva `--label`.
 
 ### `show <N>`
 
@@ -131,16 +136,17 @@ Variantes del argumento:
 ### `list`
 
 ```sh
-bun run task list [--status <estado>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]
+bun run task list [--status <estado>] [--search <texto>] [--last <N>] [--group <nombre>] [--label <etiquetas>] [--json]
 ```
 
-Todas las tareas del operador en una sola lista, una línea por tarea y sin leer bloques enteros: `T-153 · done · 2026-11-16 · título`. Es el comando para «las últimas N», filtradas o no, sin abrir `history.md` ni el backlog. Reúne la tarea en curso, las pausadas, las libres (también las de un grupo, con ` [grupo]` al final), las bloqueadas o pospuestas, las cerradas de `history.md` y, si existe, las del `team-backlog.md` (sin número: `team · free · 2026-11-16 · título`). Una entrada de history sin número sale con `—` en su lugar. Va con `--operator <carpeta>` como el resto (lee los archivos de ese operador; el team-backlog es compartido) y un operador «solo team-backlog» solo ve las del team. No escribe nada.
+Todas las tareas del operador en una sola lista, una línea por tarea y sin leer bloques enteros: `T-153 · done · 2026-11-16 · título`. Es el comando para «las últimas N», filtradas o no, sin abrir `history.md` ni el backlog. Reúne la tarea en curso, las pausadas, las libres (también las de un grupo, con ` [grupo]` al final y, si tienen etiquetas, `#a #b` después), las bloqueadas o pospuestas, las cerradas de `history.md` y, si existe, las del `team-backlog.md` (sin número: `team · free · 2026-11-16 · título`). Una entrada de history sin número sale con `—` en su lugar. Va con `--operator <carpeta>` como el resto (lee los archivos de ese operador; el team-backlog es compartido) y un operador «solo team-backlog» solo ve las del team. No escribe nada.
 
 | Flag | Qué hace |
 |---|---|
 | `--status <estado>` | Solo las tareas en ese estado. Se repite (`--status done --status discarded`) o se separa con comas (`--status done,discarded`). Un valor desconocido es un error de uso (código 2) que lista los válidos. |
 | `--search <texto>` | Solo las que contienen el texto. Un texto en blanco, o que queda vacío al normalizarlo (por ejemplo solo marcas combinantes), es un error de uso (código 2). |
 | `--group <nombre>` | Solo las tareas de un grupo cuyo título contiene el texto (las tareas de grupo son siempre `free`). Mismo error de uso con un texto vacío. |
+| `--label <etiquetas>` | Solo las tareas con **todas** esas etiquetas (AND), sin distinguir mayúsculas y con un `#` inicial opcional por etiqueta. Se repite (`--label a --label b`) o se separa con comas (`--label a,b`). Una etiqueta inválida (que no sea solo letras ASCII y números) o un valor vacío es un error de uso (código 2) con el motivo. |
 | `--last <N>` | Muestra solo las primeras `N` (entero ≥ 1), después de filtrar y ordenar. |
 | `--json` | Salida estructurada (ver «Esquema `--json`»). |
 
@@ -152,7 +158,9 @@ Todas las tareas del operador en una sola lista, una línea por tarea y sin leer
 
 **Límite:** sin `--last` se muestran las 20 primeras y, si hay más, una última línea `Hay M más: usa --last <N> o filtra con --status/--search.`. Con `--last` no hay nota. La cabecera dice cuántas se muestran (`5 de 20 tareas (--last 5)`) y qué filtros hay; sin coincidencias imprime `Ninguna tarea coincide.` (código 0).
 
-**Flags repetidos:** `--search`, `--group` y `--last` repetidos usan el último valor; solo `--status` se acumula.
+**Etiquetas:** se leen del campo `Etiquetas`/`Tags` de cada tarea (ver «Etiquetas de una tarea»): en las de backlog (libres, agrupadas y bloqueadas), pausadas, la en curso y el team-backlog, de su campo; en las cerradas, del primer bloque de campos de su entrada de `history.md` (una viñeta `- **Etiquetas:** ...` del resumen no cuenta). En texto van al final de la línea, tras el grupo (`T-23 · free · 2026-10-08 · título [grupo] #empresa1 #trabajo`), y solo si la tarea las tiene: una línea sin etiquetas queda como siempre. El filtro se combina con los demás (`--status`, `--search`, `--group`, `--last`) y la cabecera lo muestra (`--label trabajo,ideas`).
+
+**Flags repetidos:** `--search`, `--group` y `--last` repetidos usan el último valor; `--status` y `--label` se acumulan.
 
 **Títulos largos:** en texto, un título de más de 100 caracteres se recorta a 100 (por caracteres, sin partir un emoji) y termina en `…`; uno de exactamente 100 queda igual. Si se recortó alguno, la última línea es ``Títulos recortados a 100 caracteres: `show <N>` muestra la tarea completa.`` (una sola vez). Con `--json` el título va siempre completo.
 
@@ -164,6 +172,8 @@ bun run task list --status discarded --last 20           # las 20 últimas desca
 bun run task list --search "migración" --last 15         # las 15 últimas que mencionan «migración» (o «migracion»)
 bun run task list --status free --group docs             # las libres de los grupos con «docs» en su título
 bun run task list --operator ana --status in-progress    # la tarea en curso de ana (solo lectura)
+bun run task list --label trabajo,#empresa1 --status free   # las libres con las etiquetas «trabajo» y «empresa1»
+bun run task next --label trabajo                        # qué tomar entre las tareas con la etiqueta «trabajo»
 ```
 
 ### Esquema `--json`
@@ -196,7 +206,7 @@ La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un c
 }
 ```
 
-`next`: `{ schema, command, mode, current, paused, free, team, unblockCandidates, suggestion }`. `mode` es `current` (con tarea en curso; `current` como en `status` y el resto vacío), `pick` (sin tarea en curso y algo que tomar) o `empty` (nada pendiente). Las listas `paused`, `free` y `unblockCandidates` tienen la forma de `status`; `team` es la lista de libres del team-backlog (`{ title, tag, trigger }`). Los disparadores salen siempre completos (el filtro de «corto y no repetido» es solo del texto). `suggestion` es `null` con tarea en curso.
+`next`: `{ schema, command, mode, current, paused, free, team, unblockCandidates, suggestion }`. `mode` es `current` (con tarea en curso; `current` como en `status` y el resto vacío), `pick` (sin tarea en curso y algo que tomar) o `empty` (nada pendiente). Las listas `paused`, `free` y `unblockCandidates` tienen la forma de `status`; `team` es la lista de libres del team-backlog (`{ title, tag, trigger }`). Los disparadores salen siempre completos (el filtro de «corto y no repetido» es solo del texto). `suggestion` es `null` con tarea en curso. Con `--label` se agrega al final `filters: { labels }` (sin `--label` la clave no existe) y las listas traen solo las tareas con esas etiquetas; sin ninguna, `mode` es `empty` y `suggestion` dice `No hay tareas libres con la etiqueta #x.`.
 
 `show`: `{ schema, command, query, matches, warnings }`. Cada elemento de `matches`:
 
@@ -214,7 +224,7 @@ La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un c
 }
 ```
 
-`list`: `{ schema, command, operator, filters, total, shown, tasks }`. `filters` repite lo pedido (`status` es la lista de estados o `null`; `search`, `last` y `group`, `null` si no se pasaron); `total` cuenta las tareas que cumplen los filtros y `shown` las de `tasks` (tras `--last` o el límite de 20). Cada elemento de `tasks`:
+`list`: `{ schema, command, operator, filters, total, shown, tasks }`. `filters` repite lo pedido (`status` es la lista de estados o `null`; `labels`, la lista de etiquetas o `null`; `search`, `last` y `group`, `null` si no se pasaron); `total` cuenta las tareas que cumplen los filtros y `shown` las de `tasks` (tras `--last` o el límite de 20). Cada elemento de `tasks`:
 
 ```jsonc
 {
@@ -225,6 +235,7 @@ La salida es un objeto con `schema` (versión del esquema, hoy `1`; sube si un c
   "group": null,          // título del grupo si es agrupada
   "team": false,          // true si es del team-backlog.md
   "file": "docs/agents/gersom/history.md", "startLine": 120,
+  "labels": ["empresa1", "trabajo"],   // las del campo Etiquetas/Tags, sin `#`; [] si no tiene
   "matched": ["title", "body"]   // solo con --search: title | fields | body
 }
 ```
@@ -508,7 +519,7 @@ Deshace el grupo que contiene la tarea `N`: todas sus tareas pasan de `#### Tare
 
 ### Etiquetas de una tarea
 
-Campo **opcional** de una tarea (libre, bloqueada, agrupada, en curso, pausada o del `team-backlog.md`) para clasificarla: `- **Etiquetas:** empresa1 trabajo ideasBrillantes` (`- **Tags:** ...` en un proyecto en inglés; el script reconoce las dos palabras y escribe la del idioma del documento). Se escribe con `add --labels` y se cambia con `edit --labels`; sin etiquetas el campo no existe. Los **grupos no llevan etiquetas** (sí las tareas dentro de ellos).
+Campo **opcional** de una tarea (libre, bloqueada, agrupada, en curso, pausada o del `team-backlog.md`) para clasificarla: `- **Etiquetas:** empresa1 trabajo ideasBrillantes` (`- **Tags:** ...` en un proyecto en inglés; el script reconoce las dos palabras y escribe la del idioma del documento). Se escribe con `add --labels` y se cambia con `edit --labels`; sin etiquetas el campo no existe. Se filtran con `list --label` y `next --label`. Los **grupos no llevan etiquetas** (sí las tareas dentro de ellos).
 
 - **Entrada (`--labels <texto|->`):** etiquetas separadas por espacios o comas (o saltos de línea, con `-` para stdin), con un `#` inicial opcional en cada una (`#trabajo`), que no se guarda.
 - **Qué vale:** solo letras ASCII (`a-z`, `A-Z`) y números, sin tildes, símbolos ni espacios. Cualquier otro carácter es un error de uso (exit 2) que cita la etiqueta y el carácter inválidos y no escribe nada: `--labels: la etiqueta «café» no es válida (tiene «é»): ...`. Un `#` suelto, o un segundo `#` dentro de la etiqueta, también.
@@ -527,7 +538,9 @@ Campo **opcional** de una tarea (libre, bloqueada, agrupada, en curso, pausada o
 Los comandos de lectura son una capa fina sobre un módulo de consulta que los comandos que editan (`add`, `start`, `step`, `close`...) también usan, para no repetir cómo se interpreta cada archivo:
 
 - `query/find.ts`: `findTask(docs, n)` devuelve dónde vive la tarea `n` (lugar, título, grupo, archivo y rango sin líneas en blanco; más de uno si está repetida); `locationText(location)` el fragmento; `findTeamTasks(docs, query)` las del team-backlog por título; `parseTarget(arg)` interpreta `N`, `T-N@operador` o un título; `readOperatorDocs(workspace, folder)` lee (solo lectura) los archivos de otro operador; `describeKnownNumbers(docs)`.
-- `query/state.ts`: `buildState(docs)` arma el estado completo (lo que muestra `status`); `buildTaskIndex(docs)` y `knownNumbers(docs)`; `planProgress`, `nextConcreteStep` y `fieldValue` (campo por etiqueta) son sus piezas.
+- `query/labels.ts`: `parseLabelFilter(valor)` interpreta `--label` (comas, `#` opcional, validación con `LABEL_RE`), `hasLabels(etiquetas, pedidas)` comprueba el AND sin distinguir mayúsculas y `hashLabels` las escribe con `#`.
+- `query/list.ts`: `collectTasks(docs)` reúne todas las tareas con sus `labels` (leídas con `fieldLabels` y, en history, `entryLabels` vía el parseo); `filterTasks` las filtra; `parseStatuses` interpreta `--status`.
+- `query/state.ts`: `buildState(docs, { labels })` arma el estado completo (lo que muestra `status`; con `labels` limita las pausadas, libres, bloqueadas y del team, como `next --label`); `buildTaskIndex(docs)` y `knownNumbers(docs)`; `planProgress`, `nextConcreteStep` y `fieldValue` (campo por etiqueta) son sus piezas.
 - `query/next-number.ts`: `findNextTaskNumber(text)` devuelve el valor, la línea y los offsets de los dígitos de «Próximo número de tarea».
 - `query/lines.ts`: `trimRange(text, range)` y `lineAt(text, offset)`.
 - `query/format.ts`: texto compacto y `emitJson`, compartidos por los comandos de lectura.

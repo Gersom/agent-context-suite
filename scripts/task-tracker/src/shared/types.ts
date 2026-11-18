@@ -161,6 +161,10 @@ export interface RenderMeta {
   compact?: boolean;
   /** `false`: sin las líneas de flecha entre recuadros. Por defecto `true`. */
   arrows?: boolean;
+  /** Filtro por etiqueta activo (sin `#`): el encabezado lo indica. Las tareas ya llegan filtradas (ver `filterModel`). Ausente o `null`: todas. */
+  labelFilter?: string | null;
+  /** `true` si el proyecto tiene etiquetas: el pie ofrece `[t]` para filtrar (sin etiquetas la tecla no hace nada). */
+  hasLabels?: boolean;
   updatedAt: Date;
   trigger: DrawTrigger;
   /** Por defecto `"ctrl-c"`. */

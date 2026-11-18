@@ -64,6 +64,8 @@ type CanvasMeta = Omit<RenderMeta, "projectName" | "projectDir"> & Partial<Pick<
 
 /** Separación entre el nombre del proyecto (y operador) y su ruta en el encabezado. */
 const LOCATION_GAP = "   ";
+/** Separación entre la línea de la hora y el filtro por etiqueta (`Filtro #empresa1`) en el encabezado. */
+const FILTER_GAP = "   ";
 /** Lo que se suma al título con el observador activo (`TAREAS · MODO OBSERVADOR`), y título de su vista de espera. */
 const OBSERVER_TITLE = "MODO OBSERVADOR";
 
@@ -121,7 +123,15 @@ function createCanvas(meta: CanvasMeta, header: Header) {
       line(2, dir, secondary);
     }
   }
-  line(2, `Última actualización ${formatTime(meta.updatedAt)} · ${triggerText(meta.trigger)}`, secondary);
+  const updated = `Última actualización ${formatTime(meta.updatedAt)} · ${triggerText(meta.trigger)}`;
+  if (meta.labelFilter) {
+    // El filtro va al final de la línea de la hora; si no cabe todo, se recorta la hora, no el filtro.
+    const filter = `Filtro #${plainText(meta.labelFilter)}`;
+    const room = Math.max(1, width - 2 - visibleLength(filter) - FILTER_GAP.length);
+    line(2, `${truncate(updated, room)}${FILTER_GAP}${filter}`, secondary);
+  } else {
+    line(2, updated, secondary);
+  }
   blank();
 
   return { pc, width, out, line, blank, box, secondary, completed, completedGreen, unownedBlue };
@@ -591,7 +601,7 @@ export function triggerText(trigger: DrawTrigger): string {
 
 /**
  * Pie con las teclas que valen en esta vista, como `[tecla] acción` separadas por ` - `; `c` y `f`
- * dicen lo que harán según el estado actual. Si no entra en el ancho se parte en más líneas (así
+ * dicen lo que harán según el estado actual y `t` solo aparece si el proyecto tiene etiquetas. Si no entra en el ancho se parte en más líneas (así
  * "salir", lo último, nunca queda recortado).
  */
 function footerLines(meta: CanvasMeta, width: number): string[] {
@@ -618,6 +628,8 @@ function footerLines(meta: CanvasMeta, width: number): string[] {
     if (meta.multiView !== "team") {
       parts.push(meta.compact ? "[c] expandir" : "[c] compactar");
       parts.push(meta.arrows === false ? "[f] mostrar flechas" : "[f] ocultar flechas");
+      // Sin etiquetas en el proyecto la tecla `t` no hace nada: el pie no la ofrece.
+      if (meta.hasLabels) parts.push("[t] filtrar por etiqueta");
     }
     parts.push("[r] redibujar", observe, "[Ctrl+C o q] salir");
   }

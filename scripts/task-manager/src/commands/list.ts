@@ -1,11 +1,12 @@
 // `list`: todas las tareas del operador (en curso, pausadas, libres, bloqueadas, cerradas y las del
 // team-backlog) en una sola lista, de la más reciente a la más antigua, con filtros por estado,
-// texto y grupo y un límite. Solo lectura; no imprime los bloques, solo una línea por tarea.
+// texto, grupo y etiqueta y un límite. Solo lectura; no imprime los bloques, solo una línea por tarea.
 
 import { normalizeTitle } from "../../../_shared/parse/markdown.ts";
 import type { Command } from "../cli/types.ts";
 import { UsageError } from "../cli/errors.ts";
 import { emitJson, relFile } from "../query/format.ts";
+import { hashLabels, parseLabelFilter } from "../query/labels.ts";
 import { collectTasks, filterTasks, LIST_STATUSES, type ListedTask, parseStatuses } from "../query/list.ts";
 import { requireDoc } from "../workspace/docs.ts";
 
@@ -31,10 +32,10 @@ function parseLast(value: unknown): number | null {
   return Number(value);
 }
 
-/** `T-153 · done · 2026-11-16 · título [grupo]`; `team` en lugar del número en las del team-backlog. */
+/** `T-153 · done · 2026-11-16 · título [grupo] #a #b`; `team` en lugar del número en las del team-backlog; las etiquetas, solo si tiene. */
 function taskText(task: ListedTask, title: string): string {
   const who = task.number !== null ? `T-${task.number}` : task.team ? "team" : "—";
-  return `${who} · ${task.status} · ${task.date ?? "—"} · ${title}${task.group ? ` [${task.group}]` : ""}`;
+  return `${who} · ${task.status} · ${task.date ?? "—"} · ${title}${task.group ? ` [${task.group}]` : ""}${task.labels.length ? ` ${hashLabels(task.labels)}` : ""}`;
 }
 
 /** El título recortado a `TITLE_MAX` caracteres (por puntos de código: no parte un emoji) con «…»; `null` si cabe entero. */
@@ -46,7 +47,7 @@ function truncatedTitle(title: string): string | null {
 export const list: Command = {
   name: "list",
   summary: "Lista las tareas (en curso, pausadas, libres, bloqueadas, cerradas y del team-backlog), las más recientes primero (solo lectura)",
-  usage: "list [--status <estado>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]",
+  usage: "list [--status <estado>] [--search <texto>] [--last <N>] [--group <nombre>] [--label <etiquetas>] [--json]",
   flags: {
     status: {
       type: "string",
@@ -57,14 +58,21 @@ export const list: Command = {
     search: { type: "string", valueName: "texto", description: "Solo las que contienen el texto (sin distinguir mayúsculas ni acentos) en su título, campos o cuerpo." },
     last: { type: "string", valueName: "N", description: `Cuántas mostrar, tras filtrar y ordenar (entero ≥ 1). Por defecto ${DEFAULT_LIMIT}.` },
     group: { type: "string", valueName: "nombre", description: "Solo las tareas de los grupos cuyo título contiene el texto." },
+    label: {
+      type: "string",
+      valueName: "etiquetas",
+      multiple: true,
+      description: "Solo las tareas con todas esas etiquetas (sin distinguir mayúsculas; `#` inicial opcional); se repite o se separa con comas. Ej.: --label trabajo,#empresa1",
+    },
     json: { type: "boolean", description: "Salida estructurada (JSON) en vez de texto." },
   },
   run({ args, flags, io, workspace, docs }) {
-    if (args.length) throw new UsageError("`list` no recibe argumentos: filtra con --status, --search o --group.");
+    if (args.length) throw new UsageError("`list` no recibe argumentos: filtra con --status, --search, --group o --label.");
     const rawStatus = flags.status === undefined ? null : Array.isArray(flags.status) ? flags.status : [String(flags.status)];
     const statuses = rawStatus && parseStatuses(rawStatus);
     const search = textFlag(flags.search, "search");
     const group = textFlag(flags.group, "group");
+    const labels = parseLabelFilter(flags.label);
     const last = parseLast(flags.last);
 
     // Un operador «solo team-backlog» no tiene carpeta propia: solo se listan las tareas del team.
@@ -72,13 +80,13 @@ export const list: Command = {
     const all = docs({ allowFolderless: true });
     if (!ws.operator?.folderless) requireDoc(all.handoff, "handoff.md");
 
-    const found = filterTasks(collectTasks(all), { statuses, search, group });
+    const found = filterTasks(collectTasks(all), { statuses, search, group, labels });
     const shown = found.slice(0, last ?? DEFAULT_LIMIT);
 
     if (flags.json === true) {
       emitJson(io, "list", {
         operator: ws.operator?.folder ?? null,
-        filters: { status: statuses, search, last, group },
+        filters: { status: statuses, search, last, group, labels },
         total: found.length,
         shown: shown.length,
         tasks: shown.map((task) => ({
@@ -90,6 +98,7 @@ export const list: Command = {
           team: task.team,
           file: relFile(ws, task.path),
           startLine: task.startLine,
+          labels: task.labels,
           ...(task.matched ? { matched: task.matched } : {}),
         })),
       });
@@ -104,6 +113,7 @@ export const list: Command = {
       statuses && `--status ${statuses.join(",")}`,
       search !== null && `--search «${search}»`,
       group !== null && `--group «${group}»`,
+      labels && `--label ${labels.join(",")}`,
       last !== null && `--last ${last}`,
     ].filter(Boolean);
     const count = shown.length === found.length ? `${found.length} ${found.length === 1 ? "tarea" : "tareas"}` : `${shown.length} de ${found.length} tareas`;
