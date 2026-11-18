@@ -11,6 +11,10 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ❌ Tarea 78 — Publicación en npm por GitHub Actions
+
+- Se mantiene el npm publish manual desde la terminal, como dice la Decisión no negociable de rules.md. Investigado el 2026-11-18: npm revocó todos los tokens clásicos el 2025-12-09; los tokens granulares con bypass de 2FA pierden la publicación directa hacia ene-2027 (objetivo anunciado, no confirmado); el único método de CI vigente es trusted publishing (OIDC, npm CLI 11.5.1 o superior, sin token, con provenance), que sigue disponible pero no compensa con releases poco frecuentes. Reabrir solo si los releases se vuelven frecuentes: en ese caso, trusted publishing, nunca un token.
+
 ## 2026-11-18 — ✅ Tarea 181 — Suite 2.5.0: versión y CHANGELOG de la suite
 
 - La suite sube a 2.5.0 (minor): package.json y la sección 2.5.0 de CHANGELOG.md con cómo actualizar y lo nuevo: etiquetas (--labels en add y edit, filtros --label en list y next, tecla t del tablero, etiquetas con # y pausadas con Qué falta y Próximo paso), validación de etiquetas en check y sin el aviso de tarea sin plan, CLAUDE.md opcional, board con ruta sin la skill abre la lista de proyectos, idioma desde rules.md y close que retira el Ninguna. de history.md. Tag anotado v2.5.0 solo en local: la publicación (push con --follow-tags y npm publish) la hace el operador.

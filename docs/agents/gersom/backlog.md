@@ -48,6 +48,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
+### Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
+
+- **Descripción:** Dejar documentado cómo instalar acsuite de forma global (npm o dist/cli.js) y un .bat de arranque que haga cd a su carpeta y ejecute acsuite board, para que una persona no técnica abra el tablero con doble clic.
+- **Decisiones/temas a definir antes de empezar:** Cómo se distribuye el CLI (npm global tras publicar, o copiar dist/cli.js); dónde vive el .bat (plantilla en la suite o en la skill); si el instalador lo crea; comprobar el modo interactivo del board en una ventana real.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la Tarea 163 (ruta sin la skill abre la lista de proyectos) y de publicar el CLI en npm (Tarea 78).
+- **Disparador:** cuando el operador pregunte por tareas pendientes; la T-163 ya está hecha y la suite ya está publicada en npm.
+- **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
+- **Agregada:** 2026-11-17.
+
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 
@@ -60,14 +69,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Cambios a revisar: (1) los pasos del plan pueden llevar al final de la línea evidencia y commit (· bun test 779 pass · commit abc1234, Tarea 35): ver si el tracker los corta, los desalinea o los muestra bien; (2) un paso reabierto se escribe como (reabierto: motivo); (3) el handoff ahora se edita solo en lo que cambia y las pausadas ya no se leen salvo sin tarea en curso: ver si el tracker asume que el archivo se reescribe entero (reintento de primera lectura en src/io/snapshot.ts); (4) la entrada de history.md ahora es más breve y lista los commits; (5) el reporte de cierre suma Checks pendientes y Próximo paso (no afecta al tracker, solo confirmarlo). Probar contra el handoff real con una tarea en curso, con evidencia en los pasos y con una pausada. Si no hay nada que cambiar, cerrarla con esa conclusión.
 - **Agregada:** 2026-10-08.
 
-### Tarea 78 — Publicación en npm por GitHub Actions
-
-- **Descripción:** Debatir si automatizar la publicación en npm (GitHub Actions al subir un tag vX.Y.Z, con provenance) y qué decisión tomar, porque contradice la «Decisión no negociable» de releases manuales, no por CI.
-- **Decisiones/temas a definir antes de empezar:** Debatir con el operador: ¿se revisa la decisión de «no por CI»? ¿Se publica por CI o se mantiene manual? Token de npm o trusted publishing (lo configura el operador).
-- **Bloqueos:** [postergada] Hay que debatirla al llegar a esta tarea, tras publicar la primera versión.
-- **Disparador:** cuando el operador pregunte por tareas pendientes.
-- **Agregada:** 2026-10-26.
-
 ### Tarea 108 — Separar el mod acsuite-active-project en su propio repo
 
 - **Descripción:** Mover mods/acsuite-active-project/ a un repo propio (con su marketplace.json y README) para instalarlo con /plugin install sin depender del repo de la suite.
@@ -76,15 +77,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
-
-### Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
-
-- **Descripción:** Dejar documentado cómo instalar acsuite de forma global (npm o dist/cli.js) y un .bat de arranque que haga cd a su carpeta y ejecute acsuite board, para que una persona no técnica abra el tablero con doble clic.
-- **Decisiones/temas a definir antes de empezar:** Cómo se distribuye el CLI (npm global tras publicar, o copiar dist/cli.js); dónde vive el .bat (plantilla en la suite o en la skill); si el instalador lo crea; comprobar el modo interactivo del board en una ventana real.
-- **Bloqueos:** [dependencia] Depende de la Tarea 163 (ruta sin la skill abre la lista de proyectos) y de publicar el CLI en npm (Tarea 78).
-- **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
-- **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
-- **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
