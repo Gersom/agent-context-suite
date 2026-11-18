@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 179 — task close: quitar el Ninguna. de history.md al registrar la primera entrada
+
+- task close retira de history.md la línea sola Ninguna. o None. que deja la instalación del perfil no técnico, al agregar la entrada (también con --discarded, en inglés y con CRLF); solo actúa en la zona anterior al primer ## real y en la columna 0, y sin esa línea la salida no cambia.
+- Cómo: insertHistoryEntry devuelve una lista de ediciones (borrar la línea e insertar la entrada) y close.ts la aplica; tests de escritura, de close y un e2e con el history.md real de la plantilla. bun test 2365 pass, typecheck y check sin avisos, cierre real comprobado; sin revisión independiente por ser un cambio acotado.
+- Commit: 4e42b93.
+
 ## 2026-11-18 — ✅ Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
 
 - Prueba de punta a punta del perfil no técnico: un agente que solo conocía la skill instaló el perfil y atendió nueve peticiones (consulta, cambio de un paso, tarea con copia de seguridad, interrupción por otro contexto, retomar, restaurar, cierre de una pausada, descarte y un ajuste directo) sin errores de herramientas; un revisor independiente confirmó git (11 commits en inglés, solo docs y archivos de la skill versionados, árbol limpio), documentos, archivos de la persona, copias y check con 0 errores y 0 avisos.

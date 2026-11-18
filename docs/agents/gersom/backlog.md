@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 179 — task close: quitar el Ninguna. de history.md al registrar la primera entrada
-
-- **Descripción:** En un history.md recién instalado la sección dice Ninguna.; al cerrar la primera tarea, task close inserta la entrada debajo y el Ninguna. queda encima de las entradas, contradiciendo el contenido. close debe retirarlo (también en inglés: None.).
-- **Decisiones/temas a definir antes de empezar:** Qué formas reconocer (Ninguna., Ninguna, None.); si también lo hace add con el backlog (comprobado que el backlog no lo deja); si acsuite check debe avisar de un Ninguna. con entradas debajo.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; hallazgo de la prueba de punta a punta del perfil no técnico (T-176).
-- **Detalles:** Origen: T-176. Código: scripts/task-manager/src/write/history.ts y commands/close.ts. Reproducción: instalar el perfil, cerrar una tarea con close --done y mirar docs/agents/history.md.
-- **Agregada:** 2026-11-18.
-
 ### Tarea 180 — Perfil no técnico: ajustes de redacción de rules.md, office-git.md y office-profile.md
 
 - **Descripción:** Aplicar a la skill los huecos que halló la prueba de punta a punta del perfil: conservar el formato de los archivos de la persona, ajustes directos sin copia, cerrar una tarea pausada que la persona nombra, verbo update en office-git.md, cuándo marcar pasos, restaurar una copia, resumen de una tarea descartada, y no ofrecer la recomendación de la suite.
