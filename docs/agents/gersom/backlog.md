@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 169 — Etiquetas: validar el formato en acsuite check
-
-- **Descripción:** Nuevo hallazgo de check cuando una etiqueta no cumple el formato (solo letras y números, sin tildes ni símbolos, sin #), en backlog, handoff, history y team-backlog.
-- **Decisiones/temas a definir antes de empezar:** Severidad (aviso o error); si avisa de etiquetas duplicadas; código del hallazgo.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la tarea Etiquetas del task-manager (T-167), que fija el formato.
-- **Disparador:** cuando se cierre la T-167.
-- **Detalles:** Origen: T-161. Patrón a copiar: scripts/docs-check/src/checks/tasks.ts (checkTaskFields y checkBlockTags); registro en checks/index.ts; documentar el código en scripts/docs-check/README.md. Tests en test/checks y e2e.
-- **Agregada:** 2026-11-17.
-
 ### Tarea 170 — Etiquetas: documentar el campo en las plantillas de la skill
 
 - **Descripción:** Documentar el campo opcional Etiquetas en las plantillas de la skill (backlog, handoff, history y team-backlog) y en el flujo que corresponda.

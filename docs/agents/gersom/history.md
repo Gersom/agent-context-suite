@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 169 — Etiquetas: validar el formato en acsuite check
+
+- acsuite check valida el campo Etiquetas/Tags de las tareas en backlog, handoff, history y team-backlog: label-format (solo letras y números ASCII; avisa por #, comas, tildes, símbolos y corchetes) y label-duplicate (sin distinguir mayúsculas), ambos como aviso. Vacío, placeholder y Ninguna no avisan.
+- Cómo: regla compartida en _shared/tasks/labels.ts (labelProblems, usada también por parseLabels del task-manager) y checkLabels en docs-check/checks/tasks.ts. bun test 2206 pass, typecheck sin errores, check del repo sin avisos, revisión independiente. Pendiente menor: en una libre con corchete inicial solo avisa block-tag hasta corregirlo.
+- Commit: bf60115.
+
 ## 2026-11-18 — ✅ Tarea 168 — Etiquetas: mostrarlas con # en el board
 
 - El board muestra las etiquetas de las tareas con #: al final de la línea del título (libres, bloqueadas, completadas, team-backlog y SIN DUEÑO, en gris, recortando el título y no las etiquetas) y en una fila propia en las tareas en curso y pausadas; también en compacto y con Tags en inglés. Sin etiquetas el board queda idéntico.
