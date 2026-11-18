@@ -11,7 +11,7 @@ import { checkHistoryEntries } from "./history.ts";
 import { checkLegacyMarkers } from "./legacy-marker.ts";
 import { checkPlaceholders } from "./placeholders.ts";
 import { checkSuiteRules } from "./suite-rules.ts";
-import { checkBlockTags, checkDuplicateNumbers, checkNextNumber, checkTaskFields, checkTaskHeadings } from "./tasks.ts";
+import { checkBlockTags, checkDuplicateNumbers, checkLabels, checkNextNumber, checkTaskFields, checkTaskHeadings } from "./tasks.ts";
 
 export const CHECKS: Check[] = [
   checkFilesExist,
@@ -27,6 +27,7 @@ export const CHECKS: Check[] = [
   checkTaskHeadings,
   checkTaskFields,
   checkBlockTags,
+  checkLabels,
   checkGroups,
   checkCurrentTask,
   checkCurrentPlanLines,

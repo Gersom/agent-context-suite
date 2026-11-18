@@ -2,14 +2,8 @@
 // proyecto en inglés): la validación y normalización de `--labels` que comparten `add` y `edit`. Se
 // guardan separadas por un espacio y sin `#`; cada una solo lleva letras ASCII y números.
 
+import { invalidLabelChars, LABEL_RE } from "../../../_shared/tasks/labels.ts";
 import { UsageError } from "../cli/errors.ts";
-
-const LABEL_RE = /^[A-Za-z0-9]+$/;
-
-/** Los caracteres de una etiqueta que no son letra ASCII ni número, sin repetir y en el orden en que aparecen. */
-function invalidChars(label: string): string[] {
-  return [...new Set([...label].filter((char) => !/[A-Za-z0-9]/.test(char)))];
-}
 
 /**
  * Las etiquetas de un valor de `--labels`: separadas por espacios o comas, con un `#` inicial
@@ -29,7 +23,7 @@ export function parseLabels(flag: string, value: string): string[] {
       throw new UsageError(`--${flag}: la etiqueta «${token}» está vacía: tras el \`#\` va el nombre (ej. \`#trabajo\`). No se escribió nada.`);
     }
     if (!LABEL_RE.test(label)) {
-      const bad = invalidChars(label).map((char) => `«${char}»`).join(", ");
+      const bad = invalidLabelChars(label).map((char) => `«${char}»`).join(", ");
       throw new UsageError(
         `--${flag}: la etiqueta «${token}» no es válida (tiene ${bad}): solo admite letras ASCII y números, sin tildes, símbolos ni espacios (un \`#\` inicial es opcional). No se escribió nada.`,
       );

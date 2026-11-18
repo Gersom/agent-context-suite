@@ -585,3 +585,61 @@ describe("decisions-index (proyecto real)", () => {
     expect(report.code).toBe(0);
   });
 });
+
+describe("label-format y label-duplicate (proyecto real)", () => {
+  /** Un repo plano sano con etiquetas válidas en la tarea libre 8 y mal escritas en la bloqueada 6. */
+  function labelsTree(): Tree {
+    const tree = flatTree();
+    tree["docs/agents/backlog.md"] = BACKLOG.replace("- **Descripción:** exportar el estado a JSON.", "- **Descripción:** exportar el estado a JSON.\n- **Etiquetas:** empresa1 trabajo ideasBrillantes").replace(
+      "- **Descripción:** empaquetar y publicar.",
+      "- **Descripción:** empaquetar y publicar.\n- **Etiquetas:** #empresa1 diseño Trabajo trabajo",
+    );
+    return tree;
+  }
+
+  test("etiquetas inválidas: avisos con archivo y línea, y el código de salida sigue en 0", async () => {
+    const tree = labelsTree();
+    const backlog = tree["docs/agents/backlog.md"];
+    const line = lineOf(backlog, "**Etiquetas:** #empresa1");
+    const p = project(tree);
+    const report = await checkJson([p.root]);
+    expect(report.code).toBe(0);
+    expect(report.warnings).toBe(3);
+    expect(report.findings.map((f) => `${f.severity} ${f.code} ${f.file}:${f.line}`).sort()).toEqual([
+      `warning label-duplicate docs/agents/backlog.md:${line}`,
+      `warning label-format docs/agents/backlog.md:${line}`,
+      `warning label-format docs/agents/backlog.md:${line}`,
+    ]);
+    const hash = report.findings.find((f) => f.message.includes("«#empresa1»"));
+    expect(hash?.message).toContain("quita el `#`");
+  });
+
+  test("en el informe de texto aparece el aviso con archivo:línea, y --strict falla", async () => {
+    const tree = labelsTree();
+    const line = lineOf(tree["docs/agents/backlog.md"], "**Etiquetas:** #empresa1");
+    const p = project(tree);
+    const { code, out } = await check([p.root]);
+    expect(code).toBe(0);
+    expect(out).toContain(`docs/agents/backlog.md:${line}`);
+    expect(out).toContain("label-format");
+    expect((await check([p.root, "--strict"])).code).toBe(1);
+  });
+
+  test("con etiquetas válidas, la salida es la de un proyecto sano", async () => {
+    const tree = flatTree();
+    tree["docs/agents/backlog.md"] = BACKLOG.replace("- **Descripción:** exportar el estado a JSON.", "- **Descripción:** exportar el estado a JSON.\n- **Etiquetas:** empresa1 trabajo ideasBrillantes");
+    const withLabels = await check([project(tree).root, "--json"]);
+    const plain = await check([project(flatTree()).root, "--json"]);
+    expect(withLabels.code).toBe(0);
+    const strip = (out: string) => ({ ...JSON.parse(out), project: "" });
+    expect(strip(withLabels.out)).toEqual(strip(plain.out));
+    expect(JSON.parse(withLabels.out).findings).toEqual([]);
+  });
+
+  test("un proyecto sin ningún campo de etiquetas: la salida de texto no cambia", async () => {
+    const { code, out } = await check([project(flatTree()).root]);
+    expect(code).toBe(0);
+    expect(out).toContain("0 errores, 0 avisos");
+    expect(out).not.toContain("label-");
+  });
+});

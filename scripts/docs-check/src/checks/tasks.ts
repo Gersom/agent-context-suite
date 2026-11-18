@@ -1,9 +1,12 @@
 // Tareas de handoff.md y backlog.md: «Próximo número de tarea», números repetidos, headers que el
-// parseo no reconoce, tareas sin campos y coherencia entre el bloqueo y la sección donde están.
+// parseo no reconoce, tareas sin campos, coherencia entre el bloqueo y la sección donde están y el
+// formato del campo opcional de etiquetas (en todos los documentos que llevan tareas).
 
 import { TASK_HEADING_RE } from "../../../_shared/parse/blocks.ts";
+import { classifyPreamble, matchFieldLine } from "../../../_shared/parse/text-fields.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
-import type { Task } from "../../../_shared/types.ts";
+import { entryLabelsField, type LabelProblem, LABELS_FIELD_RE, labelProblems } from "../../../_shared/tasks/labels.ts";
+import type { Field, Task } from "../../../_shared/types.ts";
 import { findNextTaskNumber } from "../../../task-manager/src/query/next-number.ts";
 import { proseLines } from "../lines.ts";
 import type { Check, CheckContext, DocInfo, Finding } from "../types.ts";
@@ -190,4 +193,133 @@ export const checkBlockTags: Check = ({ docs }) => {
     });
   }
   return findings;
+};
+
+/** Un campo de etiquetas por validar: su valor, dónde está y de qué tarea o entrada es. */
+interface LabelsField {
+  file: string;
+  /** Línea (1-based) del campo; `null` si el parseo no la dio. */
+  line: number | null;
+  /** Quién lo lleva, para el mensaje (`la Tarea 9`). */
+  subject: string;
+  value: string;
+  /** `true` si `block-tag` ya avisa de este valor (ver `checkLabels`). */
+  coveredByBlockTag?: boolean;
+}
+
+/** Los campos `Etiquetas`/`Tags` de una lista de campos (todos, aunque el parseo lea solo el último). */
+function labelsFieldsOf(fields: Field[], doc: DocInfo<unknown>, subject: string, free = false): LabelsField[] {
+  return fields
+    .filter((field) => LABELS_FIELD_RE.test(field.label.trim()))
+    .map((field) => ({
+      file: doc.file,
+      line: field.range?.startLine ?? null,
+      subject,
+      value: field.value,
+      // En una libre, un valor que empieza por `[tag]` ya lo avisa `block-tag` (lo toma por un bloqueo vigente).
+      coveredByBlockTag: free && blockInfo({ fields: [field] }).tag !== null,
+    }));
+}
+
+/** El campo de etiquetas de la tarea en curso: entre su línea `Tarea N — título` y la primera subsección, como lo lee el seguimiento. */
+function currentLabelsFields({ handoff }: CheckContext["docs"]): LabelsField[] {
+  const { task, subsections } = handoff.parsed.inProgress;
+  const start = task?.range?.end;
+  const end = subsections[0]?.range?.start ?? handoff.parsed.sections["in-progress"]?.bodyRange.end;
+  if (!task?.range || start === undefined || end === undefined || end <= start) return [];
+  const fields: LabelsField[] = [];
+  let current: LabelsField | null = null;
+  // Con los comentarios enmascarados las líneas coinciden con las del archivo; la primera es lo que queda de la línea de la tarea.
+  for (const [i, { kind, text }] of classifyPreamble(handoff.text.slice(start, end), { looseOrigin: true, maskComments: true }).entries()) {
+    if (kind === "field") {
+      const field = matchFieldLine(text);
+      current =
+        field && LABELS_FIELD_RE.test(field.label.trim())
+          ? { file: handoff.file, line: task.range.endLine + i, subject: `la Tarea ${task.number}`, value: field.value.trim() }
+          : null;
+      if (current) fields.push(current);
+    } else if (kind === "continuation" && current) {
+      current.value += ` ${text.trim()}`;
+    } else if (text.trim()) {
+      current = null;
+    }
+  }
+  return fields;
+}
+
+/** El campo de etiquetas de cada entrada de history.md, el que lee `entryLabels` (el primero de su bloque de campos). */
+function historyLabelsFields({ history }: CheckContext["docs"]): LabelsField[] {
+  const fields: LabelsField[] = [];
+  for (const entry of history.parsed.entries) {
+    if (!entry.range) continue;
+    const headerEnd = history.text.indexOf("\n", entry.range.start);
+    if (headerEnd === -1 || headerEnd >= entry.range.end) continue;
+    const found = entryLabelsField(history.text.slice(headerEnd + 1, entry.range.end));
+    if (!found) continue;
+    fields.push({
+      file: history.file,
+      line: entry.range.startLine + 1 + found.line,
+      subject: entry.number === null ? `la entrada «${entry.title}»` : `la entrada de la Tarea ${entry.number}`,
+      value: found.value,
+    });
+  }
+  return fields;
+}
+
+/** Cómo corregir un carácter no válido de una etiqueta. */
+function labelAdvice(char: string): string {
+  if (char === "#") return "quita el `#`";
+  if (char === ",") return "quita la coma: las etiquetas se separan solo con un espacio";
+  if (char === "[" || char === "]") return "quita los corchetes";
+  return `«${char}» no es una letra ASCII ni un número`;
+}
+
+function labelFinding(field: LabelsField, problem: LabelProblem): Finding {
+  const base = { severity: "warning" as const, file: field.file, line: field.line };
+  if (problem.kind === "duplicate") {
+    return {
+      ...base,
+      code: "label-duplicate",
+      message: `En ${field.subject}, la etiqueta «${problem.token}» está repetida (ya figura como «${problem.first}»; no se distinguen mayúsculas): deja solo una.`,
+    };
+  }
+  const advice = [...new Set(problem.chars.map(labelAdvice))].join("; ");
+  return {
+    ...base,
+    code: "label-format",
+    message: `En ${field.subject}, la etiqueta «${problem.token}» no es válida: ${advice}. Cada etiqueta lleva solo letras ASCII y números, sin \`#\`, y van separadas por un espacio.`,
+  };
+}
+
+/**
+ * Formato del campo opcional `Etiquetas`/`Tags` (`label-format`, `label-duplicate`) en la tarea en curso, las
+ * pausadas, las libres, las bloqueadas y las agrupadas, las entradas de history.md y las de team-backlog.md.
+ * La regla es la de `add`/`edit` (`labelProblems`, en `_shared/tasks/labels.ts`). Un valor vacío o
+ * placeholder no avisa; «Ninguna» es una etiqueta válida. Un valor que empieza por `[…]` (`[postergada]`)
+ * es una etiqueta no válida, pero en una tarea libre ya lo avisa `block-tag` (lo toma por un bloqueo vigente):
+ * ahí se omite, para no avisar dos veces; en las demás secciones sí avisa.
+ */
+export const checkLabels: Check = ({ docs }) => {
+  const { handoff, backlog, history, teamBacklog } = docs;
+  const fields: LabelsField[] = [];
+  if (handoff.exists) {
+    fields.push(...currentLabelsFields(docs));
+    for (const task of handoff.parsed.paused) if (!task.isPlaceholder) fields.push(...labelsFieldsOf(task.fields, handoff, `la Tarea ${task.number}`));
+  }
+  if (backlog.exists) {
+    const { free, blocked, grouped } = backlog.parsed;
+    for (const task of free.tasks) if (!task.isPlaceholder) fields.push(...labelsFieldsOf(task.fields, backlog, `la Tarea ${task.number}`, true));
+    for (const task of [...blocked, ...grouped.flatMap((g) => g.tasks)]) {
+      if (!task.isPlaceholder) fields.push(...labelsFieldsOf(task.fields, backlog, `la Tarea ${task.number}`));
+    }
+  }
+  if (history.exists) fields.push(...historyLabelsFields(docs));
+  if (teamBacklog?.exists) {
+    for (const task of [...teamBacklog.parsed.free, ...teamBacklog.parsed.blocked]) {
+      if (!task.isPlaceholder) fields.push(...labelsFieldsOf(task.fields, teamBacklog, `la tarea «${task.title}»`));
+    }
+  }
+  return fields
+    .filter((field) => !field.coveredByBlockTag)
+    .flatMap((field) => labelProblems(field.value).map((problem) => labelFinding(field, problem)));
 };

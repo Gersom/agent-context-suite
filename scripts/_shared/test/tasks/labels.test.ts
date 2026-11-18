@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { entryLabels, fieldLabels, parseLabelsValue } from "../../tasks/labels.ts";
+import { entryLabels, entryLabelsField, fieldLabels, invalidLabelChars, LABEL_RE, labelProblems, parseLabelsValue } from "../../tasks/labels.ts";
 
 describe("parseLabelsValue", () => {
   test("separadas por espacios, sin `#`", () => {
@@ -81,5 +81,51 @@ describe("entryLabels", () => {
   test("CRLF crudo: lee las etiquetas", () => {
     expect(entryLabels("\r\n- **Origen:** team-backlog\r\n- **Etiquetas:** a b\r\n- Listo.\r\n")).toEqual(["a", "b"]);
     expect(entryLabels("\r\n- **Etiquetas:** a b\r\n- **Etiquetas:** x y\r\n")).toEqual(["a", "b"]);
+  });
+});
+
+describe("labelProblems", () => {
+  test("etiquetas válidas, vacío, placeholder y «Ninguna»: sin problemas", () => {
+    expect(labelProblems("empresa1 trabajo ideasBrillantes")).toEqual([]);
+    expect(labelProblems("")).toEqual([]);
+    expect(labelProblems(null)).toEqual([]);
+    expect(labelProblems("[Placeholder: etiquetas]")).toEqual([]);
+    expect(labelProblems("Ninguna")).toEqual([]);
+  });
+
+  test("formato: `#`, comas, tildes y símbolos quedan en el token, con sus caracteres no válidos", () => {
+    expect(labelProblems("#a b, año c$d")).toEqual([
+      { kind: "format", token: "#a", chars: ["#"] },
+      { kind: "format", token: "b,", chars: [","] },
+      { kind: "format", token: "año", chars: ["ñ"] },
+      { kind: "format", token: "c$d", chars: ["$"] },
+    ]);
+    expect(labelProblems("[postergada]")).toEqual([{ kind: "format", token: "[postergada]", chars: ["[", "]"] }]);
+  });
+
+  test("duplicados sin distinguir mayúsculas (ni `#` ni comas), con la primera forma escrita", () => {
+    expect(labelProblems("Trabajo uno trabajo")).toEqual([{ kind: "duplicate", token: "trabajo", first: "Trabajo" }]);
+    expect(labelProblems("a #A")).toEqual([
+      { kind: "format", token: "#A", chars: ["#"] },
+      { kind: "duplicate", token: "#A", first: "a" },
+    ]);
+  });
+
+  test("la regla de formato es la de `LABEL_RE`: lo válido no avisa", () => {
+    expect(LABEL_RE.test("ideasBrillantes9")).toBe(true);
+    expect(labelProblems("ideasBrillantes9")).toEqual([]);
+    expect(invalidLabelChars("a-b-ñ")).toEqual(["-", "ñ"]);
+  });
+});
+
+describe("entryLabelsField", () => {
+  test("el valor crudo y su línea (0-based) dentro del texto", () => {
+    expect(entryLabelsField("\n- **Origen:** x\n- **Etiquetas:** #a b\n- Listo.\n")).toEqual({ value: "#a b", line: 2 });
+    expect(entryLabelsField("\n<!-- nota\nmás -->\n- **Tags:** a")).toEqual({ value: "a", line: 3 });
+  });
+
+  test("sin el campo en el primer bloque: `null`", () => {
+    expect(entryLabelsField("\n- Se hizo A.\n- **Etiquetas:** x")).toBeNull();
+    expect(entryLabelsField("")).toBeNull();
   });
 });
