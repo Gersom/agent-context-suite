@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 178 — task-manager: detectar el idioma desde rules.md cuando no hay tareas
+
+- task add y el resto de comandos del task-manager detectan el idioma desde la línea «Idioma de la documentación» (o Documentation language) de rules.md cuando no hay tareas que lo indiquen: con Español no hay aviso, con English la primera tarea sale con Description y Tags; con placeholder o valor desconocido sigue el aviso de siempre, y las tareas existentes siguen mandando.
+- Cómo: languageFromRules y un segundo parámetro de detectLanguage, con rulesText cargado por readDocs y pasado por unos quince comandos. bun test 2315 pass, typecheck y check sin avisos, prueba real con un proyecto en inglés; sin revisión independiente por ser un cambio acotado.
+- Commit: c5d8642.
+
 ## 2026-11-18 — ✅ Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
 
 - Plantillas del perfil no técnico en la skill (template/office): rules.md de once reglas en lenguaje llano (sin plan ni modo, registro de tareas, frases a comandos con sus flags, contextos con etiquetas, copia de seguridad en backups/ con T-N y hora, git solo si está instalado, resumen de cierre), AGENTS.md y gitignore.txt, con el bloque de la suite y la marca de versión.

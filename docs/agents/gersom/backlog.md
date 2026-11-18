@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 178 — task-manager: detectar el idioma desde rules.md cuando no hay tareas
-
-- **Descripción:** task add avisa «No pude determinar el idioma…» y usa español en un proyecto recién instalado, porque detectLanguage solo mira las palabras de las tareas existentes. Debe leer también la línea «Idioma de la documentación» de rules.md cuando no haya tareas que lo indiquen.
-- **Decisiones/temas a definir antes de empezar:** Prioridad: las palabras de las tareas existentes siguen mandando; rules.md solo decide cuando no hay tareas que lo indiquen; qué valores acepta (Español, English, y sus formas en inglés de la línea); un placeholder o un idioma desconocido sigue dando el aviso de siempre.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; molesta en la primera tarea del perfil no técnico (T-173).
-- **Detalles:** Origen: T-173. Código: scripts/task-manager/src/write/language.ts (detectLanguage, ~línea 209) y quienes lo llaman en commands/add.ts y start/pause/close. Hoy un proyecto en inglés recién instalado escribiría su primera tarea con etiquetas en español.
-- **Agregada:** 2026-11-18.
-
 ### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
 
 - **Descripción:** Agregar a questions-flow.md una pregunta de perfil antes de la Ronda 1 y un documento docs/office-profile.md con el flujo de instalación del perfil no técnico: qué rondas se saltan, qué se copia, la confirmación previa y las preguntas en texto con opciones numeradas.
