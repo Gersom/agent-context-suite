@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 170 — Etiquetas: documentar el campo en las plantillas de la skill
+
+- Las plantillas de la skill documentan el campo opcional Etiquetas: backlog.md (formato de cada tarea, con la regla y un ejemplo), team-backlog.md (mismo formato enlazado) y history.md (la entrada conserva las etiquetas). handoff.md no cambia: el campo viaja como campo extra. La versión de la skill no se sube ahora: se sube al publicar con la T-162.
+- Cómo: tres líneas en las plantillas y el fixture de docs-check regenerado a partir de ellas; el helper lineOf de los tests de la T-169 pasa a buscar la última coincidencia. bun test 2206 pass, typecheck y check sin avisos; sin revisión independiente por ser un cambio de texto.
+- Commits: f9ff521 en la skill y fba8b5a en la suite.
+
 ## 2026-11-18 — ✅ Tarea 169 — Etiquetas: validar el formato en acsuite check
 
 - acsuite check valida el campo Etiquetas/Tags de las tareas en backlog, handoff, history y team-backlog: label-format (solo letras y números ASCII; avisa por #, comas, tildes, símbolos y corchetes) y label-duplicate (sin distinguir mayúsculas), ambos como aviso. Vacío, placeholder y Ninguna no avisan.

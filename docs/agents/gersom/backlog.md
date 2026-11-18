@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 170 — Etiquetas: documentar el campo en las plantillas de la skill
-
-- **Descripción:** Documentar el campo opcional Etiquetas en las plantillas de la skill (backlog, handoff, history y team-backlog) y en el flujo que corresponda.
-- **Decisiones/temas a definir antes de empezar:** Si se sube la versión de la skill y el changelog ahora o al publicar con la T-162; en qué archivo va la explicación sin pasar los límites de tamaño.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la tarea Etiquetas del task-manager (T-167), que fija el formato.
-- **Disparador:** cuando se cierre la T-167.
-- **Detalles:** Origen: T-161. Repo de la skill (commit propio con git -C). Archivos: skill/template/agents/backlog.md (lista de campos), history.md, handoff.md y skill/template/multi/team-backlog.md. Límites de scripts/skill-checks: SKILL.md 4500 bytes (hoy 4434, no añadir ahí), template/README.md 2600, multi-operator 2600 y 700.
-- **Agregada:** 2026-11-17.
-
 ### Tarea 171 — Etiquetas: filtrar por etiqueta en el task-manager y el board
 
 - **Descripción:** Filtro --label en list, status y next del task-manager, y una tecla de filtro por etiqueta en el board.
@@ -64,6 +55,15 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas Etiquetas del task-manager (T-167) y del board (T-168).
 - **Disparador:** cuando se cierren la T-167 y la T-168.
 - **Detalles:** Origen: T-161. Archivos: scripts/task-manager/src/commands/list.ts, query/list.ts (ListFilters y filterTasks), commands/status.ts y next.ts vía query/state.ts; en el board cli/keys.ts, cli/nav.ts y app.ts. No la necesita la T-162.
+- **Agregada:** 2026-11-17.
+
+### Tarea 162 — Flujo de la skill para trabajo no técnico
+
+- **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
+- **Decisiones/temas a definir antes de empezar:** Hipótesis de la T-160, a confirmar con su veredicto: sin carpeta project/; sin multi-operador; git automático (el agente crea rama y commits, la persona no los ve); se conserva el T-N; sin plan ni modo de ejecución (ejecuta casi todo la persona); el agente registra un T-N solo si la petición toca un archivo y no es de un paso, o si la persona cambia de tarea; frases normales (pausa esto, sigamos con X, ya terminé) traducidas a pause/resume/close; varias empresas con una sola carpeta y etiquetas (T-161). Qué plantillas se adaptan o se omiten y cómo se elige el flujo al empezar (pregunta inicial o variante de SKILL.md); cómo funciona con Codex (AGENTS.md, preguntas en texto con opciones numeradas).
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas de etiquetas: T-167 (task-manager), T-168 (board) y T-170 (plantillas de la skill), para separar empresas dentro de una sola carpeta.
+- **Disparador:** cuando se cierre la Tarea 160 con veredicto viable.
+- **Detalles:** Origen: T-160. Cambia principalmente la skill (SKILL.md, questions-flow, rules y plantillas); puede tocar la suite si check o el task-manager exigen campos de código. Cada repo con su commit y versión. Riesgos de la revisión de la T-160: (1) git automático choca con la Regla 5 (los commits de otros cambios solo a pedido) y la Regla 6 (cierre solo a pedido): hay que cambiar esas reglas para el perfil, subir versión y changelog, y regenerar el fixture scripts/docs-check/test/fixtures/template (snapshot.test.ts). (2) close --commits auto falla si no hay commits con scope (T-N); step --commit auto toma HEAD: los commits automáticos deben llevar el scope. (3) .gitignore total: usar lista blanca con !docs/** (no basta !docs/) más AGENTS.md, CLAUDE.md y agent-context/; el flujo working-branch usa git add con rutas y falla en rutas ignoradas. (4) Si la carpeta cuelga de otro repo, las herramientas usan la raíz de ese repo; antes de git init el agente debe detectarlo. (5) SKILL.md pesa 4434 de 4500 bytes (reading-policy.test.ts): el texto nuevo va en docs/. (6) start y add exigen backlog.md aunque el board lo tolere. (7) Una tarea sin plan sigue dando aviso en check (T-165).
 - **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +94,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
-
-### Tarea 162 — Flujo de la skill para trabajo no técnico
-
-- **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
-- **Decisiones/temas a definir antes de empezar:** Hipótesis de la T-160, a confirmar con su veredicto: sin carpeta project/; sin multi-operador; git automático (el agente crea rama y commits, la persona no los ve); se conserva el T-N; sin plan ni modo de ejecución (ejecuta casi todo la persona); el agente registra un T-N solo si la petición toca un archivo y no es de un paso, o si la persona cambia de tarea; frases normales (pausa esto, sigamos con X, ya terminé) traducidas a pause/resume/close; varias empresas con una sola carpeta y etiquetas (T-161). Qué plantillas se adaptan o se omiten y cómo se elige el flujo al empezar (pregunta inicial o variante de SKILL.md); cómo funciona con Codex (AGENTS.md, preguntas en texto con opciones numeradas).
-- **Bloqueos:** [dependencia] Depende de las tareas de etiquetas: T-167 (task-manager), T-168 (board) y T-170 (plantillas de la skill), para separar empresas dentro de una sola carpeta.
-- **Disparador:** cuando se cierre la Tarea 160 con veredicto viable.
-- **Detalles:** Origen: T-160. Cambia principalmente la skill (SKILL.md, questions-flow, rules y plantillas); puede tocar la suite si check o el task-manager exigen campos de código. Cada repo con su commit y versión. Riesgos de la revisión de la T-160: (1) git automático choca con la Regla 5 (los commits de otros cambios solo a pedido) y la Regla 6 (cierre solo a pedido): hay que cambiar esas reglas para el perfil, subir versión y changelog, y regenerar el fixture scripts/docs-check/test/fixtures/template (snapshot.test.ts). (2) close --commits auto falla si no hay commits con scope (T-N); step --commit auto toma HEAD: los commits automáticos deben llevar el scope. (3) .gitignore total: usar lista blanca con !docs/** (no basta !docs/) más AGENTS.md, CLAUDE.md y agent-context/; el flujo working-branch usa git add con rutas y falla en rutas ignoradas. (4) Si la carpeta cuelga de otro repo, las herramientas usan la raíz de ese repo; antes de git init el agente debe detectarlo. (5) SKILL.md pesa 4434 de 4500 bytes (reading-policy.test.ts): el texto nuevo va en docs/. (6) start y add exigen backlog.md aunque el board lo tolere. (7) Una tarea sin plan sigue dando aviso en check (T-165).
-- **Agregada:** 2026-11-17.
 
 ### Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
 
