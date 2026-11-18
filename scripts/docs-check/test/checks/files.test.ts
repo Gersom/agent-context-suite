@@ -93,14 +93,26 @@ describe("root-file", () => {
     expect(findings[0].message).toContain("Falta AGENTS.md");
   });
 
-  test("falta CLAUDE.md: aviso", () => {
-    const findings = checkRootFiles(makeCtx({ claudeMd: null }));
-    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "root-file", file: "CLAUDE.md", line: null }]);
+  test("falta CLAUDE.md pero existe AGENTS.md: sin hallazgos (CLAUDE.md es opcional)", () => {
+    expect(checkRootFiles(makeCtx({ claudeMd: null }))).toEqual([]);
   });
 
-  test("faltan los dos: un aviso por archivo", () => {
+  test("faltan los dos: un solo aviso, el de AGENTS.md", () => {
     const findings = checkRootFiles(makeCtx({ agentsMd: null, claudeMd: null }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "root-file", file: "AGENTS.md", line: null }]);
+  });
+
+  test("falta AGENTS.md pero existe CLAUDE.md: avisa por AGENTS.md y sigue validando CLAUDE.md", () => {
+    expect(checkRootFiles(makeCtx({ agentsMd: null })).map((f) => f.file)).toEqual(["AGENTS.md"]);
+    const findings = checkRootFiles(makeCtx({ agentsMd: null, claudeMd: "# Notas sueltas\n" }));
     expect(findings.map((f) => f.file)).toEqual(["AGENTS.md", "CLAUDE.md"]);
+    expect(findings[1].message).toContain(ROOT_MARKER);
+  });
+
+  test("CLAUDE.md sin marcador ni mención de AGENTS.md o docs/agents: aviso", () => {
+    const findings = checkRootFiles(makeCtx({ claudeMd: "# Notas sueltas\n" }));
+    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "root-file", file: "CLAUDE.md", line: null }]);
+    expect(findings[0].message).toContain(ROOT_MARKER);
   });
 
   test("existe pero no tiene el marcador ni menciona docs/agents: aviso", () => {

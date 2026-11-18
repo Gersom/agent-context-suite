@@ -44,11 +44,12 @@ export const checkOperatorsReadable: Check = ({ operatorsFile, operatorWarnings 
   }));
 };
 
-/** AGENTS.md y CLAUDE.md de la raíz: que existan y que dirijan al agente a la documentación (el bloque de la skill o una mención de docs/agents; CLAUDE.md puede solo redirigir a AGENTS.md). */
+/** AGENTS.md y CLAUDE.md de la raíz: AGENTS.md tiene que existir; CLAUDE.md es opcional (si falta, no se avisa: con AGENTS.md ausente ya avisa AGENTS.md, sin duplicar). Los que existen deben dirigir al agente a la documentación (el bloque de la skill o una mención de docs/agents; CLAUDE.md puede solo redirigir a AGENTS.md). */
 export const checkRootFiles = ({ rootFiles }: Pick<CheckContext, "rootFiles">): Finding[] => {
   const findings: Finding[] = [];
   for (const root of rootFiles) {
     if (!root.exists) {
+      if (root.file === "CLAUDE.md") continue;
       findings.push({
         severity: "warning",
         code: "root-file",

@@ -75,26 +75,23 @@ describe("current-task-line", () => {
   });
 });
 
-describe("current-no-plan", () => {
-  test("tarea en curso sin checkboxes: aviso en la línea de la tarea", () => {
+describe("tarea en curso sin plan", () => {
+  test("sin checkboxes: no avisa (la Regla 2 permite tareas pequeñas sin plan)", () => {
     const handoff = HANDOFF.replace(/### Plan[\s\S]*?### Qué falta/, "### Qué falta");
-    const findings = checkCurrentTask(makeCtx({ handoff }));
-    expect(findings.map(brief)).toEqual([{ severity: "warning", code: "current-no-plan", file: FILE, line: lineOf(handoff, "Tarea 7 — Escribir") }]);
-    expect(findings[0].message).toContain("Tarea 7");
-    expect(findings[0].message).toContain("- [ ] Paso");
+    expect(checkCurrentTask(makeCtx({ handoff }))).toEqual([]);
   });
 
-  test("el plan en una subsección con otro nombre también cuenta (basta un checkbox)", () => {
+  test("con el plan en una subsección con otro nombre: tampoco avisa", () => {
     const handoff = HANDOFF.replace(/### Plan[\s\S]*?### Qué falta/, "### Pasos\n\n- [ ] Único paso\n\n### Qué falta");
     expect(checkCurrentTask(makeCtx({ handoff }))).toEqual([]);
   });
 
-  test("los checkboxes de las pausadas no cuentan como plan de la tarea en curso", () => {
+  test("sin plan pero con una pausada con plan: no avisa", () => {
     const handoff = HANDOFF.replace(/### Plan[\s\S]*?### Qué falta/, "### Qué falta").replace(
       "- **Por qué se pausó:** otra prioridad.",
       "- **Plan:**\n  - [ ] Algo\n- **Por qué se pausó:** otra prioridad.",
     );
-    expect(checkCurrentTask(makeCtx({ handoff })).map((f) => f.code)).toEqual(["current-no-plan"]);
+    expect(checkCurrentTask(makeCtx({ handoff }))).toEqual([]);
   });
 });
 

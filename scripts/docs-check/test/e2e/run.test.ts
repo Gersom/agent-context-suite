@@ -68,7 +68,6 @@ function brokenTree(): Tree {
 const BROKEN_CODES = [
   "anchor-missing",
   "block-tag",
-  "current-no-plan",
   "history-entry",
   "next-number",
   "placeholder",
@@ -268,9 +267,41 @@ describe("repo roto con varios problemas a la vez", () => {
   });
 });
 
+describe("CLAUDE.md opcional y tarea en curso sin plan", () => {
+  test("con AGENTS.md y sin CLAUDE.md: sin hallazgos", async () => {
+    const tree = flatTree();
+    delete tree["CLAUDE.md"];
+    const report = await checkJson([project(tree).root]);
+    expect(report).toMatchObject({ code: 0, ok: true, errors: 0, warnings: 0 });
+    expect(report.findings).toEqual([]);
+  });
+
+  test("sin AGENTS.md ni CLAUDE.md: un solo aviso, el de AGENTS.md", async () => {
+    const tree = flatTree();
+    delete tree["AGENTS.md"];
+    delete tree["CLAUDE.md"];
+    const report = await checkJson([project(tree).root]);
+    expect(report.findings.map((f) => [f.severity, f.code, f.file])).toEqual([["warning", "root-file", "AGENTS.md"]]);
+  });
+
+  test("con CLAUDE.md sin marcador: aviso por CLAUDE.md", async () => {
+    const tree = flatTree();
+    tree["CLAUDE.md"] = "# Notas sueltas\n";
+    const report = await checkJson([project(tree).root]);
+    expect(report.findings.map((f) => [f.severity, f.code, f.file])).toEqual([["warning", "root-file", "CLAUDE.md"]]);
+  });
+
+  test("tarea en curso sin plan: sin hallazgos", async () => {
+    const tree = flatTree();
+    tree["docs/agents/handoff.md"] = HANDOFF.replace(/### Plan[\s\S]*?### Qué falta/, "### Qué falta");
+    const report = await checkJson([project(tree).root]);
+    expect(report.findings).toEqual([]);
+  });
+});
+
 describe("--strict con solo avisos", () => {
   const tree = flatTree();
-  delete tree["CLAUDE.md"];
+  delete tree["AGENTS.md"];
   const p = project(tree);
 
   test("sin --strict: código 0 y la nota de revisar los avisos", async () => {
@@ -386,11 +417,10 @@ describe("ruta que no existe o sin documentación", () => {
   test("carpeta sin docs/agents: el hallazgo workspace y la revisión de AGENTS.md y CLAUDE.md de esa carpeta", async () => {
     const p = project({ "README.md": "# Hola\n" });
     const report = await checkJson([p.root]);
-    expect(report).toMatchObject({ code: 1, mode: null, agentsDir: null, project: resolve(p.root), errors: 1, warnings: 2 });
+    expect(report).toMatchObject({ code: 1, mode: null, agentsDir: null, project: resolve(p.root), errors: 1, warnings: 1 });
     expect(report.findings.map((f) => [f.severity, f.code, f.file])).toEqual([
       ["error", "workspace", "."],
       ["warning", "root-file", "AGENTS.md"],
-      ["warning", "root-file", "CLAUDE.md"],
     ]);
     expect(report.findings[0].message).toContain("Indica la raíz del proyecto o su carpeta de agentes.");
     expect(report.findings[0].message).not.toContain("--agents");
@@ -412,7 +442,6 @@ describe("ruta que no existe o sin documentación", () => {
     expect(report.findings.map((f) => [f.code, f.file])).toEqual([
       ["workspace", "."],
       ["root-file", "AGENTS.md"],
-      ["root-file", "CLAUDE.md"],
     ]);
   });
 

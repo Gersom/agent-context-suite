@@ -1,5 +1,5 @@
-// Tarea en progreso de handoff.md: que la línea `Tarea N — título` se reconozca, que traiga un plan y
-// que ese plan solo tenga lo que `close` y `pause` aceptan.
+// Tarea en progreso de handoff.md: que la línea `Tarea N — título` se reconozca y
+// que el plan, si lo hay, solo tenga lo que `close` y `pause` aceptan.
 
 import { isPlaceholder, stripComments } from "../../../_shared/parse/markdown.ts";
 import { detectLanguage } from "../../../task-manager/src/write/language.ts";
@@ -13,21 +13,11 @@ export const checkCurrentTask: Check = ({ docs }) => {
   const { handoff } = docs;
   const section = handoff.parsed.sections["in-progress"];
   if (!handoff.exists || !section) return [];
-  const { task, planSteps: steps } = handoff.parsed.inProgress;
+  const { task } = handoff.parsed.inProgress;
   const findings: Finding[] = [];
 
-  if (task) {
-    if (!steps.length) {
-      findings.push({
-        severity: "warning",
-        code: "current-no-plan",
-        file: handoff.file,
-        line: task.range?.startLine ?? section.headerRange.startLine,
-        message: `La Tarea ${task.number} está en curso pero no tiene plan: agrega sus pasos como checkboxes \`- [ ] Paso\` (el seguimiento cuenta el avance con ellos).`,
-      });
-    }
-    return findings;
-  }
+  // Con tarea reconocida no hay nada que avisar aquí: las pequeñas van sin plan (Regla 2) y el tamaño no se puede saber.
+  if (task) return findings;
 
   // Sin tarea reconocida: está bien solo si la sección dice que no hay (o aún es la plantilla, que ya avisa el check de placeholders).
   const body = stripComments(section.body).trim();

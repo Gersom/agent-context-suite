@@ -32,7 +32,7 @@ Cada hallazgo lleva archivo, línea (cuando aplica) y un código. **Error:** el 
 | `workspace` | error | No se pudo ubicar la carpeta de agentes o el operador (mensaje del gestor de tareas). Aun así se revisan `AGENTS.md` y `CLAUDE.md` si la ruta es una carpeta que existe (aunque no tenga `docs/agents`). |
 | `file-missing` | error / aviso | Falta `handoff.md` o `backlog.md` (error); `history.md` o `team-backlog.md` (aviso). |
 | `operators-unreadable` | aviso | Líneas de `operators.md` que no se pudieron leer. |
-| `root-file` | aviso | Falta `AGENTS.md` o `CLAUDE.md`, o no llevan el bloque de la skill ni mencionan `docs/agents`. |
+| `root-file` | aviso | Falta `AGENTS.md`, o `AGENTS.md` / `CLAUDE.md` no llevan el bloque de la skill ni mencionan `docs/agents`. `CLAUDE.md` es opcional: si falta no se avisa (tampoco cuando falta `AGENTS.md`, que ya avisa por sí solo); si existe, se valida igual. |
 | `suite-rules` | aviso | `rules.md` sin la sección de agent-context-suite (el bloque entre `<!-- agent-context-suite:start -->` y `<!-- agent-context-suite:end -->`), que enseña al agente a usar la suite. Se agrega con `acsuite init`, al inicio de `rules.md`, después del título. Si no hay `rules.md`, no dice nada. |
 | `legacy-marker` | aviso | Marcadores con un prefijo anterior a la skill 2.0.0 (`agent-context-kit:` en anclas, versión y firma; `agent-docs-skill:` en el bloque de `AGENTS.md` y `CLAUDE.md`) en los archivos del operador, `rules.md` o la raíz. Se siguen leyendo; actualízalos a `agent-context-skill:`. |
 | `decisions-index` | aviso | La carpeta `project/decisions/` no tiene `README.md`, un tema no figura en su índice (`- [tema.md](./tema.md) — cuándo leerlo`) o una línea del índice enlaza a un archivo que no existe. |
@@ -48,7 +48,6 @@ Cada hallazgo lleva archivo, línea (cuando aplica) y un código. **Error:** el 
 | `task-fields` | aviso | Tarea sin ningún campo `- **Etiqueta:** valor`. |
 | `block-tag` | aviso | Bloqueada sin tag vigente, o libre con uno. |
 | `current-task-line` | aviso | «Tarea en progreso» con contenido pero sin la línea `Tarea N — título`. |
-| `current-no-plan` | aviso | Tarea en curso sin ningún checkbox de plan. |
 | `current-structure` | aviso | Otro problema de estructura de «Tarea en progreso» que `close` y `pause` rechazan: una subsección repetida (dos «Qué falta»), texto antes de la línea `Tarea N — título` o un checkbox fuera de la subsección del plan (una subsección con checkboxes de otro título cuenta como segundo plan). Uno por problema, con su número de línea cuando se conoce. |
 | `current-subsection` | aviso | Una subsección de «Tarea en progreso» con un título que `close` y `pause` no reconocen (por ejemplo `### Notas`): solo admiten Plan, «Qué falta», «Decisiones a medio camino» y «Próximo paso concreto». Una por subsección, con su número de línea. |
 | `current-plan-line` | aviso | Una línea del plan de la tarea en curso que no es un paso (`- [ ] Paso N — texto`) ni la línea de modo (`**Modo de ejecución acordado:** <texto>`): `close` y `pause` la rechazarían. Una por línea, con su número de línea. |
