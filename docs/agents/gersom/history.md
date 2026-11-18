@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 172 — Perfil no técnico: git automático de la skill (init, repo padre, .gitignore)
+
+- La skill documenta el git del perfil no técnico en docs/office-git.md: rechazo del home, la raíz de una unidad y carpetas del sistema; detección de otro proyecto con git rev-parse --show-prefix; una sola confirmación con la ruta; git init, identidad solo local y .gitignore con lista blanca (asterisco, !*/, !.gitignore, !AGENTS.md, !CLAUDE.md, !docs/**/*.md); primer commit y commits automáticos por cambio de estado con git add por rutas.
+- Cómo: probado con git real en ocho carpetas temporales y revisado por un agente que siguió el documento al pie de la letra; la lista blanca usa docs/**/*.md porque docs/** dejaba pasar binarios. skill-checks pasa (52).
+- Commit: 610c558 en la skill.
+
 ## 2026-11-18 — ✅ Tarea 162 — Investigación: flujo de la skill para trabajo no técnico
 
 - Investigación terminada: el perfil no técnico de la skill es viable y se divide en seis tareas: T-172 git automático (init, repo padre, .gitignore), T-173 plantillas template/office, T-174 pregunta de perfil y flujo de instalación, T-175 tests, T-176 prueba de punta a punta y T-177 versión 2.5.0.

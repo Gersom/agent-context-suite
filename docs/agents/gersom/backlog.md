@@ -48,13 +48,13 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 172 — Perfil no técnico: git automático de la skill (init, repo padre, .gitignore)
+### Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
 
-- **Descripción:** Definir en la skill cómo el agente prepara git para una persona no técnica: pide una sola confirmación con la ruta de la carpeta, inicia git si falta, avisa si la carpeta ya está dentro de otro repositorio, escribe un .gitignore con lista blanca y hace commits automáticos solo de docs/ y de los archivos de la skill y configuración.
-- **Decisiones/temas a definir antes de empezar:** Texto exacto de la confirmación; cómo se detecta el repo padre con git rev-parse --show-toplevel y qué carpetas se rechazan (el home, la raíz de una unidad); lista blanca del .gitignore: la regla con asterisco y !docs/** no re-incluye docs/ porque git no recupera archivos bajo una carpeta excluida, hay que usar !*/ o !docs/ y validar con git check-ignore -v; cuándo comitea el agente (al pausar, al cerrar, al cambiar de tarea); mensajes de commit en inglés con el scope (T-N); excepción a la Regla 5.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; es la primera de las tareas del perfil no técnico.
-- **Detalles:** Origen: T-162 (investigación). Repo de la skill, commit propio con git -C. Archivos probables: skill/docs/working-branch.md (hoy rama, git add por rutas y merge; sin precedente de git init ni de auto-commit) y un documento nuevo del perfil. Probar con carpetas temporales: sin git, con git propio y dentro de otro repo.
+- **Descripción:** Crear template/office/ con AGENTS.md, rules.md completo y corto sin jerga de código, y la plantilla del .gitignore, para proyectos de personas no técnicas (Excel, imágenes, varias empresas) que usan Codex u otro agente.
+- **Decisiones/temas a definir antes de empezar:** Qué Reglas se conservan, se reescriben o se quitan (Regla 2 sin plan ni modo, Regla 5 con commits automáticos, Regla 7 y 9 sin evidencia ni checks técnicos); registro de T-N solo si la petición toca un archivo y no es de un paso o si la persona cambia de tarea; frases normales traducidas a pause, resume y close; etiquetas por empresa; el bloque de la suite en rules.md va incluido porque Codex usa acsuite task; marca de versión en la línea 1; el nombre de la plantilla del .gitignore (gitignore.txt) y los enlaces sin project/.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la tarea del git automático del perfil (T-172), porque las reglas describen cómo se hacen los commits.
+- **Disparador:** cuando se cierre la T-172.
+- **Detalles:** Origen: T-162. Repo de la skill. handoff, backlog e history se reutilizan de template/agents. Tests de skill-checks leen hoy solo template/agents/rules.md (reading-policy y version): hay que cubrir también la variante.
 - **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +94,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
-
-### Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
-
-- **Descripción:** Crear template/office/ con AGENTS.md, rules.md completo y corto sin jerga de código, y la plantilla del .gitignore, para proyectos de personas no técnicas (Excel, imágenes, varias empresas) que usan Codex u otro agente.
-- **Decisiones/temas a definir antes de empezar:** Qué Reglas se conservan, se reescriben o se quitan (Regla 2 sin plan ni modo, Regla 5 con commits automáticos, Regla 7 y 9 sin evidencia ni checks técnicos); registro de T-N solo si la petición toca un archivo y no es de un paso o si la persona cambia de tarea; frases normales traducidas a pause, resume y close; etiquetas por empresa; el bloque de la suite en rules.md va incluido porque Codex usa acsuite task; marca de versión en la línea 1; el nombre de la plantilla del .gitignore (gitignore.txt) y los enlaces sin project/.
-- **Bloqueos:** [dependencia] Depende de la tarea del git automático del perfil (T-172), porque las reglas describen cómo se hacen los commits.
-- **Disparador:** cuando se cierre la T-172.
-- **Detalles:** Origen: T-162. Repo de la skill. handoff, backlog e history se reutilizan de template/agents. Tests de skill-checks leen hoy solo template/agents/rules.md (reading-policy y version): hay que cubrir también la variante.
-- **Agregada:** 2026-11-18.
 
 ### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
 
