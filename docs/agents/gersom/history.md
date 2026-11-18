@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 171 — Etiquetas: filtrar por etiqueta en el task-manager y el board
+
+- El task-manager filtra por etiqueta con list --label y next --label (varias con comas o repetido, todas a la vez, sin distinguir mayúsculas; inválida es error de uso código 2; list muestra las etiquetas y su JSON suma labels; status no lleva el flag). El board suma la tecla t que recorre todas y cada etiqueta del panel y filtra libres, bloqueadas, pausadas, completadas y SIN DUEÑO, con la tarea en curso siempre visible, contadores acordes y Filtro #x en el encabezado, solo durante la sesión.
+- Cómo: query/labels.ts en el task-manager y model/labels.ts con cli/label-filter.ts en el board. bun test 2301 pass, typecheck y check sin avisos, revisión independiente (168 comparaciones sin --label idénticas a antes; la tecla t verificada con stdin simulado, no con una terminal real). Pendiente menor: sin test del cableado de t en app.ts.
+- Commit: bd7a94a.
+
 ## 2026-11-18 — ✅ Tarea 170 — Etiquetas: documentar el campo en las plantillas de la skill
 
 - Las plantillas de la skill documentan el campo opcional Etiquetas: backlog.md (formato de cada tarea, con la regla y un ejemplo), team-backlog.md (mismo formato enlazado) y history.md (la entrada conserva las etiquetas). handoff.md no cambia: el campo viaja como campo extra. La versión de la skill no se sube ahora: se sube al publicar con la T-162.

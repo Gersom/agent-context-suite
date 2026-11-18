@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 171 — Etiquetas: filtrar por etiqueta en el task-manager y el board
-
-- **Descripción:** Filtro --label en list, status y next del task-manager, y una tecla de filtro por etiqueta en el board.
-- **Decisiones/temas a definir antes de empezar:** Si el filtro acepta varias etiquetas (todas o alguna); qué tecla usa el board y cómo se ve el filtro activo; si status y next lo necesitan o basta list.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas Etiquetas del task-manager (T-167) y del board (T-168).
-- **Disparador:** cuando se cierren la T-167 y la T-168.
-- **Detalles:** Origen: T-161. Archivos: scripts/task-manager/src/commands/list.ts, query/list.ts (ListFilters y filterTasks), commands/status.ts y next.ts vía query/state.ts; en el board cli/keys.ts, cli/nav.ts y app.ts. No la necesita la T-162.
-- **Agregada:** 2026-11-17.
-
 ### Tarea 162 — Flujo de la skill para trabajo no técnico
 
 - **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
