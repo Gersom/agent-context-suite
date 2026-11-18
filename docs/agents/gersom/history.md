@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
+
+- La skill sube a 2.5.0 (minor: nueva rama del árbol de preguntas, el perfil no técnico): versión en plugin.json, SKILL.md y la línea 1 de template/agents/rules.md y template/office/rules.md; docs/changelog/2.5.md con un cambio manual opcional (campo Etiquetas) y sin cambios que aplicar al resto de proyectos; tag anotado v2.5.0 solo en local, la publicación con git push --follow-tags la hace el operador.
+- Cómo: versiones coincidentes verificadas por version.test.ts y changelog.test.ts; fixture de docs-check regenerado; bun test 2365 pass, typecheck y check sin avisos. Quedan como tareas aparte la versión de la suite y el README público de la skill.
+- Commits: c33bd94 en la skill y a864fe5 en la suite.
+
 ## 2026-11-18 — ✅ Tarea 180 — Perfil no técnico: ajustes de redacción de rules.md, office-git.md y office-profile.md
 
 - Ajustes de redacción del perfil no técnico tras las pruebas de punta a punta: tareas sin plan, formato de los archivos de la persona conservado, ajuste directo sin copia (se dice en llano y se reescribe el valor anterior), cierre de una pausada nombrada sin tocar la en curso, restauración entera desde la copia, «lo dejé como estaba» al descartar, verbos de commit unificados (add, update, start, pause, resume, close) y sin ofrecer la recomendación de la suite. Topes: rules.md 5500, office-git.md 1500, office-profile.md 2000 bytes.
