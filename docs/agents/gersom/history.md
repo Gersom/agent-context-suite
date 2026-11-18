@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 182 — README público de la skill: documentar el perfil no técnico
+
+- El README público de la skill (README.md y README.es.md) documenta el perfil no técnico en una sección nueva: cuándo se activa (la pregunta de perfil), sin jerga ni planes, tareas que se pausan y se retoman con frases normales y etiquetas, copia de seguridad, git sin que la persona lo vea y que requiere acsuite; enlaza office-profile.md y office-git.md, que también entran en la lista de qué hay en el repo.
+- Cómo: sección en español e inglés antes de las herramientas complementarias; skill-checks (81) y bun test completo pasan. El tag local v2.5.0, que aún no se había subido, se movió al commit del README para que la release lo incluya.
+- Commit: a8253cd en la skill.
+
 ## 2026-11-18 — ✅ Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
 
 - La skill sube a 2.5.0 (minor: nueva rama del árbol de preguntas, el perfil no técnico): versión en plugin.json, SKILL.md y la línea 1 de template/agents/rules.md y template/office/rules.md; docs/changelog/2.5.md con un cambio manual opcional (campo Etiquetas) y sin cambios que aplicar al resto de proyectos; tag anotado v2.5.0 solo en local, la publicación con git push --follow-tags la hace el operador.

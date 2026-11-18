@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Origen: T-177. Reglas en docs/releasing.md: tag anotado vX.Y.Z en el commit que sube la versión y push con --follow-tags (lo hace el operador); sección en CHANGELOG.md de la suite. Cambios desde la 2.4.0 de la suite: T-163, T-164, T-165, T-167 a T-171, T-178 y T-179.
 - **Agregada:** 2026-11-18.
 
-### Tarea 182 — README público de la skill: documentar el perfil no técnico
-
-- **Descripción:** El README de la skill (README.md y README.es.md) no menciona el perfil no técnico ni la pregunta de perfil de la Ronda 0. Agregar una sección breve: para quién es, qué instala, cómo se usa con Codex u otro agente y qué hace con git.
-- **Decisiones/temas a definir antes de empezar:** Dónde va la sección y cuánto detalle (los README son la cara pública del repo de la skill); si menciona la suite (acsuite task y board) como requisito del perfil; ejemplos de frases como pausa esto o ya terminé.
-- **Bloqueos:** Ninguno.
-- **Disparador:** antes de publicar la skill 2.5.0 (push del tag v2.5.0).
-- **Detalles:** Origen: T-177. Repo de la skill, commit propio con git -C. Archivos: skill/README.md y skill/README.es.md. Hay tests de skill-checks sobre README (límite de ejemplos @vX.Y.Z en version.test.ts): comprobar que pasan.
-- **Agregada:** 2026-11-18.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 
