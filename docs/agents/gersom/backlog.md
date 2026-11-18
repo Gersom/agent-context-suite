@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 178
+**Próximo número de tarea:** 179
 
 ---
 
@@ -48,13 +48,22 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
+### Tarea 178 — task-manager: detectar el idioma desde rules.md cuando no hay tareas
 
-- **Descripción:** Crear template/office/ con AGENTS.md, rules.md completo y corto sin jerga de código, y la plantilla del .gitignore, para proyectos de personas no técnicas (Excel, imágenes, varias empresas) que usan Codex u otro agente.
-- **Decisiones/temas a definir antes de empezar:** Qué Reglas se conservan, se reescriben o se quitan (Regla 2 sin plan ni modo, Regla 5 con commits automáticos, Regla 7 y 9 sin evidencia ni checks técnicos); registro de T-N solo si la petición toca un archivo y no es de un paso o si la persona cambia de tarea; frases normales traducidas a pause, resume y close; etiquetas por empresa; el bloque de la suite en rules.md va incluido porque Codex usa acsuite task; marca de versión en la línea 1; el nombre de la plantilla del .gitignore (gitignore.txt) y los enlaces sin project/.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la tarea del git automático del perfil (T-172), porque las reglas describen cómo se hacen los commits.
-- **Disparador:** cuando se cierre la T-172.
-- **Detalles:** Origen: T-162. Repo de la skill. handoff, backlog e history se reutilizan de template/agents. Tests de skill-checks leen hoy solo template/agents/rules.md (reading-policy y version): hay que cubrir también la variante.
+- **Descripción:** task add avisa «No pude determinar el idioma…» y usa español en un proyecto recién instalado, porque detectLanguage solo mira las palabras de las tareas existentes. Debe leer también la línea «Idioma de la documentación» de rules.md cuando no haya tareas que lo indiquen.
+- **Decisiones/temas a definir antes de empezar:** Prioridad: las palabras de las tareas existentes siguen mandando; rules.md solo decide cuando no hay tareas que lo indiquen; qué valores acepta (Español, English, y sus formas en inglés de la línea); un placeholder o un idioma desconocido sigue dando el aviso de siempre.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; molesta en la primera tarea del perfil no técnico (T-173).
+- **Detalles:** Origen: T-173. Código: scripts/task-manager/src/write/language.ts (detectLanguage, ~línea 209) y quienes lo llaman en commands/add.ts y start/pause/close. Hoy un proyecto en inglés recién instalado escribiría su primera tarea con etiquetas en español.
+- **Agregada:** 2026-11-18.
+
+### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
+
+- **Descripción:** Agregar a questions-flow.md una pregunta de perfil antes de la Ronda 1 y un documento docs/office-profile.md con el flujo de instalación del perfil no técnico: qué rondas se saltan, qué se copia, la confirmación previa y las preguntas en texto con opciones numeradas.
+- **Decisiones/temas a definir antes de empezar:** Redacción de la pregunta de perfil; qué rondas se saltan (1 a 4); qué se conserva (idioma, scaffolding de AGENTS.md); sin tocar SKILL.md, que está a 66 bytes de su tope de 4500; límite de 1500 bytes por flujo en reading-policy.test.ts; cómo se pregunta el nombre de las empresas.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las plantillas del perfil (T-173), que son lo que el flujo copia.
+- **Disparador:** cuando se cierre la T-173.
+- **Detalles:** Origen: T-162. Repo de la skill. Archivos: skill/docs/questions-flow.md (Ronda 1 en 48-57, sets en 228-262, scaffolding de la Ronda final), skill/docs/asking-questions.md (respaldo de texto numerado) y el flujo nuevo.
 - **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +103,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
-
-### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
-
-- **Descripción:** Agregar a questions-flow.md una pregunta de perfil antes de la Ronda 1 y un documento docs/office-profile.md con el flujo de instalación del perfil no técnico: qué rondas se saltan, qué se copia, la confirmación previa y las preguntas en texto con opciones numeradas.
-- **Decisiones/temas a definir antes de empezar:** Redacción de la pregunta de perfil; qué rondas se saltan (1 a 4); qué se conserva (idioma, scaffolding de AGENTS.md); sin tocar SKILL.md, que está a 66 bytes de su tope de 4500; límite de 1500 bytes por flujo en reading-policy.test.ts; cómo se pregunta el nombre de las empresas.
-- **Bloqueos:** [dependencia] Depende de las plantillas del perfil (T-173), que son lo que el flujo copia.
-- **Disparador:** cuando se cierre la T-173.
-- **Detalles:** Origen: T-162. Repo de la skill. Archivos: skill/docs/questions-flow.md (Ronda 1 en 48-57, sets en 228-262, scaffolding de la Ronda final), skill/docs/asking-questions.md (respaldo de texto numerado) y el flujo nuevo.
-- **Agregada:** 2026-11-18.
 
 ### Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
 

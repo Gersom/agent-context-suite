@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
+
+- Plantillas del perfil no técnico en la skill (template/office): rules.md de once reglas en lenguaje llano (sin plan ni modo, registro de tareas, frases a comandos con sus flags, contextos con etiquetas, copia de seguridad en backups/ con T-N y hora, git solo si está instalado, resumen de cierre), AGENTS.md y gitignore.txt, con el bloque de la suite y la marca de versión.
+- Cómo: probado por un revisor que instaló el perfil en una carpeta temporal y actuó con seis escenarios; sus omisiones se corrigieron en rules.md (borrado con el patrón *_backup_T<N>_*, flags de pause y close, commit tras add y edit). bun test 2301 pass, typecheck y check sin avisos.
+- Commit: cda6a71 en la skill.
+
 ## 2026-11-18 — ✅ Tarea 172 — Perfil no técnico: git automático de la skill (init, repo padre, .gitignore)
 
 - La skill documenta el git del perfil no técnico en docs/office-git.md: rechazo del home, la raíz de una unidad y carpetas del sistema; detección de otro proyecto con git rev-parse --show-prefix; una sola confirmación con la ruta; git init, identidad solo local y .gitignore con lista blanca (asterisco, !*/, !.gitignore, !AGENTS.md, !CLAUDE.md, !docs/**/*.md); primer commit y commits automáticos por cambio de estado con git add por rutas.
