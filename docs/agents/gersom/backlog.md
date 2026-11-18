@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
-
-- **Descripción:** Dejar documentado cómo instalar acsuite de forma global (npm o dist/cli.js) y un .bat de arranque que haga cd a su carpeta y ejecute acsuite board, para que una persona no técnica abra el tablero con doble clic.
-- **Decisiones/temas a definir antes de empezar:** Cómo se distribuye el CLI (npm global tras publicar, o copiar dist/cli.js); dónde vive el .bat (plantilla en la suite o en la skill); si el instalador lo crea; comprobar el modo interactivo del board en una ventana real.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la Tarea 163 (ruta sin la skill abre la lista de proyectos) y de publicar el CLI en npm (Tarea 78).
-- **Disparador:** cuando el operador pregunte por tareas pendientes; la T-163 ya está hecha y la suite ya está publicada en npm.
-- **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
-- **Agregada:** 2026-11-17.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 

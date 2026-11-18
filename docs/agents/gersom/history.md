@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
+
+- El perfil no técnico trae un lanzador de doble clic para Windows: template/office/open-board.bat (solo ASCII y CRLF) hace cd a su propia carpeta y ejecuta acsuite board sin ruta; si acsuite no está instalado muestra un mensaje en llano y espera una tecla. El flujo de instalación lo copia a la raíz y avisa en llano si falta acsuite (lo instala el operador con npm install -g agent-context-suite); el README de la suite documenta la instalación global y el lanzador. Entra en la skill 2.5.0, aún no publicada: línea en el changelog 2.5.md y tag local v2.5.0 movido.
+- Cómo: tests de existencia, ASCII, CRLF, contenido y lista blanca de git, más dos que ejecutan el .bat de verdad en Windows con un acsuite simulado; verificado rompiendo el archivo de tres maneras. Prueba real: el .bat lanzado desde otra carpeta abre el tablero real de su carpeta. bun test 2373 pass, typecheck y check sin avisos. Queda del operador probar el doble clic en una ventana real.
+- Commits: 19f114a en la skill y 84c35b7 en la suite.
+
 ## 2026-11-18 — ❌ Tarea 78 — Publicación en npm por GitHub Actions
 
 - Se mantiene el npm publish manual desde la terminal, como dice la Decisión no negociable de rules.md. Investigado el 2026-11-18: npm revocó todos los tokens clásicos el 2025-12-09; los tokens granulares con bypass de 2FA pierden la publicación directa hacia ene-2027 (objetivo anunciado, no confirmado); el único método de CI vigente es trusted publishing (OIDC, npm CLI 11.5.1 o superior, sin token, con provenance), que sigue disponible pero no compensa con releases poco frecuentes. Reabrir solo si los releases se vuelven frecuentes: en ese caso, trusted publishing, nunca un token.
