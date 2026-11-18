@@ -2,6 +2,27 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.5.0
+
+Etiquetas en las tareas, para llevar varios contextos (empresas, proyectos, clientes) en una sola carpeta y filtrarlos, y mejoras del tablero y de `check` pensadas para quien no programa. No rompe nada y no cambia el formato de los archivos: el campo nuevo es opcional.
+
+### Cómo pasar de la 2.4.x a la 2.5.0
+
+Actualiza el paquete: `npm install -g agent-context-suite@latest`. No hay nada más que hacer. Los proyectos con la skill 2.4.x siguen siendo compatibles; las etiquetas se documentan en las plantillas de la skill 2.5.0 (campo opcional `Etiquetas`).
+
+### Lo nuevo
+
+- **Etiquetas:** `task add --labels` y `task edit --labels` (con valor vacío quitan el campo). Aceptan espacios o comas y un `#` inicial opcional por etiqueta; se guardan sin `#`, solo con letras y números, sin repetidas sin distinguir mayúsculas. El campo se llama `Etiquetas` (`Tags` en inglés), viaja de `backlog.md` a `handoff.md`, a pausadas y a la entrada de `history.md` al cerrar, y los grupos no lo llevan.
+- **Filtro por etiqueta:** `task list --label` y `task next --label` (varias a la vez, todas deben estar; `list` muestra las etiquetas de cada tarea y su JSON suma `labels`). El tablero suma la tecla `t`, que recorre las etiquetas y filtra libres, bloqueadas, pausadas, completadas y SIN DUEÑO; la tarea en curso siempre se ve y el filtro vive solo en la sesión.
+- **Tablero:** muestra las etiquetas con `#` en todas las cajas, y las tareas pausadas ahora muestran «Qué falta» y «Próximo paso concreto» (en compacto se ocultan).
+- **`check`:** valida las etiquetas (`label-format` y `label-duplicate`, como aviso). Ya no avisa de una tarea en curso sin plan (`current-no-plan`, que contradecía la Regla 2) y `CLAUDE.md` pasa a ser opcional si existe `AGENTS.md`.
+
+### Cambios de comportamiento
+
+- **`acsuite board <ruta>`:** con una carpeta que existe pero no tiene la skill, abre la lista de proyectos con un aviso en vez de salir con error. Una ruta que no existe, o con documentación mal formada, sigue dando error.
+- **Idioma:** con un proyecto sin tareas, los comandos que escriben leen el idioma de la línea «Idioma de la documentación» de `rules.md`, y ya no avisan de que no lo pudieron determinar.
+- **`close`:** al agregar la primera entrada a `history.md` retira la línea sola `Ninguna.` o `None.` que deja la instalación del perfil no técnico.
+
 ## 2.4.0
 
 Un comando nuevo de solo lectura para listar y buscar tareas, sin tener que leer `history.md` entero ni recurrir a `grep`. No rompe nada y no cambia el formato de los archivos.
