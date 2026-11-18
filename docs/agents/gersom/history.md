@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
+
+- Prueba de punta a punta del perfil no técnico: un agente que solo conocía la skill instaló el perfil y atendió nueve peticiones (consulta, cambio de un paso, tarea con copia de seguridad, interrupción por otro contexto, retomar, restaurar, cierre de una pausada, descarte y un ajuste directo) sin errores de herramientas; un revisor independiente confirmó git (11 commits en inglés, solo docs y archivos de la skill versionados, árbol limpio), documentos, archivos de la persona, copias y check con 0 errores y 0 avisos.
+- Cómo: carpeta temporal con CSV, imagen binaria y texto (sin xlsx real por falta de librería). Hallazgos registrados: T-179 (task close deja el Ninguna. de history.md) y T-180 (ajustes de redacción de las reglas); queda sin cubrir el contexto ambiguo y la prueba con Codex real, para la que se entregó una guía.
+
 ## 2026-11-18 — ✅ Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
 
 - Tests del perfil no técnico en scripts/skill-checks: office-profile.test.ts (29 tests) fija la estructura de template/office y de office-profile.md y office-git.md, sus tamaños (office-git 1500, office-profile 2000, AGENTS.md 1500, rules.md 5000 bytes), la ausencia de enlaces a project/ y de jerga de plan, el contenido imprescindible de rules.md y AGENTS.md, la Ronda 0 y la lista blanca del .gitignore con git real; version.test.ts exige además que template/office/rules.md lleve la versión de plugin.json.
