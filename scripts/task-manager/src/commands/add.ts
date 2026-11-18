@@ -14,6 +14,7 @@ import { requireDoc } from "../workspace/docs.ts";
 import { requireOwnFolder } from "../workspace/ownership.ts";
 import { BLOCKING_TAGS, citeBlockingTags } from "../write/blocking.ts";
 import { requiredFlag, singleLine, textFlag } from "../write/flags.ts";
+import { formatLabels, parseLabels } from "../write/labels.ts";
 import { detectLanguage, NONE_RE, STRINGS, type Strings } from "../write/language.ts";
 import { renderBacklogTask } from "../write/new-task.ts";
 import { reserveNextNumber } from "../write/numbering.ts";
@@ -38,7 +39,7 @@ export const add: Command = {
   name: "add",
   summary: "Agrega una tarea a tu backlog.md (o al team-backlog.md con --team); escribe con --apply",
   usage:
-    "add --title <título> --description <texto> [--decisions <texto>] [--blocker <texto>] [--trigger <texto>] [--details <texto>] [--team] [--apply]",
+    "add --title <título> --description <texto> [--decisions <texto>] [--blocker <texto>] [--trigger <texto>] [--labels <texto>] [--details <texto>] [--team] [--apply]",
   writes: true,
   flags: {
     title: { type: "string", valueName: "título", stdin: true, description: "Título de la tarea (una línea). Obligatorio." },
@@ -61,6 +62,13 @@ export const add: Command = {
       stdin: true,
       description: "Cuándo corresponde tomarla. Por defecto, el genérico de la plantilla. No aplica con --team.",
     },
+    labels: {
+      type: "string",
+      valueName: "texto",
+      stdin: true,
+      description:
+        "Etiquetas (campo Etiquetas / Tags): separadas por espacios o comas, con un `#` inicial opcional (se quita), solo letras ASCII y números; los duplicados (sin distinguir mayúsculas) se quitan y se conserva el orden. Se guardan separadas por un espacio y sin `#`. Opcional: si no se pasa, el campo se omite. Vale también con --team.",
+    },
     details: { type: "string", valueName: "texto", stdin: true, description: "Contexto extendido. Opcional: si no se pasa, el campo se omite." },
     team: {
       type: "boolean",
@@ -70,12 +78,14 @@ export const add: Command = {
   run(ctx) {
     const { flags } = ctx;
     const title = singleLine("title", requiredFlag(flags, "title"));
+    const labelList = parseLabels("labels", textFlag(flags, "labels") ?? "");
     const input = {
       title,
       description: requiredFlag(flags, "description"),
       decisions: textFlag(flags, "decisions"),
       blocker: textFlag(flags, "blocker"),
       trigger: textFlag(flags, "trigger"),
+      labels: labelList.length ? formatLabels(labelList) : undefined,
       details: textFlag(flags, "details"),
     };
     return flags.team === true ? addToTeam(ctx, input) : addToBacklog(ctx, input);
@@ -88,6 +98,8 @@ interface AddInput {
   decisions?: string;
   blocker?: string;
   trigger?: string;
+  /** Etiquetas ya normalizadas (separadas por un espacio, sin `#`); sin ellas el campo se omite. */
+  labels?: string;
   details?: string;
 }
 
@@ -116,6 +128,7 @@ function addToBacklog(ctx: CommandContext, input: AddInput): void {
     decisions: input.decisions,
     blocker: input.blocker,
     trigger: input.trigger,
+    labels: input.labels,
     details: input.details,
     date: formatLocalDate(ctx.now()),
   });
@@ -173,6 +186,7 @@ function addToTeam(ctx: CommandContext, input: AddInput): void {
     [label("decisions"), input.decisions ?? S.none],
     [label("blockers"), input.blocker ?? S.none],
   ];
+  if (input.labels) fields.push([label("labels"), input.labels]);
   if (input.details) fields.push([label("details"), input.details]);
   fields.push([label("added"), `${formatLocalDate(ctx.now())} ${S.by} ${operator}`]);
   const block = renderTaskBlock(`### ${input.title}`, fields);

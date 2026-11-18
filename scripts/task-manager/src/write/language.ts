@@ -15,13 +15,14 @@ export type { Lang };
 export { NONE_RE };
 
 /** Campos de una tarea de backlog que el script reconoce en cualquier idioma conocido. */
-export type FieldKind = "description" | "decisions" | "blockers" | "trigger" | "details" | "added";
+export type FieldKind = "description" | "decisions" | "blockers" | "trigger" | "labels" | "details" | "added";
 
 const FIELD_PATTERNS: Record<FieldKind, RegExp> = {
   description: DESCRIPTION_LABEL_RE,
   decisions: /^(decisiones|decisions)$/i,
   blockers: /^(bloqueos?|blockers?)$/i,
   trigger: /^(disparador|trigger)$/i,
+  labels: /^(etiquetas|tags)$/i,
   details: /^(detalles?|details?)$/i,
   added: /^(agregada|added)$/i,
 };
@@ -113,6 +114,7 @@ export const STRINGS: Record<Lang, Strings> = {
       decisions: "Decisiones/temas a definir antes de empezar",
       blockers: "Bloqueos",
       trigger: "Disparador",
+      labels: "Etiquetas",
       details: "Detalles",
       added: "Agregada",
     },
@@ -157,6 +159,7 @@ export const STRINGS: Record<Lang, Strings> = {
       decisions: "Decisions/topics to settle before starting",
       blockers: "Blockers",
       trigger: "Trigger",
+      labels: "Tags",
       details: "Details",
       added: "Added",
     },
@@ -189,8 +192,8 @@ export const STRINGS: Record<Lang, Strings> = {
   },
 };
 
-const ES_WORDS = /^(tarea|descripci[oó]n|bloqueos?|decisiones|disparador|agregada|detalles?)$/i;
-const EN_WORDS = /^(task|description|blockers?|decisions|trigger|added|details?)$/i;
+const ES_WORDS = /^(tarea|descripci[oó]n|bloqueos?|decisiones|disparador|etiquetas|agregada|detalles?)$/i;
+const EN_WORDS = /^(task|description|blockers?|decisions|trigger|tags|added|details?)$/i;
 
 export interface DetectedLanguage {
   lang: Lang;

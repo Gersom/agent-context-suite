@@ -17,6 +17,8 @@ export interface NewTaskInput {
   blocker?: string;
   /** Por defecto, el genérico de la plantilla. */
   trigger?: string;
+  /** Etiquetas ya normalizadas (separadas por un espacio, sin `#`). Si no se pasan, el campo se omite. */
+  labels?: string;
   /** Si no se pasa, el campo se omite. */
   details?: string;
   /** Fecha de hoy (`YYYY-MM-DD`). */
@@ -36,6 +38,7 @@ export function renderBacklogTask(docs: Docs, S: Strings, sectionTasks: Task[], 
     [label("blockers"), input.blocker ?? S.none],
     [label("trigger"), input.trigger ?? S.defaultTrigger],
   ];
+  if (input.labels) fields.push([label("labels"), input.labels]);
   if (input.details) fields.push([label("details"), input.details]);
   fields.push([label("added"), `${input.date}.`]);
   return renderTaskBlock(`### ${headerLabels(docs)[0] ?? S.task} ${input.number} — ${input.title}`, fields);

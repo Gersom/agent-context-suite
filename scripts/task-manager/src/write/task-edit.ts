@@ -9,7 +9,7 @@ import { classifyPreamble, FIELD_START_RE } from "../../../_shared/parse/text-fi
 import { blockInfo, LEADING_TAG_RE } from "../../../_shared/tasks/block-info.ts";
 import type { Field } from "../../../_shared/types.ts";
 import { CliError } from "../cli/errors.ts";
-import { type Edit, insertAt, replaceRange } from "../edit/edits.ts";
+import { deleteRange, type Edit, insertAt, replaceRange } from "../edit/edits.ts";
 import { trimRange } from "../query/lines.ts";
 import { BLOCKING_TAGS, blockedValue, citeBlockingTags } from "./blocking.ts";
 import { partOf } from "./handoff.ts";
@@ -62,9 +62,10 @@ export function titleEdit(text: string, block: Span, shape: TitleShape, current:
 export type Placement = (rendered: string) => Edit;
 
 /** Los campos que se editan por su tipo, con su texto nuevo. */
-export type FieldValues = Partial<Record<"description" | "decisions" | "blockers" | "trigger" | "details", string>>;
+/** Con valor vacío (`""`) el campo se quita (solo `labels` lo pide: `edit --labels ""`). */
+export type FieldValues = Partial<Record<"description" | "decisions" | "blockers" | "trigger" | "labels" | "details", string>>;
 
-const FIELD_ORDER: Array<keyof FieldValues> = ["description", "decisions", "blockers", "trigger", "details"];
+const FIELD_ORDER: Array<keyof FieldValues> = ["description", "decisions", "blockers", "trigger", "labels", "details"];
 
 /**
  * Dónde va un campo nuevo en una tarea de backlog.md o team-backlog.md: antes del campo `Agregada`
@@ -105,6 +106,22 @@ export function pausedPlacement(text: string, headerEnd: number, fields: Field[]
   return (rendered) => insertAt(headerEnd, `\n\n${rendered}`);
 }
 
+/**
+ * Edición que borra un campo (su línea y sus continuaciones) sin dejar una línea en blanco en su
+ * lugar: se lleva el salto de línea que lo sigue o, si es lo último del texto, el que lo precede. Si
+ * el campo estaba solo entre dos líneas en blanco, se lleva también una para no dejar dos seguidas.
+ * @param span rango del campo sin líneas en blanco de los extremos (`trimRange`)
+ */
+export function removeField(text: string, span: Span): Edit {
+  if (text[span.end] === "\n") {
+    const blankBefore = span.start >= 2 && text[span.start - 1] === "\n" && text[span.start - 2] === "\n";
+    const end = span.end + 1;
+    return deleteRange({ start: span.start, end: blankBefore && text[end] === "\n" ? end + 1 : end });
+  }
+  const before = span.start > 0 && text[span.start - 1] === "\n" ? span.start - 1 : span.start;
+  return deleteRange({ start: before, end: span.end });
+}
+
 /** Reemplaza el campo del tipo `kind` (con su etiqueta, la traducida del archivo) o, si falta, lo agrega con `label`. */
 export function setField(text: string, fields: Field[], kind: FieldKind, label: string, value: string, place: Placement): Edit {
   const field = findFieldOfKind(fields, kind);
@@ -112,11 +129,19 @@ export function setField(text: string, fields: Field[], kind: FieldKind, label: 
   return place(renderField(label, value));
 }
 
-/** Las ediciones de los campos de `values` (en el orden de la plantilla). `label` da la etiqueta de un campo que hay que agregar. */
+/**
+ * Las ediciones de los campos de `values` (en el orden de la plantilla). `label` da la etiqueta de un
+ * campo que hay que agregar. Un valor vacío quita el campo si existe (y no hace nada si no).
+ */
 export function fieldEdits(text: string, fields: Field[], values: FieldValues, label: (kind: FieldKind) => string, place: Placement): Edit[] {
   return FIELD_ORDER.flatMap((kind) => {
     const value = values[kind];
-    return value === undefined ? [] : [setField(text, fields, kind, label(kind), value, place)];
+    if (value === undefined) return [];
+    if (value === "") {
+      const field = findFieldOfKind(fields, kind);
+      return field?.range ? [removeField(text, trimRange(text, field.range))] : [];
+    }
+    return [setField(text, fields, kind, label(kind), value, place)];
   });
 }
 
@@ -305,27 +330,38 @@ export function parsePreamble(text: string, region: Span): Preamble {
   return { description, fields };
 }
 
-/** Ediciones de la descripción y de `Detalles` de «Tarea en progreso». `taskEnd`: fin de la línea de la tarea. */
+/**
+ * Ediciones de la descripción, `Etiquetas` y `Detalles` de «Tarea en progreso» (un campo que falta se
+ * agrega tras los que ya hay; `Etiquetas` con valor vacío se quita). `taskEnd`: fin de la línea de la tarea.
+ * @param label etiqueta de un campo que hay que agregar
+ * @param text texto LF del archivo (para quitar un campo sin dejar una línea en blanco)
+ */
 export function preambleEdits(
   preamble: Preamble,
   taskEnd: number,
-  values: { description?: string; details?: string },
-  detailsLabel: () => string,
+  values: { description?: string; labels?: string; details?: string },
+  label: (kind: "labels" | "details") => string,
+  text: string,
 ): Edit[] {
   const edits: Edit[] = [];
   const { description, fields } = preamble;
   if (values.description !== undefined) {
     edits.push(description ? replaceRange(description, values.description) : insertAt(taskEnd, `\n\n${values.description}`));
   }
-  if (values.details !== undefined) {
-    const existing = fields.find(({ label }) => isFieldKind(label, "details"));
+  // Los campos que faltan se agregan en fila: el primero tras el último campo (o tras la descripción) y los demás tras él.
+  let appended = false;
+  for (const kind of ["labels", "details"] as const) {
+    const value = values[kind];
+    if (value === undefined) continue;
+    const existing = fields.find((field) => isFieldKind(field.label, kind));
     if (existing) {
-      edits.push(replaceRange(existing.span, renderField(existing.label, values.details)));
-    } else {
-      const rendered = renderField(detailsLabel(), values.details);
+      edits.push(value === "" ? removeField(text, existing.span) : replaceRange(existing.span, renderField(existing.label, value)));
+    } else if (value !== "") {
+      const rendered = renderField(label(kind), value);
       const last = fields[fields.length - 1];
-      if (last) edits.push(insertAt(last.span.end, `\n${rendered}`));
+      if (last || appended) edits.push(insertAt(last?.span.end ?? description?.end ?? taskEnd, `\n${rendered}`));
       else edits.push(insertAt(description?.end ?? taskEnd, `\n\n${rendered}`));
+      appended = true;
     }
   }
   return edits;

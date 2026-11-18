@@ -1,5 +1,5 @@
 // `edit <N | título>`: modifica el contenido (título, descripción, decisiones, bloqueo, disparador,
-// detalles y, en handoff.md, «Qué falta», «Decisiones a medio camino» y «Próximo paso concreto») de
+// etiquetas, detalles y, en handoff.md, «Qué falta», «Decisiones a medio camino» y «Próximo paso concreto») de
 // una tarea existente. Nunca cambia su estado ni su lugar: una libre sigue libre, una bloqueada sigue
 // bloqueada (el tag de `Bloqueos` decide el estado, ver `resolveBlocker`), una en curso o pausada
 // sigue donde está, y no se mueven bloques entre secciones ni archivos. Solo se cambian los campos
@@ -22,6 +22,7 @@ import { BLOCKING_TAGS } from "../write/blocking.ts";
 import { singleLine, textFlag } from "../write/flags.ts";
 import { findPart, invalidPlanLineMessages, invalidPlanLines, structureProblemMessage, structureProblems } from "../write/handoff.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
+import { formatLabels, parseLabels } from "../write/labels.ts";
 import { detectLanguage, STRINGS, type FieldKind } from "../write/language.ts";
 import { normalizeText, renderField } from "../write/render.ts";
 import { backlogTasks, headerLabels, labelResolver } from "../write/samples.ts";
@@ -43,7 +44,9 @@ import { classifyBlocker } from "./add.ts";
 
 const TEXT_FLAGS = ["title", "description", "decisions", "blocker", "trigger", "details", "missing", "next"] as const;
 type TextFlag = (typeof TEXT_FLAGS)[number];
-type Given = Partial<Record<TextFlag, string>>;
+/** `labels` va aparte de los de texto: ya llega normalizado y su valor vacío quita el campo. */
+type Given = Partial<Record<TextFlag | "labels", string>>;
+const CHANGEABLE = [...TEXT_FLAGS, "labels"] as const;
 
 const PLACE_LABEL: Record<Place | TeamPlace, string> = {
   "in-progress": "en curso (handoff)",
@@ -75,7 +78,7 @@ export const edit: Command = {
   name: "edit",
   summary: "Modifica el contenido de una tarea sin cambiar su estado; escribe con --apply",
   usage:
-    "edit <N | título de una tarea del team-backlog> [--title <texto>] [--description <texto>] [--decisions <texto>] [--blocker <texto>] [--trigger <texto>] [--details <texto>] [--missing <texto>] [--next <texto>] [--json] [--apply]",
+    "edit <N | título de una tarea del team-backlog> [--title <texto>] [--description <texto>] [--decisions <texto>] [--blocker <texto>] [--trigger <texto>] [--labels <texto>] [--details <texto>] [--missing <texto>] [--next <texto>] [--json] [--apply]",
   writes: true,
   flags: {
     title: textFlagDef("Nuevo título (una línea). Reemplaza solo el texto: conserva el número y el nivel del header."),
@@ -85,6 +88,9 @@ export const edit: Command = {
       "Nuevo valor de Bloqueos sin cambiar el estado: en una libre no puede bloquearla (usa `block`); en una bloqueada, con tag `[dependencia]`/`[postergada]` (`[dependency]`/`[postponed]` en inglés) se respeta y sin tag solo cambia el motivo. El tag se guarda tal cual se escribe: usa el del idioma de la documentación. No aplica en handoff.md.",
     ),
     trigger: textFlagDef("Nuevo Disparador. No aplica en el team-backlog.md ni en handoff.md."),
+    labels: textFlagDef(
+      "Nuevas etiquetas (campo Etiquetas / Tags): separadas por espacios o comas, con un `#` inicial opcional (se quita), solo letras ASCII y números. Reemplaza todas las que tenga; con valor vacío (`--labels \"\"`) quita el campo. Se guardan separadas por un espacio y sin `#`. Vale en cualquier estado, también en el team-backlog.md.",
+    ),
     details: textFlagDef("Nuevo contexto extendido (Detalles); si la tarea no tiene el campo, se agrega."),
     missing: textFlagDef("Nuevo texto de «Qué falta». Solo en una tarea en curso o pausada."),
     next: textFlagDef("Nuevo texto de «Próximo paso concreto». Solo en una tarea en curso o pausada."),
@@ -102,9 +108,11 @@ export const edit: Command = {
       if (!value) throw new UsageError(`--${name} está vacío: edit no borra campos; pasa el texto nuevo.`);
       given[name] = name === "title" ? singleLine("title", value) : value;
     }
-    const changed = TEXT_FLAGS.filter((name) => given[name] !== undefined);
+    // `--labels ""` (o solo separadores) quita el campo: no pasa por el rechazo de valores vacíos.
+    if (typeof flags.labels === "string") given.labels = formatLabels(parseLabels("labels", flags.labels));
+    const changed = CHANGEABLE.filter((name) => given[name] !== undefined);
     if (!changed.length) {
-      throw new UsageError(`Indica qué cambiar: ${TEXT_FLAGS.map((name) => `--${name}`).join(", ")}.`);
+      throw new UsageError(`Indica qué cambiar: ${CHANGEABLE.map((name) => `--${name}`).join(", ")}.`);
     }
 
     const target = parseTarget(ctx.args[0]);
@@ -174,6 +182,8 @@ function backlogValues(
     rejectLeadingTag(name, value);
     values[name] = value;
   }
+  // Las etiquetas ya vienen validadas (solo letras y números): no pueden leerse como tag de bloqueo.
+  if (given.labels !== undefined) values.labels = given.labels;
   if (given.blocker !== undefined) {
     const blocking = classifyBlocker(given.blocker).blocked;
     if (place === "grouped" && (blocking || WHERE_BLOCKER(task))) {
@@ -247,15 +257,16 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
       if (value !== undefined) rejectStructuralLines(name, value);
     }
 
-    if (given.description !== undefined || given.details !== undefined) {
+    if (given.description !== undefined || given.labels !== undefined || given.details !== undefined) {
       const region = { start: task.range.end, end: subsections[0]?.range?.start ?? section.bodyRange.end };
       const preamble = parsePreamble(text, region);
       edits.push(
         ...preambleEdits(
           preamble,
           task.range.end,
-          { description: given.description && normalizeText(given.description), details: given.details },
-          () => names.label("details"),
+          { description: given.description && normalizeText(given.description), labels: given.labels, details: given.details },
+          names.label,
+          text,
         ),
       );
     }
@@ -283,6 +294,7 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
 
     const values: FieldValues = {};
     if (given.description !== undefined) values.description = given.description;
+    if (given.labels !== undefined) values.labels = given.labels;
     if (given.details !== undefined) values.details = given.details;
     edits.push(...fieldEdits(text, task.fields, values, names.label, pausedPlacement(text, headerEnd, task.fields)));
     for (const part of ["missing", "decisions", "next"] as const) {

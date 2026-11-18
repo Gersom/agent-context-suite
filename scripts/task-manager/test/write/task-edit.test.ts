@@ -23,7 +23,9 @@ import {
 import { BACKLOG_ONE, BACKLOG_RICH, HANDOFF_CURRENT, TEAM_TWO } from "../fixtures.ts";
 
 const apply = (text: string, edits: Edit[]) => applyEdits(text, normalizeEol(text), edits);
-const label = (kind: string) => ({ details: "Detalles", description: "Descripción" })[kind] ?? kind;
+const label = (kind: string) => ({ details: "Detalles", description: "Descripción", labels: "Etiquetas" })[kind] ?? kind;
+/** Cabecera mínima de un backlog.md para las pruebas de campos. */
+const BACKLOG_HEAD = "# Backlog\n\n<!-- agent-context-skill:section=free -->\n## Tareas libres\n\n";
 
 describe("titleEdit", () => {
   test("backlog: cambia solo el texto del título y conserva nivel, palabra y número", () => {
@@ -222,7 +224,50 @@ describe("parsePreamble / preambleEdits", () => {
   test("agrega descripción y Detalles donde corresponde", () => {
     const text = "<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nTarea 3 — T\n\n### Plan\n\n- [ ] x\n";
     const { task, region: r } = region(text);
-    const edits = preambleEdits(parsePreamble(text, r), task.range!.end, { description: "Desc", details: "Det" }, () => "Detalles");
+    const edits = preambleEdits(parsePreamble(text, r), task.range!.end, { description: "Desc", details: "Det" }, label, text);
     expect(apply(text, edits)).toContain("Tarea 3 — T\n\nDesc\n\n- **Detalles:** Det\n\n### Plan");
+  });
+
+  test("agrega Etiquetas antes de Detalles; sin descripción ni campos, en fila", () => {
+    const text = "<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nTarea 3 — T\n\n### Plan\n\n- [ ] x\n";
+    const { task, region: r } = region(text);
+    const edits = preambleEdits(parsePreamble(text, r), task.range!.end, { labels: "a b", details: "Det" }, label, text);
+    expect(apply(text, edits)).toContain("Tarea 3 — T\n\n- **Etiquetas:** a b\n- **Detalles:** Det\n\n### Plan");
+  });
+
+  test("Etiquetas: reemplaza el campo existente (con su etiqueta) o lo quita sin dejar líneas en blanco dobles", () => {
+    const text = "<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nTarea 3 — T\n\nUno.\n\n- **Tags:** x y\n\n### Plan\n\n- [ ] x\n";
+    const { task, region: r } = region(text);
+    const pre = parsePreamble(text, r);
+    expect(apply(text, preambleEdits(pre, task.range!.end, { labels: "z" }, label, text))).toContain("Uno.\n\n- **Tags:** z\n\n### Plan");
+    expect(apply(text, preambleEdits(pre, task.range!.end, { labels: "" }, label, text))).toBe(text.replace("- **Tags:** x y\n\n", ""));
+    // Quitar lo que no está no hace nada.
+    const bare = "<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nTarea 3 — T\n\n### Plan\n\n- [ ] x\n";
+    const rb = region(bare);
+    expect(preambleEdits(parsePreamble(bare, rb.region), rb.task.range!.end, { labels: "" }, label, bare)).toEqual([]);
+  });
+});
+
+describe("removeField / fieldEdits con valor vacío", () => {
+  const edits = (text: string, number: number, values: Parameters<typeof fieldEdits>[2]) => {
+    const task = parseBacklog(text).free.tasks.find((candidate) => candidate.number === number)!;
+    return fieldEdits(text, task.fields, values, label, backlogPlacement(text, trimRange(text, task.range!), task.fields));
+  };
+  const TEXT = `${BACKLOG_HEAD}### Tarea 1 — T\n\n- **Descripción:** d\n- **Etiquetas:** a b\n- **Agregada:** hoy.\n\n### Tarea 2 — U\n\n- **Descripción:** d\n- **Etiquetas:** c\n`;
+
+  test("quita la línea del campo y su salto de línea; si es lo último del texto, el salto anterior", () => {
+    expect(apply(TEXT, edits(TEXT, 1, { labels: "" }))).toBe(TEXT.replace("- **Etiquetas:** a b\n", ""));
+    expect(apply(TEXT, edits(TEXT, 2, { labels: "" }))).toBe(TEXT.replace("\n- **Etiquetas:** c\n", "\n"));
+  });
+
+  test("un campo de varias líneas se quita entero; sin el campo no hay edición", () => {
+    const text = `${BACKLOG_HEAD}### Tarea 1 — T\n\n- **Descripción:** d\n- **Etiquetas:** a\n  b\n- **Agregada:** hoy.\n\n### Tarea 2 — U\n\n- **Descripción:** d\n`;
+    expect(apply(text, edits(text, 1, { labels: "" }))).toBe(text.replace("- **Etiquetas:** a\n  b\n", ""));
+    expect(edits(text, 2, { labels: "" })).toEqual([]);
+  });
+
+  test("con valor, Etiquetas va antes de Detalles y de Agregada", () => {
+    const text = `${BACKLOG_HEAD}### Tarea 1 — T\n\n- **Descripción:** d\n- **Agregada:** hoy.\n`;
+    expect(apply(text, edits(text, 1, { details: "x", labels: "a b" }))).toContain("- **Descripción:** d\n- **Etiquetas:** a b\n- **Detalles:** x\n- **Agregada:** hoy.");
   });
 });

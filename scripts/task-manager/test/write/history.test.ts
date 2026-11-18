@@ -40,6 +40,21 @@ describe("renderHistoryEntry", () => {
     ).toBe("## 2026-10-08 — ❌ Task 3 — X\n\n- **Origen:** team-backlog\n- No hace falta.");
   });
 
+  test("las `Etiquetas` de la tarea van tras el `Origen`, tal cual (con la etiqueta de su idioma)", () => {
+    expect(
+      renderHistoryEntry({ date: "2026-10-08", outcome: "done", label: "Tarea", number: 4, title: "X", text: "Hecho.", origin: "- **Origen:** team-backlog", labels: "- **Etiquetas:** empresa1 trabajo  " }),
+    ).toBe("## 2026-10-08 — ✅ Tarea 4 — X\n\n- **Origen:** team-backlog\n- **Etiquetas:** empresa1 trabajo\n- Hecho.");
+    expect(renderHistoryEntry({ date: "2026-10-08", outcome: "done", label: "Task", number: 4, title: "X", text: "Done.", labels: "- **Tags:** home" })).toBe(
+      "## 2026-10-08 — ✅ Task 4 — X\n\n- **Tags:** home\n- Done.",
+    );
+  });
+
+  test("el parser de history.md lee bien una entrada con `Etiquetas` y sigue sin tomarla por entrada", () => {
+    const entry = renderHistoryEntry({ date: "2026-10-08", outcome: "done", label: "Tarea", number: 4, title: "Con etiquetas", text: "Hecho.", labels: "- **Etiquetas:** a b" });
+    const parsed = parseHistory(`# History\n\n---\n\n${entry}\n\n${ENTRY}\n`);
+    expect(parsed.entries.map((e) => [e.number, e.title, e.status])).toEqual([[4, "Con etiquetas", "done"], [12, "Algo", "done"]]);
+  });
+
   test("el parser de history.md la reconoce con su número, título y resultado", () => {
     const [entry] = parseHistory(`${renderHistoryEntry({ date: "2026-10-08", outcome: "discarded", label: "Tarea", number: 5, title: "Usar YAML", text: "x" })}\n`).entries;
     expect(entry).toMatchObject({ date: "2026-10-08", status: "discarded", number: 5, label: "Tarea", title: "Usar YAML" });

@@ -1,7 +1,8 @@
 // `close`: cierra una tarea, hecha (`--done --summary`) o descartada (`--discarded --reason`), con las
 // Reglas 6 a 9 de rules.md en una sola operación sobre todos los archivos (o ninguno):
 // - `history.md`: la entrada `## <fecha> — ✅|❌ Tarea N — título` con el resumen o el motivo,
-//   arriba de las demás. Si la tarea traía `Origen: team-backlog`, la entrada lo conserva.
+//   arriba de las demás. Si la tarea traía `Origen: team-backlog` o `Etiquetas`, la entrada los
+//   conserva (las líneas `- **Origen:** ...` y `- **Etiquetas:** ...` tal cual, antes de las viñetas).
 // - `handoff.md`: la tarea en curso (o, con `close <N>`, una pausada) sale y «Tarea en progreso»
 //   queda en «Sin tarea en curso».
 //   Con `close <N> --discarded` sobre una tarea que ni se empezó (está en «libres» o «bloqueadas» de
@@ -19,7 +20,7 @@
 // progreso» es un error, como en `pause`. Sin `--apply` solo muestra el diff.
 
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import type { ParsedBacklog, ParsedHandoff } from "../../../_shared/types.ts";
+import type { Field, ParsedBacklog, ParsedHandoff } from "../../../_shared/types.ts";
 import { CliError, UsageError } from "../cli/errors.ts";
 import type { Command, FlagValue } from "../cli/types.ts";
 import { type Edit, replaceRange } from "../edit/edits.ts";
@@ -34,10 +35,10 @@ import { requiredFlag, singleLine, textFlag } from "../write/flags.ts";
 import { inspectCurrent } from "../write/handoff.ts";
 import { insertHistoryEntry, type Outcome, renderHistoryEntry } from "../write/history.ts";
 import { emitWriteJson, JSON_FLAG } from "../write/json.ts";
-import { detectLanguage, STRINGS, type Strings } from "../write/language.ts";
+import { detectLanguage, type FieldKind, findFieldOfKind, STRINGS, type Strings } from "../write/language.ts";
 import { renderBacklogTask } from "../write/new-task.ts";
 import { reserveNextNumbers } from "../write/numbering.ts";
-import { closingStepRe, formatLocalDate } from "../write/render.ts";
+import { closingStepRe, fieldBody, formatLocalDate } from "../write/render.ts";
 import { headerLabels } from "../write/samples.ts";
 import { isCommitHash } from "../write/suffix.ts";
 import { insertIntoFree, planUnblock, reviewBlocked } from "../write/unblocking.ts";
@@ -49,6 +50,7 @@ const GROUPING_LIMIT = 15;
 
 const ORIGIN_LINE_RE = /^[-*]\s+\*\*(?:origen|origin)(?::\*\*|\*\*:)/i;
 const ORIGIN_LABEL_RE = /^(origen|origin)$/i;
+const LABELS_LINE_RE = /^[-*]\s+\*\*(?:etiquetas|tags)(?::\*\*|\*\*:)/i;
 const STEP_RE = /^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/;
 /** Una línea del resumen que ya lista commits (`Commit: ...`, `- Commits: ...`, `**Commits:** ...`, `Commits (skill): ...`). */
 const COMMITS_LINE_RE = /^\s*(?:[-*]\s+)?(?:\*\*commits?(?:\s*\([^)]*\))?(?::\*\*|\*\*:)|commits?(?:\s*\([^)]*\))?:)/i;
@@ -65,6 +67,8 @@ interface Closing {
   title: string;
   /** Su línea `- **Origen:** ...` tal como está escrita, si la traía. */
   origin: string | null;
+  /** Su línea `- **Etiquetas:** ...` tal como está escrita, si la traía. */
+  labels: string | null;
   /** Textos de los pasos del plan que quedaban sin marcar (sin el de «Documentar cierre de tarea»). */
   pendingSteps: string[];
   /** Cómo sale del handoff, dado el texto de «Sin tarea en curso» y el de una sección vacía; `null` si no vive en handoff.md (tarea sin empezar). */
@@ -238,7 +242,7 @@ export const close: Command = {
     }
 
     const handoffEdit = closing.remove ? closing.remove(S.noTask, S.emptySection) : null;
-    const entry = renderHistoryEntry({ date, outcome, label: closing.label, number, title: closing.title, text: entryText, origin: closing.origin });
+    const entry = renderHistoryEntry({ date, outcome, label: closing.label, number, title: closing.title, text: entryText, origin: closing.origin, labels: closing.labels });
     const result = ctx.commit(
       [
         ...(handoffEdit ? [{ doc: handoff, edits: [handoffEdit] }] : []),
@@ -385,10 +389,18 @@ function notDoneable(number: number, source: TaskLocation): string {
   return `La Tarea ${number} está en «${section}» de backlog.md y nunca se empezó: una tarea sin empezar no se puede dar por hecha; empiézala con \`start ${number}\` y ciérrala después. Para descartarla sin empezarla: \`close ${number} --discarded --reason <texto>\`. No se escribió nada.`;
 }
 
+/** La línea `- **Campo:** valor` del campo de ese tipo tal como está escrita, o `null` si falta, es un placeholder o está vacío. */
+function fieldLine(text: string, fields: Field[], kind: FieldKind): string | null {
+  const field = findFieldOfKind(fields, kind);
+  if (!field || field.isPlaceholder) return null;
+  const line = (field.range ? text.slice(field.range.start, field.range.end) : `- **${field.label}:** ${field.value}`).replace(/\s+$/, "");
+  return fieldBody(text, field) ? line : null;
+}
+
 /** Una tarea sin empezar de «libres» o «bloqueadas»: no toca handoff.md ni trae `Origen` (el campo es de la tarea en curso). */
 function closingBacklog(backlog: Doc<ParsedBacklog>, source: TaskLocation): Closing {
   const task = [...backlog.parsed.free.tasks, ...backlog.parsed.blocked].find((candidate) => candidate.number === source.number)!;
-  return { kind: "backlog", label: task.label, number: source.number, title: source.title, origin: null, pendingSteps: [], remove: null };
+  return { kind: "backlog", label: task.label, number: source.number, title: source.title, origin: null, labels: fieldLine(backlog.text, task.fields, "labels"), pendingSteps: [], remove: null };
 }
 
 /** La tarea en curso, validada (`inspectCurrent` se niega ante contenido que no reconoce). */
@@ -404,6 +416,7 @@ function closingCurrent(handoff: Doc<ParsedHandoff>): Closing {
     number: current.number,
     title: current.title,
     origin: current.extras.find((line) => ORIGIN_LINE_RE.test(line)) ?? null,
+    labels: current.extras.find((line) => LABELS_LINE_RE.test(line)) ?? null,
     pendingSteps: pendingOf(steps),
     remove: (noTask) => replaceRange(current.replace, noTask),
   };
@@ -422,6 +435,7 @@ function closingPaused(handoff: Doc<ParsedHandoff>, number: number): Closing {
     number,
     title: task.title,
     origin: origin ? (origin.range ? text.slice(origin.range.start, origin.range.end) : `- **${origin.label}:** ${origin.value}`).replace(/\s+$/, "") : null,
+    labels: fieldLine(text, task.fields, "labels"),
     pendingSteps: pendingOf(task.steps),
     remove: (_noTask, emptySection) => removeBlock(text, trimRange(text, task.range!), emptySection, handoff.parsed.paused.length > 1),
   };

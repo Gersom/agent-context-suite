@@ -23,6 +23,8 @@ export interface HistoryEntryInput {
   text: string;
   /** La línea `- **Origen:** team-backlog` de la tarea, si la traía: viaja a la entrada tal cual. */
   origin?: string | null;
+  /** La línea `- **Etiquetas:** a b` de la tarea, si la traía: viaja a la entrada tal cual, tras `Origen`. */
+  labels?: string | null;
 }
 
 /**
@@ -41,7 +43,8 @@ export function bulletize(text: string): string {
 /** La entrada completa (sin salto de línea final): header, línea en blanco y viñetas. */
 export function renderHistoryEntry(input: HistoryEntryInput): string {
   const header = `## ${input.date} — ${OUTCOME_MARK[input.outcome]} ${input.label} ${input.number} — ${input.title}`;
-  const bullets = [...(input.origin ? [input.origin.replace(/\s+$/, "")] : []), bulletize(input.text)];
+  const carried = [input.origin, input.labels].flatMap((line) => (line ? [line.replace(/\s+$/, "")] : []));
+  const bullets = [...carried, bulletize(input.text)];
   return `${header}\n\n${bullets.join("\n")}`;
 }
 

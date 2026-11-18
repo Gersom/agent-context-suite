@@ -58,6 +58,22 @@ describe("idioma", () => {
     expect(isFieldKind("Disparador", "details")).toBe(false);
   });
 
+  test("reconoce el campo de etiquetas en los dos idiomas, lo usa para detectar el idioma y lo escribe con el del documento", () => {
+    expect(isFieldKind("Etiquetas", "labels")).toBe(true);
+    expect(isFieldKind("etiquetas", "labels")).toBe(true);
+    expect(isFieldKind("Tags", "labels")).toBe(true);
+    expect(isFieldKind("Tag", "labels")).toBe(false);
+    expect(isFieldKind("Etiquetas", "details")).toBe(false);
+    expect(detectLanguage(["Etiquetas"])).toEqual({ lang: "es", notice: null });
+    expect(detectLanguage(["Tags"])).toEqual({ lang: "en", notice: null });
+    expect(STRINGS.es.fields.labels).toBe("Etiquetas");
+    expect(STRINGS.en.fields.labels).toBe("Tags");
+    const tasks = parseBacklog("## L\n\n### Task 1 — a\n\n- **Description:** x\n- **Tags:** a b\n").free.tasks;
+    expect(findFieldOfKind(tasks[0].fields, "labels")?.label).toBe("Tags");
+    expect(labelResolver([], STRINGS.es)("labels")).toBe("Etiquetas");
+    expect(labelResolver([], STRINGS.en)("labels")).toBe("Tags");
+  });
+
   test("las etiquetas salen de una tarea del archivo; si no hay, de la tabla del idioma", () => {
     const tasks = parseBacklog("## L\n\n### Task 1 — a\n\n- **Description:** x\n- **Blockers:** None.\n").free.tasks;
     const label = labelResolver(

@@ -79,6 +79,36 @@ describe("index.ts", () => {
     expect(other.stderr).toContain("«gersom» no es la tuya");
   });
 
+  test("--labels: add y edit escriben Etiquetas normalizadas; una inválida sale con código 2", async () => {
+    if (!hasGit) return;
+    const backlog = join(project.agents, "ana", "backlog.md");
+    const added = await runCli(["add", "--title", "Con etiquetas", "--description", "Desde el proceso", "--labels", "#Empresa1, trabajo empresa1", "--apply"]);
+    expect(added.code).toBe(0);
+    expect(readFileSync(backlog, "utf8")).toContain("- **Etiquetas:** Empresa1 trabajo");
+
+    const edited = await runCli(["edit", "21", "--labels", "otra", "--apply"]);
+    expect(edited.code).toBe(0);
+    expect(readFileSync(backlog, "utf8")).toContain("- **Etiquetas:** otra");
+    expect((await runCli(["edit", "21", "--labels", "", "--apply"])).code).toBe(0);
+    expect(readFileSync(backlog, "utf8")).not.toContain("Etiquetas");
+
+    const before = readFileSync(backlog, "utf8");
+    const bad = await runCli(["add", "--title", "X", "--description", "Y", "--labels", "café", "--apply"]);
+    expect(bad.code).toBe(2);
+    expect(bad.stdout).toBe("");
+    expect(bad.stderr).toContain("«café»");
+    expect(readFileSync(backlog, "utf8")).toBe(before);
+  });
+
+  test("la ayuda de add y de edit documenta --labels", async () => {
+    for (const command of ["add", "edit"]) {
+      const { stdout, code } = await runCli([command, "--help"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("--labels");
+      expect(stdout).toContain("Etiquetas");
+    }
+  });
+
   test("la ayuda de un comando de escritura avisa de --apply", async () => {
     const { stdout, code } = await runCli(["start", "--help"]);
     expect(code).toBe(0);
