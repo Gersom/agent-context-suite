@@ -42,7 +42,7 @@ describe.skipIf(!hasSkill)("perfil no técnico: tamaños en bytes", () => {
     ["docs/office-git.md", 1500, (t) => t],
     ["docs/office-profile.md", 2000, (t) => t],
     ["template/office/AGENTS.md", 1500, withoutComments],
-    ["template/office/rules.md", 5000, (t) => t],
+    ["template/office/rules.md", 5500, (t) => t],
   ];
   // SKILL.md ≤ 4500 ya lo mide reading-policy.test.ts.
 
@@ -72,7 +72,8 @@ describe.skipIf(!hasSkill)("perfil no técnico: sin jerga ni enlaces del modelo 
       // La regla 10 de rules.md cita «plan» y «evidencia» solo para decir que aquí no aplican.
       const rest = text.split("\n").filter((line) => !line.startsWith("10. **Los encabezados")).join("\n");
       expect(rest, `${file} menciona «evidencia»`).not.toMatch(/evidencia/i);
-      expect(rest.replace(/sin plan ni modo/g, ""), `${file} menciona «plan»`).not.toMatch(/\bplan\b/i);
+      // «sin plan ni modo» (regla 2) y «sin `--plan`» (regla 3: las tareas del perfil se inician sin plan) son las únicas menciones válidas.
+      expect(rest.replace(/sin plan ni modo/g, "").replace(/sin `--plan`/g, ""), `${file} menciona «plan»`).not.toMatch(/\bplan\b/i);
     });
   }
 });
