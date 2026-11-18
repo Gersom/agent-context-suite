@@ -7,8 +7,8 @@ import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { isPlaceholder } from "../../../_shared/parse/markdown.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
 import { type ExecutionMode, type HandoffPart, isExecutionMode, modeLines, partOf } from "../../../_shared/parse/plan-mode.ts";
-import { classifyPreamble, DESCRIPTION_LABEL_RE, NONE_RE } from "../../../_shared/parse/text-fields.ts";
-import type { BlockedTask, CurrentTask, FreeGroup, Model, PausedTask, Plan } from "../shared/types.ts";
+import { classifyPreamble, DESCRIPTION_LABEL_RE, matchFieldLine, NONE_RE, type PreambleLine } from "../../../_shared/parse/text-fields.ts";
+import type { BlockedTask, CurrentTask, FreeGroup, FreeTask, Model, PausedTask, Plan } from "../shared/types.ts";
 import type {
   CurrentTaskLine,
   Field,
@@ -26,6 +26,7 @@ import type {
   Task,
 } from "../../../_shared/types.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
+import { fieldLabels } from "../../../_shared/tasks/labels.ts";
 import { findTaskRefs, type TaskIndex } from "../../../_shared/tasks/task-refs.ts";
 
 /** Cuántas entradas de history.md se muestran en "TAREAS COMPLETADAS". */
@@ -81,9 +82,12 @@ export function buildModel({
   const freeGroups: FreeGroup[] = (backlog?.free.groups ?? []).map((ref) => ({
     ...ref,
     // El detalle de cada tarea vive en "Tareas agrupadas"; se enlaza por número.
-    tasks: ref.taskNumbers.map((n) => findGroupedTask(grouped, n) ?? { number: n, label: null, title: null }),
+    tasks: ref.taskNumbers.map((n) => {
+      const task = findGroupedTask(grouped, n);
+      return task ? withLabels(task) : { number: n, label: null, title: null };
+    }),
   }));
-  const freeTasks = backlog?.free.tasks ?? [];
+  const freeTasks: FreeTask[] = (backlog?.free.tasks ?? []).map(withLabels);
   const paused: PausedTask[] = (handoff?.paused ?? []).map((task) => buildPaused(task));
   const historyEntries = history?.entries ?? [];
 
@@ -91,7 +95,7 @@ export function buildModel({
   const index = buildTaskIndex({ current, paused, freeTasks, blockedTasks, grouped, historyEntries });
   const blocked: BlockedTask[] = blockedTasks.map((task) => {
     const block = blockInfo(task);
-    return { ...task, block, dependsOn: findTaskRefs(block.reason, task.number, index) };
+    return { ...withLabels(task), block, dependsOn: findTaskRefs(block.reason, task.number, index) };
   });
   for (const task of blocked) {
     if (!task.block.tag) {
@@ -126,23 +130,40 @@ export function buildModel({
  */
 function buildCurrent(task: CurrentTaskLine, { planSteps, subsections }: InProgress, handoffText: string, section: Section | undefined): CurrentTask {
   const decisions = subsections.find((s) => partOf(s.title) === "decisions");
+  const preamble = preambleLines(task, subsections, handoffText, section);
   return {
     ...task,
+    labels: currentLabels(preamble),
     // Solo cuentan los checkboxes de la subsección del plan: los de otras partes no son pasos.
     plan: buildPlan(planSteps),
     mode: executionMode(handoffText, subsections),
-    description: currentDescription(task, subsections, handoffText, section),
+    description: currentDescription(preamble),
     decisions: decisionsText(decisions?.body),
   };
 }
 
-/** Texto entre la línea de la tarea y la primera subsección (o el fin de la sección), sin comentarios ni campos `- **Campo:** valor`. */
-function currentDescription(task: CurrentTaskLine, subsections: Subsection[], handoffText: string, section: Section | undefined): string | null {
+/** Líneas entre la línea de la tarea y la primera subsección (o el fin de la sección), sin comentarios, clasificadas (ver `classifyPreamble`). */
+function preambleLines(task: CurrentTaskLine, subsections: Subsection[], handoffText: string, section: Section | undefined): PreambleLine[] {
   const start = task.range?.end;
   const end = subsections[0]?.range?.start ?? section?.bodyRange.end;
-  if (start === undefined || end === undefined || end <= start) return null;
+  if (start === undefined || end === undefined || end <= start) return [];
+  return classifyPreamble(handoffText.slice(start, end), { looseOrigin: true });
+}
+
+/** Etiquetas del campo `Etiquetas`/`Tags` de la tarea en progreso. */
+function currentLabels(preamble: PreambleLine[]): string[] {
+  return fieldLabels(preamble.flatMap(({ kind, text }) => (kind === "field" ? (matchFieldLine(text) ?? []) : [])));
+}
+
+/** La tarea con sus etiquetas (campo `Etiquetas`/`Tags`). */
+function withLabels<T extends { fields: Field[] }>(task: T): T & { labels: string[] } {
+  return { ...task, labels: fieldLabels(task.fields) };
+}
+
+/** Texto entre la línea de la tarea y la primera subsección (o el fin de la sección), sin comentarios ni campos `- **Campo:** valor`. */
+function currentDescription(preamble: PreambleLine[]): string | null {
   // Los campos, su continuación y el `Origen:` suelto no son descripción; el resto se aplana a líneas sin sangría.
-  const lines = classifyPreamble(handoffText.slice(start, end), { looseOrigin: true })
+  const lines = preamble
     .filter(({ kind, text }) => kind === "text" && text.trim())
     .map(({ text }) => text.trim());
   return cleanText(lines.join("\n"));
@@ -173,6 +194,7 @@ function buildPaused(task: ParsedPausedTask): PausedTask {
   const mode = pausedField(fields, "mode");
   return {
     ...task,
+    labels: fieldLabels(fields),
     plan: buildPlan(task.steps),
     mode: mode != null && isExecutionMode(mode) ? mode : null,
     description: cleanText(fields.filter((f) => DESCRIPTION_LABEL_RE.test(f.label)).at(-1)?.value),

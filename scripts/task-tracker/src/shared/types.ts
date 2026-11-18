@@ -22,10 +22,15 @@ export interface MissingTaskRef {
   title: null;
 }
 
-/** Grupo de "Tareas libres" con sus tareas enlazadas desde "Tareas agrupadas". */
-export type FreeGroup = Omit<Group, "tasks"> & { tasks: Array<Task | MissingTaskRef> };
+/** Tarea de backlog.md con sus etiquetas (`Etiquetas`/`Tags`, sin `#`; `[]` si no trae). */
+export interface FreeTask extends Task {
+  labels: string[];
+}
 
-export interface BlockedTask extends Task {
+/** Grupo de "Tareas libres" con sus tareas enlazadas desde "Tareas agrupadas". */
+export type FreeGroup = Omit<Group, "tasks"> & { tasks: Array<FreeTask | MissingTaskRef> };
+
+export interface BlockedTask extends FreeTask {
   block: BlockInfo;
   /** Tareas de las que depende, según lo que menciona el motivo del bloqueo. */
   dependsOn: TaskRef[];
@@ -44,6 +49,8 @@ export interface Plan {
  * tarea en curso, pero sí en las pausadas (ver `PausedTask`).
  */
 interface TaskView {
+  /** Etiquetas del campo `Etiquetas`/`Tags`, sin `#`; `[]` si no trae o el campo está vacío. */
+  labels: string[];
   plan: Plan;
   /** Modo de ejecución del plan; `null` si no hay línea de modo, está vacía o trae texto legado (solo cuentan los cuatro modos). */
   mode: ExecutionMode | null;
@@ -75,7 +82,7 @@ export interface Model {
   completed: HistoryEntry[];
   current: CurrentTask | null;
   paused: PausedTask[];
-  free: { tasks: Task[]; groups: FreeGroup[] };
+  free: { tasks: FreeTask[]; groups: FreeGroup[] };
   blocked: BlockedTask[];
   grouped: Group[];
   counts: { paused: number; free: number; blocked: number };
@@ -193,6 +200,8 @@ export interface TeamRow {
 /** Tarea del `team-backlog.md` lista para pintar (sin número). */
 export interface TeamBacklogTask {
   title: string;
+  /** Etiquetas del campo `Etiquetas`/`Tags`, sin `#`; `[]` si no trae. */
+  labels: string[];
   /** Tag y motivo del bloqueo vigente; `tag: null` si no está bloqueada. */
   block: BlockInfo;
 }

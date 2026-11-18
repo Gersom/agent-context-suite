@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { FIXTURES, requireFixture } from "../../../_shared/test/helpers.ts";
+import { LABELED } from "../labeled-docs.ts";
 
 const INDEX = join(import.meta.dir, "..", "..", "index.ts");
 
@@ -329,5 +330,47 @@ describe("settings.json: compacto, flechas y modo observador recordados", () => 
     expect(stdout).not.toContain("Esperando");
     expect(readFileSync(join(home, "settings.json"), "utf8")).toBe(text);
     expect(readdirSync(home).filter((name) => name.startsWith("settings.json"))).toEqual(["settings.json"]);
+  });
+});
+
+describe("etiquetas de las tareas", () => {
+  const created: string[] = [];
+  afterAll(() => created.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+
+  /** Un proyecto multi-operador temporal (operador `ana`) con una tarea etiquetada `empresa1 trabajo` en cada sección, y su carpeta de config. */
+  function labeledProject(): { root: string; home: string } {
+    const root = mkdtempSync(join(tmpdir(), "board-labels-"));
+    const home = mkdtempSync(join(tmpdir(), "board-labels-home-"));
+    created.push(root, home);
+    const agents = join(root, "docs", "agents");
+    mkdirSync(join(agents, "ana"), { recursive: true });
+    writeFileSync(join(agents, "operators.md"), "# Operadores\n\n<!-- agent-context-skill:section=operators -->\n## Lista\n\n- ana: ana@mail.com\n");
+    writeFileSync(join(agents, "team-backlog.md"), LABELED.es.teamBacklog);
+    writeFileSync(join(agents, "ana", "handoff.md"), LABELED.es.handoff);
+    writeFileSync(join(agents, "ana", "backlog.md"), LABELED.es.backlog);
+    writeFileSync(join(agents, "ana", "history.md"), LABELED.es.history);
+    return { root, home };
+  }
+  const count = (text: string, part: string) => text.split(part).length - 1;
+
+  test("--once: cada sección (sin dueño, libres, bloqueadas, en curso, pausadas y completadas) muestra `#empresa1`", async () => {
+    const { root, home } = labeledProject();
+    const { stdout, stderr, code } = await run([root, "ana", "--once"], undefined, home);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(count(stdout, "#empresa1 #trabajo")).toBe(6);
+    expect(stdout).toContain("• Revisar el copy  #empresa1 #trabajo");
+    expect(stdout).toContain("T-3: Exportar como skill  #empresa1 #trabajo");
+    expect(stdout).toContain("T-5: Rehacer el README [postergada]  #empresa1 #trabajo");
+    expect(stdout).toContain("Etiquetas  #empresa1 #trabajo");
+    expect(stdout).toContain("T-11: Escribir el parser · 2026-10-05  #empresa1 #trabajo");
+  });
+
+  test("--once con compacto guardado: las etiquetas no se ocultan", async () => {
+    const { root, home } = labeledProject();
+    writeFileSync(join(home, "settings.json"), JSON.stringify({ version: 1, board: { compact: true, arrows: false } }));
+    const { stdout, code } = await run([root, "ana", "--once"], undefined, home);
+    expect(code).toBe(0);
+    expect(count(stdout, "#empresa1 #trabajo")).toBe(6);
   });
 });

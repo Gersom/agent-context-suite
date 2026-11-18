@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildModel } from "../../src/model/model.ts";
 import { fixture } from "../../../_shared/test/helpers.ts";
+import { LABELED, labeledModel } from "../labeled-docs.ts";
 
 const load = (name: string) =>
   buildModel({
@@ -334,5 +335,78 @@ describe("buildModel", () => {
     const handoff =
       "<!-- agent-context-skill:section=in-progress -->\n## X\n\n**Tarea:** [Placeholder]\n\n<!-- agent-context-skill:section=paused -->\n## Y\n";
     expect(buildModel({ handoffText: handoff, backlogText: null }).warnings).toEqual(["handoff.md tiene placeholders sin completar."]);
+  });
+});
+
+describe("etiquetas de las tareas", () => {
+  const withoutLabels = (text: string) => text.replace(/^- \*\*(?:Etiquetas|Tags):\*\*.*\n/gm, "");
+
+  test("en español: en curso, pausada, libre, bloqueada, completada y del team-backlog traen `labels` sin `#`", () => {
+    const { model, teamBacklog } = labeledModel("es");
+    expect(model.current?.labels).toEqual(["empresa1", "trabajo"]);
+    expect(model.paused[0].labels).toEqual(["empresa1", "trabajo"]);
+    expect(model.free.tasks[0].labels).toEqual(["empresa1", "trabajo"]);
+    expect(model.blocked[0].labels).toEqual(["empresa1", "trabajo"]);
+    expect(model.completed[0].labels).toEqual(["empresa1", "trabajo"]);
+    expect(teamBacklog.free[0].labels).toEqual(["empresa1", "trabajo"]);
+  });
+
+  test("en inglés: el campo `Tags`", () => {
+    const { model, teamBacklog } = labeledModel("en");
+    expect(model.current?.labels).toEqual(["company1", "work"]);
+    expect(model.paused[0].labels).toEqual(["company1", "work"]);
+    expect(model.free.tasks[0].labels).toEqual(["company1", "work"]);
+    expect(model.blocked[0].labels).toEqual(["company1", "work"]);
+    expect(model.completed[0].labels).toEqual(["company1", "work"]);
+    expect(teamBacklog.free[0].labels).toEqual(["company1", "work"]);
+  });
+
+  test("las etiquetas de la tarea en curso no se cuelan en su descripción", () => {
+    expect(labeledModel("es").model.current?.description).toBe("Descripción breve.");
+  });
+
+  test("sin el campo: `labels` es `[]` en todas", () => {
+    const docs = LABELED.es;
+    const { model, teamBacklog } = labeledModel("es", {
+      handoff: withoutLabels(docs.handoff),
+      backlog: withoutLabels(docs.backlog),
+      history: withoutLabels(docs.history),
+      teamBacklog: withoutLabels(docs.teamBacklog),
+    });
+    const all = [model.current, ...model.paused, ...model.free.tasks, ...model.blocked, ...model.completed, ...teamBacklog.free];
+    expect(all).toHaveLength(6);
+    for (const task of all) expect(task?.labels).toEqual([]);
+  });
+
+  test("campo vacío o placeholder de la plantilla: sin etiquetas; «Ninguna» es una etiqueta", () => {
+    const docs = LABELED.es;
+    const free = (value: string) =>
+      labeledModel("es", { ...docs, backlog: docs.backlog.replace("- **Etiquetas:** empresa1 trabajo", `- **Etiquetas:** ${value}`) }).model.free.tasks[0].labels;
+    expect(free("")).toEqual([]);
+    expect(free("[Placeholder: etiquetas]")).toEqual([]);
+    expect(free("Ninguna")).toEqual(["Ninguna"]);
+  });
+
+  test("las tareas de un grupo libre también traen sus etiquetas", () => {
+    const backlog = [
+      "<!-- agent-context-skill:section=free -->",
+      "## Tareas libres",
+      "",
+      "### Grupo — Docs (Tareas 14)",
+      "",
+      "<!-- agent-context-skill:section=blocked -->",
+      "## Tareas bloqueadas / pospuestas",
+      "",
+      "<!-- agent-context-skill:section=grouped -->",
+      "## Tareas agrupadas",
+      "",
+      "### Grupo — Docs",
+      "",
+      "#### Tarea 14 — Redactar costs.md",
+      "",
+      "- **Etiquetas:** empresa1",
+    ].join("\n");
+    const model = buildModel({ handoffText: fixture("minimal", "handoff.md"), backlogText: backlog });
+    expect(model.free.groups[0].tasks[0]).toMatchObject({ number: 14, labels: ["empresa1"] });
   });
 });

@@ -4,6 +4,7 @@ import type { RenderMeta, TeamBacklogModel, TeamModel, TeamRenderMeta } from "..
 import { visibleLength } from "../../src/ui/format.ts";
 import { render, renderTeam } from "../../src/ui/render.ts";
 import { fixture } from "../../../_shared/test/helpers.ts";
+import { LABELED, labeledModel } from "../labeled-docs.ts";
 
 const meta: RenderMeta = {
   projectName: "demo-app",
@@ -147,10 +148,10 @@ describe("modo compacto de SIN DUEÑO", () => {
   const backlog: TeamBacklogModel = {
     present: true,
     free: [
-      { title: "Revisar el copy del onboarding", block: { tag: null, reason: null } },
-      { title: "Armar el checklist de lanzamiento", block: { tag: null, reason: null } },
+      { title: "Revisar el copy del onboarding", labels: [], block: { tag: null, reason: null } },
+      { title: "Armar el checklist de lanzamiento", labels: [], block: { tag: null, reason: null } },
     ],
-    blocked: [{ title: "Integrar la pasarela", block: { tag: "dependencia", reason: "espera la cuenta" } }],
+    blocked: [{ title: "Integrar la pasarela", labels: [], block: { tag: "dependencia", reason: "espera la cuenta" } }],
     warnings: [],
   };
   const team: TeamModel = {
@@ -174,5 +175,54 @@ describe("modo compacto de SIN DUEÑO", () => {
       { ...teamMeta, compact: true },
     );
     expect(rowsOf(out, "EQUIPO (2)").filter((r) => /^[› ] (ana|gersom)/.test(r))).toHaveLength(2);
+  });
+});
+
+describe("etiquetas en modo compacto", () => {
+  const compactOf = (lang: "es" | "en", extra: Partial<RenderMeta> = {}) => {
+    const { model, teamBacklog } = labeledModel(lang);
+    return render(model, { ...meta, compact: true, teamBacklog, ...extra });
+  };
+
+  test("no se ocultan: libres, bloqueadas, completadas y sin dueño las llevan al final del título", () => {
+    const out = compactOf("es");
+    expect(rowsOf(out, "SIN DUEÑO (1)")).toEqual(["• Revisar el copy  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Exportar como skill  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "BLOQUEADAS (1)")).toEqual(["T-5: Rehacer el README [postergada]  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "TAREAS COMPLETADAS (últimas 1)")).toEqual(["T-11: Escribir el parser · 2026-10-05  #empresa1 #trabajo"]);
+  });
+
+  test("en curso y pausada conservan su fila `Etiquetas`", () => {
+    const out = compactOf("es");
+    expect(rowsOf(out, "EN PROGRESO")[1]).toBe("Etiquetas  #empresa1 #trabajo");
+    expect(rowsOf(out, "PAUSADAS (1)")[1]).toBe("    Etiquetas  #empresa1 #trabajo");
+  });
+
+  test("en inglés (`Tags`)", () => {
+    const out = compactOf("en");
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Export as skill  #company1 #work"]);
+    expect(rowsOf(out, "EN PROGRESO")[1]).toBe("Etiquetas  #company1 #work");
+  });
+
+  test("con «· +N más»: las etiquetas de la tarea que se muestra van antes del contador", () => {
+    const docs = LABELED.es;
+    const extra = "### Tarea 4 — Otra tarea\n\n- **Etiquetas:** empresa2\n\n<!-- agent-context-skill:section=blocked -->";
+    const { model, teamBacklog } = labeledModel("es", { ...docs, backlog: docs.backlog.replace("<!-- agent-context-skill:section=blocked -->", extra) });
+    const out = render(model, { ...meta, compact: true, teamBacklog });
+    expect(rowsOf(out, "LIBRES (2)")).toEqual(["T-4: Otra tarea  #empresa2 · +1 más"]);
+  });
+
+  test("con poco ancho se recorta el título, no las etiquetas ni el contador", () => {
+    const docs = LABELED.es;
+    const extra = "### Tarea 4 — Otra tarea con un título bastante largo\n\n- **Etiquetas:** empresa2\n\n<!-- agent-context-skill:section=blocked -->";
+    const { model, teamBacklog } = labeledModel("es", { ...docs, backlog: docs.backlog.replace("<!-- agent-context-skill:section=blocked -->", extra) });
+    const out = render(model, { ...meta, compact: true, teamBacklog, width: 40 });
+    expect(rowsOf(out, "LIBRES (2)")).toEqual(["T-4: Otra tarea…  #empresa2 · +1 más"]);
+    expect(rowsOf(out, "SIN DUEÑO (1)")).toEqual(["• Revisar el co…  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "BLOQUEADAS (1)")).toEqual(["T-5: Rehacer el…  #empresa1 #trabajo"]);
+  });
+
+  test("sin etiquetas, el modo compacto queda como siempre", () => {
+    expect(rowsOf(render(model, { ...meta, compact: true }), "LIBRES (4)")).toEqual(["T-3: Exportar como skill · +3 más"]);
   });
 });

@@ -2,6 +2,7 @@
 // del archivo (por convención, las más nuevas arriba). No usa anclas: cada entrada es un `## `.
 
 import type { HistoryEntry, ParsedHistory } from "../types.ts";
+import { entryLabels } from "../tasks/labels.ts";
 import { commentStateAfter, isPlaceholder } from "./markdown.ts";
 import { LineIndex } from "./positions.ts";
 
@@ -55,6 +56,8 @@ export function parseHistory(text: string): ParsedHistory {
   for (const { entry, next, line } of pending) {
     const start = index.lineStart(line + 1);
     entry.range = index.range(start, next < h2Lines.length ? index.lineStart(h2Lines[next] + 1) : text.length);
+    // El rango arranca en el header: las etiquetas se leen en lo que le sigue.
+    entry.labels = entryLabels(text.slice(index.lineStart(line + 2), entry.range.end));
   }
 
   return { entries };
@@ -80,5 +83,6 @@ export function parseEntry(header: string): HistoryEntry | null {
     number: task ? Number(task[2]) : null,
     label: task ? task[1] : null,
     title,
+    labels: [],
   };
 }

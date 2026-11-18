@@ -17,8 +17,8 @@ const meta: TeamRenderMeta = {
 
 const teamBacklog: TeamBacklogModel = {
   present: true,
-  free: [{ title: "Revisar el copy del onboarding", block: { tag: null, reason: null } }],
-  blocked: [{ title: "Integrar la pasarela", block: { tag: "dependencia", reason: "espera la cuenta del cliente" } }],
+  free: [{ title: "Revisar el copy del onboarding", labels: [], block: { tag: null, reason: null } }],
+  blocked: [{ title: "Integrar la pasarela", labels: [], block: { tag: "dependencia", reason: "espera la cuenta del cliente" } }],
   warnings: [],
 };
 
@@ -30,7 +30,7 @@ const team: TeamModel = {
       missing: false,
       current: { label: "Tarea", number: 12, title: "Implementar el parser", done: 3, total: 5 },
       counts: { free: 2, blocked: 1 },
-      lastCompleted: { date: "2026-10-04", status: "done", number: 5, label: "Tarea", title: "Escribir el README" },
+      lastCompleted: { date: "2026-10-04", status: "done", number: 5, label: "Tarea", title: "Escribir el README", labels: [] },
     },
     { folder: "gersom", folderless: false, missing: false, current: null, counts: { free: 0, blocked: 0 }, lastCompleted: null },
     { folder: "luis", folderless: true, missing: false, current: null, counts: { free: 0, blocked: 0 }, lastCompleted: null },
@@ -229,8 +229,20 @@ describe("render del panel de un operador en modo multi", () => {
   });
 
   test("tarea sin bloqueo vigente: sin tag ni motivo", () => {
-    const out = panel({ teamBacklog: { ...teamBacklog, blocked: [{ title: "Suelta", block: { tag: null, reason: null } }] } });
+    const out = panel({ teamBacklog: { ...teamBacklog, blocked: [{ title: "Suelta", labels: [], block: { tag: null, reason: null } }] } });
     expect(out).toContain("• Suelta");
     expect(out).not.toContain("• Suelta [");
+  });
+
+  test("etiquetas de las tareas sin dueño: al final del título, también en la vista de equipo y con el tag de bloqueo antes", () => {
+    const labeled: TeamBacklogModel = {
+      ...teamBacklog,
+      free: [{ title: "Revisar el copy del onboarding", labels: ["empresa1", "trabajo"], block: { tag: null, reason: null } }],
+      blocked: [{ title: "Integrar la pasarela", labels: ["empresa1"], block: { tag: "dependencia", reason: "espera la cuenta del cliente" } }],
+    };
+    const view = renderTeam({ ...team, teamBacklog: labeled }, meta);
+    expect(view).toContain("• Revisar el copy del onboarding  #empresa1 #trabajo");
+    expect(view).toContain("• Integrar la pasarela [dependencia]  #empresa1");
+    expect(panel({ teamBacklog: labeled, width: 40 })).toContain("• Revisar el co…  #empresa1 #trabajo");
   });
 });

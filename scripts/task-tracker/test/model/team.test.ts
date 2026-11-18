@@ -79,7 +79,7 @@ describe("buildTeamBacklog", () => {
     const backlog = buildTeamBacklog(TEAM_BACKLOG);
     expect(backlog.present).toBe(true);
     expect(backlog.free.map((t) => t.title)).toEqual(["Revisar el copy"]);
-    expect(backlog.blocked[0]).toEqual({ title: "Integrar la pasarela", block: { tag: "dependencia", reason: "espera la cuenta." } });
+    expect(backlog.blocked[0]).toEqual({ title: "Integrar la pasarela", labels: [], block: { tag: "dependencia", reason: "espera la cuenta." } });
   });
 
   test("sin archivo: no está presente; vacío: aviso", () => {

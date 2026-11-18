@@ -182,6 +182,8 @@ export interface HistoryEntry {
   number: number | null;
   label: string | null;
   title: string;
+  /** Etiquetas de la línea `- **Etiquetas:** a b` (o `Tags`) de la entrada, sin `#`; `[]` si no la trae. Solo si el parser recibió el texto completo (`parseHistory` siempre). */
+  labels: string[];
   /**
    * Entrada completa (varias líneas): su header `## ` hasta antes del siguiente `## ` (sea o no
    * una entrada) o el fin del texto. `entries[0].range.start` es donde insertar una entrada

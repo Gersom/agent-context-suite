@@ -220,17 +220,18 @@ export function render(model: Model, meta: RenderMeta): string {
             const text = lastTask
               ? shortTaskName(lastTask.number, lastTask.title)
               : `◇ Grupo: ${lastGroup.title} (${lastGroup.taskNumbers.map((n) => `T-${n}`).join(", ")})`;
+            const labels = lastTask?.labels ?? [];
             // Lo que se muestra cuenta como 1 tarea suelta o como las de su grupo; el resto, como en el título.
             const shown = lastTask ? 1 : lastGroup.taskNumbers.length;
-            compactRow(row, text, pc.cyan, model.counts.free - shown, width, secondary);
+            compactRow(row, text, pc.cyan, model.counts.free - shown, width, secondary, labels);
             return;
           }
-          for (const task of model.free.tasks) row(0, { paint: pc.cyan, text: shortTaskName(task.number, task.title) });
+          for (const task of model.free.tasks) titleRow(row, 0, { title: { paint: pc.cyan, text: shortTaskName(task.number, task.title) } }, task.labels, width, secondary);
           for (const group of model.free.groups) {
             const refs = group.taskNumbers.map((n) => `T-${n}`).join(", ");
             row(0, { paint: pc.cyan, text: `◇ Grupo: ${group.title} (${refs})` });
             for (const task of group.tasks) {
-              if (task.title) row(2, { paint: secondary, text: `· ${shortTaskName(task.number, task.title)}` });
+              if (task.title) titleRow(row, 2, { title: { paint: secondary, text: `· ${shortTaskName(task.number, task.title)}` } }, task.labels, width, secondary);
             }
           }
         }),
@@ -244,10 +245,10 @@ export function render(model: Model, meta: RenderMeta): string {
             // Solo la última (la más reciente de la lista), sin las tareas de las que depende.
             const last = model.blocked[model.blocked.length - 1];
             const tag = last.block.tag ? ` [${last.block.tag}]` : "";
-            compactRow(row, `${shortTaskName(last.number, last.title)}${tag}`, pc.red, model.blocked.length - 1, width, secondary);
+            compactRow(row, `${shortTaskName(last.number, last.title)}${tag}`, pc.red, model.blocked.length - 1, width, secondary, last.labels);
             return;
           }
-          for (const task of model.blocked) blockedRows(task, row, pc);
+          for (const task of model.blocked) blockedRows(task, row, pc, width);
         }),
     },
 
@@ -541,18 +542,31 @@ function teamBacklogBox({ box, pc, width, secondary, completed, unownedBlue }: C
       const last = [...backlog.free, ...backlog.blocked][total - 1];
       const tag = last.block.tag ? ` [${last.block.tag}]` : "";
       const suffix = total > 1 ? ` · +${total - 1} más` : "";
-      const room = Math.max(1, width - BOX_PADDING - visibleLength(`• ${tag}${suffix}`));
+      const tags = labelSegments(last.labels, secondary);
+      const room = Math.max(1, width - BOX_PADDING - visibleLength(`• ${tag}${suffix}`) - segmentsWidth(tags));
       row(
         0,
         { paint: unownedBlue, text: "• " },
         { paint: completed, text: truncate(plainText(last.title), room) },
         ...(tag ? [{ paint: pc.red, text: tag }] : []),
+        ...tags,
         ...(suffix ? [{ paint: secondary, text: suffix }] : []),
       );
       return;
     }
     for (const task of [...backlog.free, ...backlog.blocked]) {
-      row(0, { paint: unownedBlue, text: "• " }, { paint: completed, text: task.title }, ...(task.block.tag ? [{ paint: pc.red, text: ` [${task.block.tag}]` }] : []));
+      titleRow(
+        row,
+        0,
+        {
+          lead: [{ paint: unownedBlue, text: "• " }],
+          title: { paint: completed, text: task.title },
+          after: task.block.tag ? [{ paint: pc.red, text: ` [${task.block.tag}]` }] : [],
+        },
+        task.labels,
+        width,
+        secondary,
+      );
       if (task.block.reason) row(4, { paint: secondary, text: `→ ${task.block.reason}` });
     }
   });
@@ -627,10 +641,46 @@ function footerLines(meta: CanvasMeta, width: number): string[] {
  * Fila de un recuadro compacto: una sola tarea y, aparte, cuántas más hay (`· +3 más`). El texto
  * de la tarea se recorta antes que el contador.
  */
-function compactRow(row: Row, text: string, paint: Paint, more: number, width: number, secondary: Paint): void {
+function compactRow(row: Row, text: string, paint: Paint, more: number, width: number, secondary: Paint, labels: string[] = []): void {
   const suffix = more > 0 ? ` · +${more} más` : "";
-  const room = Math.max(1, width - BOX_PADDING - visibleLength(suffix));
-  row(0, { paint, text: truncate(plainText(text), room) }, ...(suffix ? [{ paint: secondary, text: suffix }] : []));
+  const tags = labelSegments(labels, secondary);
+  const room = Math.max(1, width - BOX_PADDING - visibleLength(suffix) - segmentsWidth(tags));
+  row(0, { paint, text: truncate(plainText(text), room) }, ...tags, ...(suffix ? [{ paint: secondary, text: suffix }] : []));
+}
+
+/** Etiquetas como se pintan: `#a #b`, o `""` sin ellas. */
+function labelsText(labels: string[]): string {
+  return plainText(labels.map((label) => `#${label}`).join(" "));
+}
+
+/** Tramo con las etiquetas en el tono secundario, separado del título por dos espacios; ninguno sin etiquetas. */
+function labelSegments(labels: string[], secondary: Paint): Segment[] {
+  const text = labelsText(labels);
+  return text ? [{ paint: secondary, text: `  ${text}` }] : [];
+}
+
+/** Columnas que ocupan los tramos. */
+function segmentsWidth(segments: Segment[]): number {
+  return segments.reduce((sum, { text }) => sum + visibleLength(plainText(text)), 0);
+}
+
+/**
+ * Fila de una tarea con sus etiquetas al final: `lead`, el título, `after` y las etiquetas. Con
+ * etiquetas, el ancho de todo lo demás se reserva primero y se recorta el título (con «…»), no
+ * ellas; sin etiquetas la fila queda como estaba.
+ */
+function titleRow(
+  row: Row,
+  indent: number,
+  { lead = [], title, after = [] }: { lead?: Segment[]; title: Segment; after?: Segment[] },
+  labels: string[],
+  width: number,
+  secondary: Paint,
+): void {
+  const tags = labelSegments(labels, secondary);
+  if (!tags.length) return row(indent, ...lead, title, ...after);
+  const room = Math.max(1, width - BOX_PADDING - indent - segmentsWidth([...lead, ...after, ...tags]));
+  row(indent, ...lead, { ...title, text: truncate(plainText(title.text), room) }, ...after, ...tags);
 }
 
 /** `Tarea 9 — título`, con la etiqueta tal como está escrita en el documento. */
@@ -656,13 +706,14 @@ function tones(pc: Colors): { completed: Paint; completedGreen: Paint; unownedBl
 }
 
 /**
- * Lo que se muestra de una tarea en progreso o pausada, bajo su título: el modo de ejecución, el
- * estado con los pasos del plan, la descripción y las decisiones (las dos últimas, bajo un
+ * Lo que se muestra de una tarea en progreso o pausada, bajo su título: el modo de ejecución, sus
+ * etiquetas (en su propia fila, `Etiquetas  #a #b`), el estado con los pasos del plan, la descripción y las decisiones (las dos últimas, bajo un
  * subtítulo gris y con salto de línea). Lo que no tiene, no se muestra.
  */
-function taskRows(task: Pick<CurrentTask, "plan" | "mode" | "description" | "decisions">, indent: number, row: Row, pc: Colors, width: number): void {
+function taskRows(task: Pick<CurrentTask, "labels" | "plan" | "mode" | "description" | "decisions">, indent: number, row: Row, pc: Colors, width: number): void {
   const { secondary } = tones(pc);
   if (task.mode) row(indent, { paint: pc.green, text: `Modo  ${EXECUTION_MODE_TEXT[task.mode]}` });
+  if (task.labels.length) row(indent, { paint: secondary, text: `Etiquetas  ${labelsText(task.labels)}` });
   planRows(task.plan, indent, row, pc);
   if (task.description) textRows("Descripción", task.description, indent, row, secondary, width);
   if (task.decisions) textRows("Decisiones a medio camino", task.decisions, indent, row, secondary, width);
@@ -704,7 +755,8 @@ function planRows(plan: Plan, indent: number, row: Row, pc: Colors): void {
 
 /**
  * Tramos de una tarea completada: el nombre y la fecha (los dos en el mismo gris) y, aparte, la
- * marca de descartada. Si no entra en el ancho del recuadro, se recorta el nombre (no la fecha).
+ * marca de descartada; al final, sus etiquetas en gris. Si no entra en el ancho del recuadro, se
+ * recorta el nombre (no la fecha ni las etiquetas).
  */
 function completedSegments(entry: HistoryEntry, width: number, pc: Colors, reserve = 0): Segment[] {
   const { completed, completedGreen } = tones(pc);
@@ -713,20 +765,21 @@ function completedSegments(entry: HistoryEntry, width: number, pc: Colors, reser
   const rest = plainText(entry.number == null ? entry.title : shortTaskName(entry.number, entry.title).slice(prefix.length));
   const discarded = entry.status === "discarded" ? " ✖ (descartada)" : "";
   const date = entry.date ? ` · ${entry.date}` : "";
-  const room = width - 4 - visibleLength(prefix + discarded + date) - reserve;
+  const labels = labelSegments(entry.labels, tones(pc).secondary);
+  const room = width - 4 - visibleLength(prefix + discarded + date) - segmentsWidth(labels) - reserve;
   const segments: Segment[] = [];
   if (prefix) segments.push({ paint: completedGreen, text: prefix });
   segments.push({ paint: completed, text: truncate(rest, Math.max(1, room)) });
   if (discarded) segments.push({ paint: pc.red, text: discarded });
   if (date) segments.push({ paint: completed, text: date });
-  return segments;
+  return [...segments, ...labels];
 }
 
 /** Una tarea bloqueada y, debajo, las tareas de las que depende. */
-function blockedRows(task: BlockedTask, row: Row, pc: Colors): void {
+function blockedRows(task: BlockedTask, row: Row, pc: Colors, width: number): void {
   const { secondary } = tones(pc);
   const tag = task.block.tag ? ` [${task.block.tag}]` : "";
-  row(0, { paint: pc.red, text: `${shortTaskName(task.number, task.title)}${tag}` });
+  titleRow(row, 0, { title: { paint: pc.red, text: `${shortTaskName(task.number, task.title)}${tag}` } }, task.labels, width, secondary);
   for (const ref of task.dependsOn) row(5, { paint: ref.closed ? pc.yellow : secondary, text: dependencyText(ref) });
 }
 

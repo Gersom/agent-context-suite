@@ -11,7 +11,8 @@ import { commentSpans, stripComments } from "./markdown.ts";
 export const FIELD_START_RE = /^[-*]\s+\*\*(.+?)(?::\*\*|\*\*:)/;
 
 // La misma línea completa, armada desde FIELD_START_RE: grupo 1 = lo que va antes del valor (con su espacio), 2 = etiqueta, 3 = valor.
-const FIELD_LINE_RE = new RegExp(`^(${FIELD_START_RE.source.slice(1)}\\s*)(.*)$`);
+// Tolera un `\r` final (texto con CRLF crudo), que no forma parte del valor.
+const FIELD_LINE_RE = new RegExp(`^(${FIELD_START_RE.source.slice(1)}\\s*)(.*?)\\r?$`);
 
 /**
  * Etiqueta del campo de la descripción (`Descripción` / `Description`). Replica la etiqueta

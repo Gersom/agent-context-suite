@@ -4,6 +4,7 @@
 
 import { parseTeamBacklog } from "../../../_shared/parse/team-backlog.ts";
 import { blockInfo } from "../../../_shared/tasks/block-info.ts";
+import { fieldLabels } from "../../../_shared/tasks/labels.ts";
 import type { Field } from "../../../_shared/types.ts";
 import type { TeamBacklogModel, TeamBacklogTask, TeamModel, TeamRead, TeamRow } from "../shared/types.ts";
 import { buildModel } from "./model.ts";
@@ -56,7 +57,7 @@ export function buildTeamBacklog(text: string | null): TeamBacklogModel {
   if (parsed.missing.length) warnings.push(`team-backlog.md: no se encontró la sección ${parsed.missing.map((id) => `"${id}"`).join(", ")}.`);
   if (parsed.placeholders) warnings.push("team-backlog.md tiene placeholders sin completar.");
 
-  const toTask = (task: { title: string; fields: Field[] }): TeamBacklogTask => ({ title: task.title, block: blockInfo(task) });
+  const toTask = (task: { title: string; fields: Field[] }): TeamBacklogTask => ({ title: task.title, labels: fieldLabels(task.fields), block: blockInfo(task) });
   const free = parsed.free.filter((t) => !t.isPlaceholder).map(toTask);
   const blocked = parsed.blocked.filter((t) => !t.isPlaceholder).map(toTask);
   for (const task of blocked) {

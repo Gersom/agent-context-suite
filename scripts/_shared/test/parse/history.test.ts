@@ -126,4 +126,91 @@ describe("parseHistory: posiciones en el texto original", () => {
   test("archivo vacío", () => {
     expect(parseHistory("")).toEqual({ entries: [] });
   });
+
+  describe("etiquetas de la entrada", () => {
+    test("la línea `- **Etiquetas:** …` de la entrada, sin `#` y en el orden escrito", () => {
+      const text = [
+        "## 2026-10-05 — ✅ Tarea 11 — Con etiquetas",
+        "",
+        "- **Origen:** team-backlog",
+        "- **Etiquetas:** empresa1 trabajo ideasBrillantes",
+        "- Quedó listo.",
+        "",
+        "## 2026-10-04 — ✅ Tarea 10 — Sin etiquetas",
+        "",
+        "- Quedó listo.",
+      ].join("\n");
+      const { entries } = parseHistory(text);
+      expect(entries.map((e) => e.labels)).toEqual([["empresa1", "trabajo", "ideasBrillantes"], []]);
+    });
+
+    test("en inglés: `- **Tags:** …`", () => {
+      const text = ["## 2026-10-05 — ✅ Task 20 — Draft the glossary", "", "- **Tags:** company1 work", "- Done."].join("\n");
+      expect(parseHistory(text).entries[0]).toMatchObject({ number: 20, label: "Task", labels: ["company1", "work"] });
+    });
+
+    test("cada entrada lee solo su rango: las etiquetas de la siguiente no se le pegan", () => {
+      const text = ["## 2026-10-05 — ✅ Tarea 2 — Sin", "", "- Listo.", "", "## 2026-10-04 — ✅ Tarea 1 — Con", "", "- **Etiquetas:** a", "- Listo."].join("\n");
+      expect(parseHistory(text).entries.map((e) => e.labels)).toEqual([[], ["a"]]);
+    });
+
+    test("valor vacío, placeholder o línea dentro de un comentario HTML: sin etiquetas; «Ninguna» sí es una etiqueta", () => {
+      const entry = (line: string) => parseHistory(`## 2026-10-05 — ✅ Tarea 1 — X\n\n${line}\n- Listo.`).entries[0].labels;
+      expect(entry("- **Etiquetas:**")).toEqual([]);
+      expect(entry("- **Etiquetas:** [Placeholder: etiquetas]")).toEqual([]);
+      expect(entry("<!-- - **Etiquetas:** a b -->")).toEqual([]);
+      expect(entry("- **Etiquetas:** Ninguna")).toEqual(["Ninguna"]);
+    });
+
+    describe("solo se lee el primer bloque de campos", () => {
+      const labelsOf = (...lines: string[]) => parseHistory(lines.join("\n")).entries[0].labels;
+      const header = "## 2026-10-05 — ✅ Tarea 1 — X";
+
+      test("formato real del task-manager (Origen + Etiquetas + resumen)", () => {
+        expect(labelsOf(header, "", "- **Origen:** team-backlog", "- **Etiquetas:** empresa1 trabajo", "- Se hizo A.", "- Se hizo B.")).toEqual(["empresa1", "trabajo"]);
+      });
+
+      test("una viñeta del resumen `- **Etiquetas:** …` posterior al bloque de campos no pisa las reales", () => {
+        expect(labelsOf(header, "", "- **Origen:** team-backlog", "- **Etiquetas:** a b", "- Se hizo A.", "- **Etiquetas:** x y")).toEqual(["a", "b"]);
+        expect(labelsOf(header, "", "- **Etiquetas:** a b", "", "- **Etiquetas:** x y")).toEqual(["a", "b"]);
+      });
+
+      test("el mismo texto dentro de un bloque de código no cuenta", () => {
+        expect(labelsOf(header, "", "- **Etiquetas:** a b", "- Ejemplo:", "```", "- **Etiquetas:** x y", "```")).toEqual(["a", "b"]);
+        expect(labelsOf(header, "", "- Ejemplo:", "```", "- **Etiquetas:** x y", "```")).toEqual([]);
+        expect(labelsOf(header, "", "```", "- **Etiquetas:** x y", "```")).toEqual([]);
+      });
+
+      test("sin campo real, la viñeta del resumen no es un campo: `[]`", () => {
+        expect(labelsOf(header, "", "- Se hizo A.", "- **Etiquetas:** x y")).toEqual([]);
+        expect(labelsOf(header, "", "Texto suelto.", "- **Etiquetas:** x y")).toEqual([]);
+        expect(labelsOf(header, "", "- **Origen:** team-backlog", "- Se hizo A.", "- **Etiquetas:** x y")).toEqual([]);
+      });
+
+      test("si el bloque repite el campo, vale el primero", () => {
+        expect(labelsOf(header, "", "- **Etiquetas:** a", "- **Tags:** b", "- Listo.")).toEqual(["a"]);
+      });
+
+      test("los comentarios HTML dentro del bloque no lo cortan", () => {
+        expect(labelsOf(header, "", "- **Origen:** team-backlog", "<!-- nota -->", "- **Etiquetas:** a b", "- Listo.")).toEqual(["a", "b"]);
+      });
+
+      test("CRLF crudo: lee las etiquetas", () => {
+        const text = [header, "", "- **Origen:** team-backlog", "- **Etiquetas:** a b", "- Listo.", "- **Etiquetas:** x y", ""].join("\r\n");
+        expect(parseHistory(text).entries[0].labels).toEqual(["a", "b"]);
+        expect(parseHistory([header, "", "- **Etiquetas:**", "- Listo."].join("\r\n")).entries[0].labels).toEqual([]);
+      });
+
+      test("en inglés (Tags): primer bloque y resumen posterior", () => {
+        expect(labelsOf("## 2026-10-05 — ✅ Task 2 — X", "", "- **Origin:** team-backlog", "- **Tags:** company1 work", "- Done.", "- **Tags:** x y")).toEqual(["company1", "work"]);
+        expect(labelsOf("## 2026-10-05 — ✅ Task 2 — X", "", "- Done.", "- **Tags:** x y")).toEqual([]);
+      });
+    });
+
+    test("entradas sin la línea (compatibilidad): `[]`, y el rango no cambia", () => {
+      const { entries } = parseHistory(requireFixture("es-anchors", "history.md"));
+      expect(entries.every((e) => Array.isArray(e.labels) && e.labels.length === 0)).toBe(true);
+      expect(parseEntry("2026-10-05 — ✅ Tarea 1 — X")?.labels).toEqual([]);
+    });
+  });
 });

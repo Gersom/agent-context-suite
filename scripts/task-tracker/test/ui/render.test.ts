@@ -4,6 +4,7 @@ import type { RenderMeta } from "../../src/shared/types.ts";
 import { visibleLength } from "../../src/ui/format.ts";
 import { arrowText, dependencyText, render, screenWidth, triggerText } from "../../src/ui/render.ts";
 import { fixture } from "../../../_shared/test/helpers.ts";
+import { LABELED, labeledModel, rowsOf } from "../labeled-docs.ts";
 
 const meta: RenderMeta = {
   projectName: "demo-app",
@@ -567,5 +568,85 @@ describe("helpers del render", () => {
         else process.env.COLUMNS = saved;
       }
     }
+  });
+});
+
+describe("etiquetas de las tareas", () => {
+  const screenOf = (lang: "es" | "en", extra: Partial<RenderMeta> = {}) => {
+    const { model, teamBacklog } = labeledModel(lang);
+    return render(model, { ...meta, teamBacklog, ...extra });
+  };
+
+  test("libres, bloqueadas, completadas y sin dueño: al final de la línea del título, con `#`", () => {
+    const out = screenOf("es");
+    expect(rowsOf(out, "SIN DUEÑO (1)")).toEqual(["• Revisar el copy  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Exportar como skill  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "BLOQUEADAS (1)")).toEqual(["T-5: Rehacer el README [postergada]  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "TAREAS COMPLETADAS (últimas 1)")).toEqual(["T-11: Escribir el parser · 2026-10-05  #empresa1 #trabajo"]);
+  });
+
+  test("en curso y pausada: una fila propia `Etiquetas` bajo el título y antes de la descripción", () => {
+    const out = screenOf("es");
+    expect(rowsOf(out, "EN PROGRESO")).toEqual([
+      "Tarea 12 — Implementar el parser",
+      "Etiquetas  #empresa1 #trabajo",
+      "Estado: recién iniciado",
+      "  ▸ Paso 1 — Escribir",
+      "Descripción:",
+      "  Descripción breve.",
+    ]);
+    expect(rowsOf(out, "PAUSADAS (1)")).toEqual([
+      "• Tarea 8 — Revisar la API",
+      "    Etiquetas  #empresa1 #trabajo",
+      "    Descripción:",
+      "      De qué trata.",
+      "    Por qué se pausó:",
+      "      Prioridad.",
+    ]);
+  });
+
+  test("en inglés (`Tags`): se pintan igual, con `#`", () => {
+    const out = screenOf("en");
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Export as skill  #company1 #work"]);
+    expect(rowsOf(out, "SIN DUEÑO (1)")).toEqual(["• Review the copy  #company1 #work"]);
+    expect(rowsOf(out, "TAREAS COMPLETADAS (últimas 1)")).toEqual(["T-11: Write the parser · 2026-10-05  #company1 #work"]);
+    expect(rowsOf(out, "EN PROGRESO")[1]).toBe("Etiquetas  #company1 #work");
+  });
+
+  test("sin etiquetas no se pinta nada: ni `#` ni la fila `Etiquetas`", () => {
+    const strip = (text: string) => text.replace(/^- \*\*(?:Etiquetas|Tags):\*\*.*\n/gm, "");
+    const docs = LABELED.es;
+    const { model, teamBacklog } = labeledModel("es", {
+      handoff: strip(docs.handoff),
+      backlog: strip(docs.backlog),
+      history: strip(docs.history),
+      teamBacklog: strip(docs.teamBacklog),
+    });
+    const out = render(model, { ...meta, teamBacklog });
+    expect(out).not.toContain("#");
+    expect(out).not.toContain("Etiquetas");
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Exportar como skill"]);
+  });
+
+  test("con poco ancho se recorta el título (con «…»), no las etiquetas", () => {
+    const out = screenOf("es", { width: 40 });
+    expect(rowsOf(out, "SIN DUEÑO (1)")).toEqual(["• Revisar el co…  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "LIBRES (1)")).toEqual(["T-3: Exportar c…  #empresa1 #trabajo"]);
+    expect(rowsOf(out, "BLOQUEADAS (1)")[0]).toEndWith("…  #empresa1 #trabajo");
+    expect(rowsOf(out, "TAREAS COMPLETADAS")[0]).toEndWith("#empresa1 #tra…");
+    for (const line of boxLines(out)) expect(visibleLength(line)).toBe(40);
+  });
+
+  test("con ancho justo para el título y las etiquetas no se recorta nada", () => {
+    // `T-3: Exportar como skill  #empresa1 #trabajo` ocupa 44 columnas; el borde y los márgenes suman 4.
+    expect(rowsOf(screenOf("es", { width: 48 }), "LIBRES (1)")).toEqual(["T-3: Exportar como skill  #empresa1 #trabajo"]);
+    expect(rowsOf(screenOf("es", { width: 47 }), "LIBRES (1)")).toEqual(["T-3: Exportar como ski…  #empresa1 #trabajo"]);
+  });
+
+  test("las etiquetas van en el tono secundario (gris), todas en uno solo", () => {
+    const out = screenOf("es", { color: true });
+    const secondary = (text: string) => `\x1b[38;5;250m${text}\x1b[39m`;
+    expect(out).toContain(secondary("  #empresa1 #trabajo"));
+    expect(out).toContain(secondary("Etiquetas  #empresa1 #trabajo"));
   });
 });
