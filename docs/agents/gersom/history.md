@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 180 — Perfil no técnico: ajustes de redacción de rules.md, office-git.md y office-profile.md
+
+- Ajustes de redacción del perfil no técnico tras las pruebas de punta a punta: tareas sin plan, formato de los archivos de la persona conservado, ajuste directo sin copia (se dice en llano y se reescribe el valor anterior), cierre de una pausada nombrada sin tocar la en curso, restauración entera desde la copia, «lo dejé como estaba» al descartar, verbos de commit unificados (add, update, start, pause, resume, close) y sin ofrecer la recomendación de la suite. Topes: rules.md 5500, office-git.md 1500, office-profile.md 2000 bytes.
+- Cómo: ediciones en template/office/rules.md, office-git.md y office-profile.md, con el test ajustado en office-profile.test.ts; una segunda prueba con un agente nuevo recorrió contexto ambiguo, pausar y retomar, cierre de una pausada y descarte con restauración sin errores de herramientas (check 0 errores). bun test 2365 pass.
+- Commits: e801d93 en la skill y 8cc6b09 en la suite.
+
 ## 2026-11-18 — ✅ Tarea 179 — task close: quitar el Ninguna. de history.md al registrar la primera entrada
 
 - task close retira de history.md la línea sola Ninguna. o None. que deja la instalación del perfil no técnico, al agregar la entrada (también con --discarded, en inglés y con CRLF); solo actúa en la zona anterior al primer ## real y en la columna 0, y sin esa línea la salida no cambia.

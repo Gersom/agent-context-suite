@@ -48,13 +48,13 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 180 — Perfil no técnico: ajustes de redacción de rules.md, office-git.md y office-profile.md
+### Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
 
-- **Descripción:** Aplicar a la skill los huecos que halló la prueba de punta a punta del perfil: conservar el formato de los archivos de la persona, ajustes directos sin copia, cerrar una tarea pausada que la persona nombra, verbo update en office-git.md, cuándo marcar pasos, restaurar una copia, resumen de una tarea descartada, y no ofrecer la recomendación de la suite.
-- **Decisiones/temas a definir antes de empezar:** Redacciones mínimas de cada regla dentro de los topes de tamaño (rules.md 5000 bytes; office-git.md 1500 bytes, con solo 16 bytes de margen: habrá que recortar para agregar update); si un ajuste directo deja copia; qué hacer con la restauración cuando solo una parte del cambio no gustó; volver a probar el flujo de contexto ambiguo, que el escenario no forzó (la petición era de un solo paso).
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando se cierre la T-176; antes de subir la versión (T-177).
-- **Detalles:** Origen: T-176. Hallazgos: (1) las reglas no dicen cuándo marcar los pasos del plan con task step ni cómo restaurar una copia; (2) conservar el formato (saltos de línea, codificación, orden) al editar archivos de la persona y cambiar solo lo pedido; (3) un ajuste directo no tiene copia: si piden deshacerlo, decirlo en llano y reescribir el valor anterior; (4) la regla 4 solo habla de cerrar la tarea en curso: si nombra una pausada, close N sin tocar la que está en curso, y preguntar si hay duda; (5) office-git.md admite start, pause, resume y close pero rules.md también update y add; unificar; (6) la regla 8 no dice qué resumir si se descartó: se dejó como estaba; (7) office-profile.md no dice si se ofrece suite-recommendation.md: no se ofrece; (8) la restauración devuelve el archivo entero, no solo lo que molestó; (9) un cierre cuando la persona nombra una tarea y otra está en curso se resolvió por el nombre y fue razonable. Archivos: skill/template/office/rules.md, skill/docs/office-git.md, skill/docs/office-profile.md y los tests de skill-checks.
+- **Descripción:** Subir la versión de la skill a 2.5.0 (minor: nuevo flujo en el árbol de preguntas, más el campo Etiquetas de las plantillas) y escribir su changelog y el tag anotado, según docs/releasing.md.
+- **Decisiones/temas a definir antes de empezar:** Si se publica en el momento o se deja listo; si el campo Etiquetas ya documentado en las plantillas entra en este mismo 2.5.0.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la prueba de punta a punta del perfil (T-176, ya hecha) y de las tareas de ajustes que dejó: T-179 (task close y el Ninguna. de history.md) y T-180 (redacción de rules.md, office-git.md y office-profile.md).
+- **Disparador:** cuando se cierre la T-176.
+- **Detalles:** Origen: T-162. Archivos de la skill: .claude-plugin/plugin.json, SKILL.md línea 8, template/agents/rules.md línea 1 y la de template/office/rules.md, docs/changelog/2.5.md y docs/changelog/README.md; tag anotado v2.5.0 (git push --follow-tags lo hace el operador).
 - **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +94,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
-
-### Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
-
-- **Descripción:** Subir la versión de la skill a 2.5.0 (minor: nuevo flujo en el árbol de preguntas, más el campo Etiquetas de las plantillas) y escribir su changelog y el tag anotado, según docs/releasing.md.
-- **Decisiones/temas a definir antes de empezar:** Si se publica en el momento o se deja listo; si el campo Etiquetas ya documentado en las plantillas entra en este mismo 2.5.0.
-- **Bloqueos:** [dependencia] Depende de la prueba de punta a punta del perfil (T-176, ya hecha) y de las tareas de ajustes que dejó: T-179 (task close y el Ninguna. de history.md) y T-180 (redacción de rules.md, office-git.md y office-profile.md).
-- **Disparador:** cuando se cierre la T-176.
-- **Detalles:** Origen: T-162. Archivos de la skill: .claude-plugin/plugin.json, SKILL.md línea 8, template/agents/rules.md línea 1 y la de template/office/rules.md, docs/changelog/2.5.md y docs/changelog/README.md; tag anotado v2.5.0 (git push --follow-tags lo hace el operador).
-- **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
