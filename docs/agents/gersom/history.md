@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 161 — Investigación: etiquetas en las tareas
+
+- Investigación terminada: el campo opcional Etiquetas (0 o más, solo letras y números, sin # en el archivo y con # en el board) es viable y se divide en cinco tareas: T-167 task-manager (add, edit, close), T-168 board, T-169 check, T-170 plantillas de la skill y T-171 filtros.
+- Cómo: mapeo de parser, task-manager, board, docs-check y plantillas por un explorador; sin cambios de código. Hallazgos en las tareas derivadas.
+
 ## 2026-11-17 — ✅ Tarea 165 — check: quitar avisos que no aplican a proyectos sin código
 
 - acsuite check ya no avisa de tarea en curso sin plan (la Regla 2 permite tareas pequeñas sin plan) y trata CLAUDE.md como opcional: solo avisa si falta AGENTS.md. Se conservan los avisos de AGENTS.md ausente, placeholders del backlog y sección de la suite en rules.md.

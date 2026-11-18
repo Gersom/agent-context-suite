@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 167
+**Próximo número de tarea:** 172
 
 ---
 
@@ -48,13 +48,13 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 161 — Etiquetas en las tareas (campo opcional, 0 o más)
+### Tarea 167 — Etiquetas: campo Etiquetas en add, edit y close del task-manager
 
-- **Descripción:** Agregar un campo opcional «Etiquetas» a las tareas (0 o más), que el agente decide poner según haga falta. Se guardan en el .md sin «#», separadas por espacio, y el board las muestra con «#» (#empresa1 #trabajo #ideasBrillantes).
-- **Decisiones/temas a definir antes de empezar:** Normalización tipo hashtag (decidida): solo letras y números, sin tildes ni caracteres especiales ni espacios; sin «#» en el archivo; comparación sin distinguir mayúsculas conservando la forma escrita (ideasBrillantes). Nombre del flag en inglés (--label) y del campo (Etiquetas), distinto del «tag» de bloqueo [dependencia]/[postergada]. Alcance: formato en backlog, handoff, history y team-backlog; add/edit/status con filtro por etiqueta; board que las muestre y filtre; acsuite check que valide el formato; plantillas de la skill. Cambia skill y suite, así que cada repo con su commit y versión.
+- **Descripción:** Agregar el campo opcional Etiquetas (en inglés Tags) a las tareas: reconocerlo en language.ts, flag --labels en add y edit con validación y normalización, y que close lo pase a history.md. start, pause y resume ya lo arrastran como campo extra.
+- **Decisiones/temas a definir antes de empezar:** Formato: solo letras y números, sin tildes ni símbolos, separadas por espacio y sin # en el archivo; duplicados sin distinguir mayúsculas (empresa1 y Empresa1 son la misma) conservando la primera forma escrita; qué hace edit al cambiar etiquetas (reemplaza todas); comportamiento en team-backlog.md y en tareas agrupadas.
 - **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; la necesita el flujo no técnico de la T-160 para separar tareas por empresa.
-- **Detalles:** Origen: T-160 (suite en trabajo de oficina). Una persona que trabaja con varias empresas necesita separar tareas por empresa sin carpetas distintas, para conservar una sola tarea en curso. Útil también en proyectos de código (área, tipo, cliente). Notas de la revisión: el parser ya acepta un campo genérico y start y pause lo arrastran, pero add y edit no tienen flag para escribirlo; falta la etiqueta del campo en inglés (Tags) en language.ts; un valor que empieza con corchete se lee como bloqueo, por eso las etiquetas no llevan símbolos; un valor Ninguna se descarta al arrastrar; verificar que close pase las etiquetas a history.md, o se pierden al cerrar.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; es la base de las demás tareas de etiquetas y de la T-162.
+- **Detalles:** Origen: T-161 (investigación). Archivos: scripts/task-manager/src/write/language.ts (FIELD_PATTERNS, nuevo kind labels), commands/add.ts y write/new-task.ts, commands/edit.ts (TEXT_FLAGS y FieldValues), commands/close.ts:406 y write/history.ts (hoy solo se conserva el origen). Tests en test/commands, test/write y test/e2e.
 - **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=blocked -->
@@ -90,7 +90,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 - **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
 - **Decisiones/temas a definir antes de empezar:** Hipótesis de la T-160, a confirmar con su veredicto: sin carpeta project/; sin multi-operador; git automático (el agente crea rama y commits, la persona no los ve); se conserva el T-N; sin plan ni modo de ejecución (ejecuta casi todo la persona); el agente registra un T-N solo si la petición toca un archivo y no es de un paso, o si la persona cambia de tarea; frases normales (pausa esto, sigamos con X, ya terminé) traducidas a pause/resume/close; varias empresas con una sola carpeta y etiquetas (T-161). Qué plantillas se adaptan o se omiten y cómo se elige el flujo al empezar (pregunta inicial o variante de SKILL.md); cómo funciona con Codex (AGENTS.md, preguntas en texto con opciones numeradas).
-- **Bloqueos:** [dependencia] Depende de la Tarea 160 (veredicto de viabilidad y lista de cambios) y de la Tarea 161 (etiquetas, para separar empresas).
+- **Bloqueos:** [dependencia] Depende de las tareas de etiquetas: T-167 (task-manager), T-168 (board) y T-170 (plantillas de la skill), para separar empresas dentro de una sola carpeta.
 - **Disparador:** cuando se cierre la Tarea 160 con veredicto viable.
 - **Detalles:** Origen: T-160. Cambia principalmente la skill (SKILL.md, questions-flow, rules y plantillas); puede tocar la suite si check o el task-manager exigen campos de código. Cada repo con su commit y versión. Riesgos de la revisión de la T-160: (1) git automático choca con la Regla 5 (los commits de otros cambios solo a pedido) y la Regla 6 (cierre solo a pedido): hay que cambiar esas reglas para el perfil, subir versión y changelog, y regenerar el fixture scripts/docs-check/test/fixtures/template (snapshot.test.ts). (2) close --commits auto falla si no hay commits con scope (T-N); step --commit auto toma HEAD: los commits automáticos deben llevar el scope. (3) .gitignore total: usar lista blanca con !docs/** (no basta !docs/) más AGENTS.md, CLAUDE.md y agent-context/; el flujo working-branch usa git add con rutas y falla en rutas ignoradas. (4) Si la carpeta cuelga de otro repo, las herramientas usan la raíz de ese repo; antes de git init el agente debe detectarlo. (5) SKILL.md pesa 4434 de 4500 bytes (reading-policy.test.ts): el texto nuevo va en docs/. (6) start y add exigen backlog.md aunque el board lo tolere. (7) Una tarea sin plan sigue dando aviso en check (T-165).
 - **Agregada:** 2026-11-17.
@@ -102,6 +102,42 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** [dependencia] Depende de la Tarea 163 (ruta sin la skill abre la lista de proyectos) y de publicar el CLI en npm (Tarea 78).
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
+- **Agregada:** 2026-11-17.
+
+### Tarea 168 — Etiquetas: mostrarlas con # en el board
+
+- **Descripción:** El board muestra las etiquetas de cada tarea con # (#empresa1 #trabajo) en libres, bloqueadas, en curso, pausadas, completadas y team-backlog.
+- **Decisiones/temas a definir antes de empezar:** Dónde va la fila en cada caja y cómo se ve en modo compacto; cómo se ven con muchas etiquetas en pantallas angostas.
+- **Bloqueos:** [dependencia] Depende de la tarea Etiquetas del task-manager (T-167): el campo tiene que poder escribirse y llegar a history.md.
+- **Disparador:** cuando se cierre la T-167.
+- **Detalles:** Origen: T-161. Archivos: scripts/task-tracker/src/model/model.ts, shared/types.ts y ui/render.ts (taskRows, completadas, bloqueadas, team-backlog). Tests de model y ui, y README del task-tracker.
+- **Agregada:** 2026-11-17.
+
+### Tarea 169 — Etiquetas: validar el formato en acsuite check
+
+- **Descripción:** Nuevo hallazgo de check cuando una etiqueta no cumple el formato (solo letras y números, sin tildes ni símbolos, sin #), en backlog, handoff, history y team-backlog.
+- **Decisiones/temas a definir antes de empezar:** Severidad (aviso o error); si avisa de etiquetas duplicadas; código del hallazgo.
+- **Bloqueos:** [dependencia] Depende de la tarea Etiquetas del task-manager (T-167), que fija el formato.
+- **Disparador:** cuando se cierre la T-167.
+- **Detalles:** Origen: T-161. Patrón a copiar: scripts/docs-check/src/checks/tasks.ts (checkTaskFields y checkBlockTags); registro en checks/index.ts; documentar el código en scripts/docs-check/README.md. Tests en test/checks y e2e.
+- **Agregada:** 2026-11-17.
+
+### Tarea 170 — Etiquetas: documentar el campo en las plantillas de la skill
+
+- **Descripción:** Documentar el campo opcional Etiquetas en las plantillas de la skill (backlog, handoff, history y team-backlog) y en el flujo que corresponda.
+- **Decisiones/temas a definir antes de empezar:** Si se sube la versión de la skill y el changelog ahora o al publicar con la T-162; en qué archivo va la explicación sin pasar los límites de tamaño.
+- **Bloqueos:** [dependencia] Depende de la tarea Etiquetas del task-manager (T-167), que fija el formato.
+- **Disparador:** cuando se cierre la T-167.
+- **Detalles:** Origen: T-161. Repo de la skill (commit propio con git -C). Archivos: skill/template/agents/backlog.md (lista de campos), history.md, handoff.md y skill/template/multi/team-backlog.md. Límites de scripts/skill-checks: SKILL.md 4500 bytes (hoy 4434, no añadir ahí), template/README.md 2600, multi-operator 2600 y 700.
+- **Agregada:** 2026-11-17.
+
+### Tarea 171 — Etiquetas: filtrar por etiqueta en el task-manager y el board
+
+- **Descripción:** Filtro --label en list, status y next del task-manager, y una tecla de filtro por etiqueta en el board.
+- **Decisiones/temas a definir antes de empezar:** Si el filtro acepta varias etiquetas (todas o alguna); qué tecla usa el board y cómo se ve el filtro activo; si status y next lo necesitan o basta list.
+- **Bloqueos:** [dependencia] Depende de las tareas Etiquetas del task-manager (T-167) y del board (T-168).
+- **Disparador:** cuando se cierren la T-167 y la T-168.
+- **Detalles:** Origen: T-161. Archivos: scripts/task-manager/src/commands/list.ts, query/list.ts (ListFilters y filterTasks), commands/status.ts y next.ts vía query/state.ts; en el board cli/keys.ts, cli/nav.ts y app.ts. No la necesita la T-162.
 - **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=grouped -->
