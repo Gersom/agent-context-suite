@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 181 — Suite 2.5.0: versión y CHANGELOG de la suite
+
+- La suite sube a 2.5.0 (minor): package.json y la sección 2.5.0 de CHANGELOG.md con cómo actualizar y lo nuevo: etiquetas (--labels en add y edit, filtros --label en list y next, tecla t del tablero, etiquetas con # y pausadas con Qué falta y Próximo paso), validación de etiquetas en check y sin el aviso de tarea sin plan, CLAUDE.md opcional, board con ruta sin la skill abre la lista de proyectos, idioma desde rules.md y close que retira el Ninguna. de history.md. Tag anotado v2.5.0 solo en local: la publicación (push con --follow-tags y npm publish) la hace el operador.
+- Cómo: bump y changelog en un commit; bun test 2365 pass, typecheck y check sin avisos, y bun run build correcto.
+- Commit: 93f4f6a.
+
 ## 2026-11-18 — ✅ Tarea 182 — README público de la skill: documentar el perfil no técnico
 
 - El README público de la skill (README.md y README.es.md) documenta el perfil no técnico en una sección nueva: cuándo se activa (la pregunta de perfil), sin jerga ni planes, tareas que se pausan y se retoman con frases normales y etiquetas, copia de seguridad, git sin que la persona lo vea y que requiere acsuite; enlaza office-profile.md y office-git.md, que también entran en la lista de qué hay en el repo.

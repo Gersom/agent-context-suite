@@ -48,15 +48,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 181 — Suite 2.5.0: versión y CHANGELOG de la suite
-
-- **Descripción:** Subir la versión de la suite (package.json) con un minor y escribir su sección en CHANGELOG.md: etiquetas en las tareas (campo, filtros por etiqueta en list y next y tecla t del board), tareas pausadas con Qué falta y Próximo paso en el board, ruta explícita sin la skill abre la lista de proyectos, avisos de check, detección de idioma desde rules.md y retiro del Ninguna. de history.md.
-- **Decisiones/temas a definir antes de empezar:** Número de versión (minor sobre la actual de package.json); qué hacer para pasar de la versión anterior; si se incluye en el mismo release la instalación global del CLI (T-166).
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador quiera publicar la suite; conviene después de publicar la skill 2.5.0.
-- **Detalles:** Origen: T-177. Reglas en docs/releasing.md: tag anotado vX.Y.Z en el commit que sube la versión y push con --follow-tags (lo hace el operador); sección en CHANGELOG.md de la suite. Cambios desde la 2.4.0 de la suite: T-163, T-164, T-165, T-167 a T-171, T-178 y T-179.
-- **Agregada:** 2026-11-18.
-
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
 
