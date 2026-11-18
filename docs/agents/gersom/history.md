@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
+
+- La skill pregunta al empezar el perfil (Ronda 0, en texto con opciones numeradas, tras el idioma): programación sigue el flujo de siempre y trabajo del día a día sigue docs/office-profile.md, el flujo de instalación del perfil no técnico: rechazos de carpetas, una sola confirmación (sin seguimiento de cambios si no hay git), creación de docs/agents con las plantillas, rules.md y AGENTS.md de office, .gitignore, git init y primer commit, check y mensaje de cierre sin jerga. Sin rondas de proyecto, project/, docs/README.md ni rama de trabajo.
+- Cómo: documento nuevo office-profile.md, Ronda 0 en questions-flow.md, template-architecture.md con template/office y una palabra en SKILL.md. Probado por un revisor que instaló el perfil siguiendo solo la skill en cinco casos (sin git, repo padre, sin git instalado, programación, AGENTS.md propio); sus omisiones se corrigieron. bun test 2315 pass, typecheck y check sin avisos.
+- Commit: 7df2965 en la skill.
+
 ## 2026-11-18 — ✅ Tarea 178 — task-manager: detectar el idioma desde rules.md cuando no hay tareas
 
 - task add y el resto de comandos del task-manager detectan el idioma desde la línea «Idioma de la documentación» (o Documentation language) de rules.md cuando no hay tareas que lo indiquen: con Español no hay aviso, con English la primera tarea sale con Description y Tags; con placeholder o valor desconocido sigue el aviso de siempre, y las tareas existentes siguen mandando.

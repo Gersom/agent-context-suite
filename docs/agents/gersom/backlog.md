@@ -48,13 +48,13 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
+### Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
 
-- **Descripción:** Agregar a questions-flow.md una pregunta de perfil antes de la Ronda 1 y un documento docs/office-profile.md con el flujo de instalación del perfil no técnico: qué rondas se saltan, qué se copia, la confirmación previa y las preguntas en texto con opciones numeradas.
-- **Decisiones/temas a definir antes de empezar:** Redacción de la pregunta de perfil; qué rondas se saltan (1 a 4); qué se conserva (idioma, scaffolding de AGENTS.md); sin tocar SKILL.md, que está a 66 bytes de su tope de 4500; límite de 1500 bytes por flujo en reading-policy.test.ts; cómo se pregunta el nombre de las empresas.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las plantillas del perfil (T-173), que son lo que el flujo copia.
-- **Disparador:** cuando se cierre la T-173.
-- **Detalles:** Origen: T-162. Repo de la skill. Archivos: skill/docs/questions-flow.md (Ronda 1 en 48-57, sets en 228-262, scaffolding de la Ronda final), skill/docs/asking-questions.md (respaldo de texto numerado) y el flujo nuevo.
+- **Descripción:** Agregar tests en scripts/skill-checks para el perfil no técnico: estructura de template/office, tamaños, marca de versión de su rules.md, ausencia de enlaces a project/, que la lista blanca del .gitignore deje pasar docs/ y archivos de la skill y ignore el resto, y que el snapshot de docs-check siga coincidiendo.
+- **Decisiones/temas a definir antes de empezar:** Cómo se prueba la lista blanca (git check-ignore sobre una carpeta temporal); qué límites de tamaño aplican a los archivos nuevos; si hay que extender reading-policy.test.ts y version.test.ts, que hoy solo leen template/agents/rules.md.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas T-172, T-173 y T-174, que crean lo que se prueba.
+- **Disparador:** cuando se cierren la T-172, la T-173 y la T-174.
+- **Detalles:** Origen: T-162. Suite, scripts/skill-checks (se saltan si la skill no está clonada) y fixtures de scripts/docs-check/test/fixtures/template.
 - **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +94,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
-
-### Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
-
-- **Descripción:** Agregar tests en scripts/skill-checks para el perfil no técnico: estructura de template/office, tamaños, marca de versión de su rules.md, ausencia de enlaces a project/, que la lista blanca del .gitignore deje pasar docs/ y archivos de la skill y ignore el resto, y que el snapshot de docs-check siga coincidiendo.
-- **Decisiones/temas a definir antes de empezar:** Cómo se prueba la lista blanca (git check-ignore sobre una carpeta temporal); qué límites de tamaño aplican a los archivos nuevos; si hay que extender reading-policy.test.ts y version.test.ts, que hoy solo leen template/agents/rules.md.
-- **Bloqueos:** [dependencia] Depende de las tareas T-172, T-173 y T-174, que crean lo que se prueba.
-- **Disparador:** cuando se cierren la T-172, la T-173 y la T-174.
-- **Detalles:** Origen: T-162. Suite, scripts/skill-checks (se saltan si la skill no está clonada) y fixtures de scripts/docs-check/test/fixtures/template.
-- **Agregada:** 2026-11-18.
 
 ### Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
 
