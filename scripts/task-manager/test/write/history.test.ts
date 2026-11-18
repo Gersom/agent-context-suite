@@ -1,6 +1,8 @@
 // La entrada de history.md que escribe `close`: formato y dónde se inserta.
 
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseHistory } from "../../../_shared/parse/history.ts";
 import { normalizeEol } from "../../../_shared/parse/positions.ts";
 import { applyEdits } from "../../src/edit/edits.ts";
@@ -13,7 +15,7 @@ import type { ParsedHistory } from "../../../_shared/types.ts";
 function insertInto(raw: string, entry: string): string {
   const eol = normalizeEol(raw);
   const history = { raw, eol, text: eol.text, parsed: parseHistory(eol.text) } as unknown as Doc<ParsedHistory>;
-  return applyEdits(raw, eol, [insertHistoryEntry(history, entry)]);
+  return applyEdits(raw, eol, insertHistoryEntry(history, entry));
 }
 
 const ENTRY = renderHistoryEntry({ date: "2026-10-08", outcome: "done", label: "Tarea", number: 12, title: "Algo", text: "Se hizo." });
@@ -92,5 +94,75 @@ describe("insertHistoryEntry", () => {
     const out = insertInto(HISTORY_RICH.replace(/\n/g, "\r\n"), ENTRY);
     expect(out.replace(/\r\n/g, "")).not.toContain("\n");
     expect(out).toContain("---\r\n\r\n## 2026-10-08 — ✅ Tarea 12 — Algo\r\n\r\n- Se hizo.\r\n\r\n## 2026-10-07");
+  });
+});
+
+describe("insertHistoryEntry: el «Ninguna.» sobrante", () => {
+  const HEAD = "# History\n\nIntro.\n\n---\n\n";
+
+  test("`Ninguna.` sola: se retira y queda la entrada", () => {
+    expect(insertInto(`${HEAD}Ninguna.\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+  });
+
+  test("`None.` en inglés, y sin punto o en otra capitalización", () => {
+    expect(insertInto(`${HEAD}None.\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+    expect(insertInto(`${HEAD}Ninguna\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+    expect(insertInto(`${HEAD}NONE\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+    expect(insertInto(`${HEAD}ninguna.\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+  });
+
+  test("sin salto de línea final, o con más líneas en blanco al final", () => {
+    expect(insertInto(`${HEAD}Ninguna.`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+    expect(insertInto(`${HEAD}Ninguna.\n\n\n`, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+  });
+
+  test("tras un comentario que la precede: el comentario se conserva", () => {
+    expect(insertInto(`${HEAD}<!-- nota -->\n\nNinguna.\n`, ENTRY)).toBe(`${HEAD}<!-- nota -->\n\n${ENTRY}\n`);
+  });
+
+  test("encima de entradas existentes: se retira y la entrada va arriba, sin dos líneas en blanco seguidas", () => {
+    const old = "## 2026-10-07 — ✅ Tarea 11 — Vieja\n\n- Antes.\n";
+    expect(insertInto(`${HEAD}Ninguna.\n\n${old}`, ENTRY)).toBe(`${HEAD}${ENTRY}\n\n${old}`);
+    expect(insertInto(`${HEAD}Ninguna.\n${old}`, ENTRY)).toBe(`${HEAD}${ENTRY}\n\n${old}`);
+  });
+
+  test("tras una línea de texto sin línea en blanco: solo se quita la línea", () => {
+    expect(insertInto("# History\n\n---\nNinguna.\n\nSigue.\n", ENTRY)).toBe(`# History\n\n---\n\nSigue.\n\n${ENTRY}\n`);
+  });
+
+  test("con la entrada de plantilla: se retira y la entrada de ejemplo se reemplaza", () => {
+    const text = `${HEAD}Ninguna.\n\n## [Placeholder fecha] — ✅ [Placeholder título]\n\n- [Placeholder]\n`;
+    expect(insertInto(text, ENTRY)).toBe(`${HEAD}${ENTRY}\n`);
+  });
+
+  test("el history.md que deja el perfil no técnico (plantilla con la entrada de ejemplo reemplazada por `Ninguna.`)", () => {
+    const installed = readFileSync(join(import.meta.dir, "..", "..", "..", "..", "skill", "template", "agents", "history.md"), "utf8").replace(/\r\n/g, "\n");
+    const text = installed.replace(/## \[Placeholder fecha\][\s\S]*$/, "Ninguna.\n");
+    expect(text).toContain("-->\n\nNinguna.\n");
+    expect(insertInto(text, ENTRY)).toBe(`${text.replace(/Ninguna\.\n$/, "")}${ENTRY}\n`);
+  });
+
+  test("la palabra dentro de una entrada, de prosa, de un comentario o de un bloque de código no se toca", () => {
+    const text = "# History\n\nNinguna. Prosa.\n\n- Ninguna.\n\n<!--\nNinguna.\n-->\n\n```\nNone.\n```\n\n---\n\n## 2026-10-07 — ✅ Tarea 11 — Vieja\n\n- Antes.\n\nNinguna.\n";
+    expect(insertInto(text, ENTRY)).toBe(text.replace("---\n\n## 2026", `---\n\n${ENTRY}\n\n## 2026`));
+  });
+
+  test("una línea sola `Ninguna.` bajo otro `##` que no es entrada no se toca", () => {
+    const text = "# History\n\n## Notas\n\nNinguna.\n";
+    expect(insertInto(text, ENTRY)).toBe(`${text}\n${ENTRY}\n`);
+  });
+
+  test("sin `Ninguna.` no cambia nada: el mismo resultado de siempre", () => {
+    expect(insertInto("# History\n\nIntro.\n", ENTRY)).toBe(`# History\n\nIntro.\n\n${ENTRY}\n`);
+    expect(insertInto(HISTORY_RICH, ENTRY)).toContain("---\n\n## 2026-10-08 — ✅ Tarea 12 — Algo\n\n- Se hizo.\n\n## 2026-10-07");
+  });
+
+  test("solo `Ninguna.` en el archivo: queda la entrada", () => {
+    expect(insertInto("Ninguna.\n", ENTRY)).toBe(`${ENTRY}\n`);
+  });
+
+  test("respeta CRLF", () => {
+    const out = insertInto(`${HEAD}Ninguna.\r\n\r\n## 2026-10-07 — ✅ Tarea 11 — Vieja\r\n\r\n- Antes.\r\n`.replace(/\r?\n/g, "\r\n"), ENTRY);
+    expect(out).toBe(`${HEAD}${ENTRY}\n\n## 2026-10-07 — ✅ Tarea 11 — Vieja\n\n- Antes.\n`.replace(/\n/g, "\r\n"));
   });
 });

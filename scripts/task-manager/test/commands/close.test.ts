@@ -376,6 +376,65 @@ describe("close --discarded", () => {
   });
 });
 
+describe("el «Ninguna.» sobrante de history.md", () => {
+  const HEAD = "# History\n\nIntro.\n\n---\n\n";
+  /** Un proyecto en español con la tarea 1 en curso y este history.md. */
+  async function withHistory(text: string): Promise<Project> {
+    const p = project({ folders: ["gersom"], contents: { "handoff.md": HANDOFF_IDLE, "backlog.md": BACKLOG_RICH, "history.md": text } });
+    await exec(["start", "1", "--apply"], p);
+    return p;
+  }
+
+  test("--done: `Ninguna.` sola se retira y queda la entrada", async () => {
+    const p = await withHistory(`${HEAD}Ninguna.\n`);
+    expect((await exec([...DONE, "--apply"], p)).code).toBe(0);
+    expect(history(p)).toBe(`${HEAD}## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n`);
+  });
+
+  test("el diff sin --apply muestra la línea retirada y no escribe", async () => {
+    const p = await withHistory(`${HEAD}Ninguna.\n`);
+    const before = snapshot(p.root);
+    const { out } = await exec(DONE, p);
+    expect(out).toContain("-Ninguna.");
+    expect(snapshot(p.root)).toEqual(before);
+  });
+
+  test("--discarded también la retira", async () => {
+    const p = await withHistory(`${HEAD}Ninguna.\n`);
+    expect((await exec(["close", "--discarded", "--reason", "No hace falta.", "--apply"], p)).code).toBe(0);
+    expect(history(p)).toBe(`${HEAD}## 2026-10-07 — ❌ Tarea 1 — Probar el flujo completo\n\n- No hace falta.\n`);
+  });
+
+  test("`None.` en un proyecto en inglés, con CRLF", async () => {
+    const crlf = (text: string) => text.replace(/\n/g, "\r\n");
+    const p = project({ folders: ["gersom"], contents: { "handoff.md": crlf(HANDOFF_IDLE_EN), "backlog.md": crlf(BACKLOG_EN), "history.md": crlf(`${HEAD}None.\n`) } });
+    await exec(["start", "4", "--apply"], p);
+    expect((await exec(["close", "--done", "--summary", "Translated.", "--apply"], p)).code).toBe(0);
+    expect(history(p)).toBe(crlf(`${HEAD}## 2026-10-07 — ✅ Task 4 — Translate the glossary\n\n- Translated.\n`));
+  });
+
+  test("encima de entradas existentes se retira y la entrada va arriba", async () => {
+    const p = await withHistory(`${HEAD}Ninguna.\n\n## 2026-10-02 — ✅ Tarea 5 — Ya hecha\n\n- Cerrada.\n`);
+    await exec([...DONE, "--apply"], p);
+    expect(history(p)).toBe(
+      `${HEAD}## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n\n## 2026-10-02 — ✅ Tarea 5 — Ya hecha\n\n- Cerrada.\n`,
+    );
+  });
+
+  test("la entrada de plantilla con placeholder se reemplaza igual", async () => {
+    const p = await withHistory(`${HEAD}Ninguna.\n\n## [Placeholder fecha] — ✅ [Placeholder título]\n\n- [Placeholder]\n`);
+    await exec([...DONE, "--apply"], p);
+    expect(history(p)).toBe(`${HEAD}## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n`);
+  });
+
+  test("sin `Ninguna.` no cambia nada de lo de siempre, y la palabra dentro de una entrada no se toca", async () => {
+    const text = `${HEAD}## 2026-10-02 — ✅ Tarea 5 — Ya hecha\n\n- Ninguna.\n\nNinguna.\n`;
+    const p = await withHistory(text);
+    await exec([...DONE, "--apply"], p);
+    expect(history(p)).toBe(`${HEAD}## 2026-10-07 — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido.\n\n${text.slice(HEAD.length)}`);
+  });
+});
+
 describe("--new", () => {
   test("agrega tareas nuevas a «libres» con los números de «Próximo número de tarea» (que pasa a N+k) y las reporta", async () => {
     const p = await started();

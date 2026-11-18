@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BACKLOG_EMPTY, HANDOFF_EMPTY } from "../fixtures.ts";
+import { BACKLOG_EMPTY, BACKLOG_RICH, HANDOFF_EMPTY, HANDOFF_IDLE } from "../fixtures.ts";
 import { makeProject, type Project } from "../helpers.ts";
 
 const INDEX = join(import.meta.dir, "..", "..", "index.ts");
@@ -195,6 +195,25 @@ describe("index.ts", () => {
     } finally {
       english.cleanup();
       spanish.cleanup();
+    }
+  });
+
+  test("close en un history.md como lo deja el perfil no técnico: la entrada nueva reemplaza al `Ninguna.`", async () => {
+    const template = readFileSync(join(import.meta.dir, "..", "..", "..", "..", "skill", "template", "agents", "history.md"), "utf8").replace(/\r\n/g, "\n");
+    const installed = template.replace(/## \[Placeholder fecha\][\s\S]*$/, "Ninguna.\n");
+    expect(installed).toMatch(/\n\nNinguna\.\n$/);
+    const p = makeProject({ flat: true, contents: { "handoff.md": HANDOFF_IDLE, "backlog.md": BACKLOG_RICH, "history.md": installed } });
+    try {
+      const start = await runCli(["start", "1", "--agents", p.agents, "--apply"], { cwd: p.root });
+      expect(start.code).toBe(0);
+      const close = await runCli(["close", "--done", "--summary", "Se hizo lo pedido.", "--agents", p.agents, "--apply"], { cwd: p.root });
+      expect(close.code).toBe(0);
+      const text = readFileSync(join(p.agents, "history.md"), "utf8");
+      expect(text).not.toContain("Ninguna.");
+      expect(text.startsWith(installed.replace(/Ninguna\.\n$/, ""))).toBe(true);
+      expect(text).toMatch(/-->\n\n## \d{4}-\d{2}-\d{2} — ✅ Tarea 1 — Probar el flujo completo\n\n- Se hizo lo pedido\.\n$/);
+    } finally {
+      p.cleanup();
     }
   });
 });

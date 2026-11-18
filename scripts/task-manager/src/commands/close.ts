@@ -246,7 +246,7 @@ export const close: Command = {
     const result = ctx.commit(
       [
         ...(handoffEdit ? [{ doc: handoff, edits: [handoffEdit] }] : []),
-        { doc: history, edits: [insertHistoryEntry(history, entry)] },
+        { doc: history, edits: insertHistoryEntry(history, entry) },
         ...(backlogEdits.length ? [{ doc: backlog, edits: backlogEdits }] : []),
       ],
       { quiet: flags.json === true },
