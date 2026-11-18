@@ -3,8 +3,8 @@ import { spawnSync } from "node:child_process";
 import { VERSION_MARKER_RE } from "../_shared/markers.ts";
 import { hasSkill, readSkill, SKILL_DIR } from "./skill-dir.ts";
 
-// La versión de la skill vive en tres sitios que deben coincidir: .claude-plugin/plugin.json,
-// la línea «Versión de esta skill» de SKILL.md y el marcador de template/agents/rules.md.
+// La versión de la skill vive en cuatro sitios que deben coincidir: .claude-plugin/plugin.json,
+// la línea «Versión de esta skill» de SKILL.md y el marcador de template/agents/rules.md y de template/office/rules.md.
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
@@ -42,6 +42,13 @@ describe.skipIf(!hasSkill)("versión de la skill: coherencia entre plugin.json, 
     const first = readSkill("template/agents/rules.md").split("\n")[0];
     const match = first.match(VERSION_MARKER_RE);
     expect(match, "template/agents/rules.md no lleva el marcador de versión en la línea 1").not.toBeNull();
+    expect(match?.[1]).toBe(pluginVersion());
+  });
+
+  test("el marcador de la línea 1 de template/office/rules.md declara la misma versión", () => {
+    const first = readSkill("template/office/rules.md").split("\n")[0];
+    const match = first.match(VERSION_MARKER_RE);
+    expect(match, "template/office/rules.md no lleva el marcador de versión en la línea 1").not.toBeNull();
     expect(match?.[1]).toBe(pluginVersion());
   });
 
