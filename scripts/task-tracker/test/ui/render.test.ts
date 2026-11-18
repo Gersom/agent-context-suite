@@ -203,14 +203,17 @@ describe("render", () => {
     expect(rowWith(out, "Estado: Paso 3 de 5")).toBe("Estado: Paso 3 de 5 [█████░░░░░░░]");
     expect(rowWith(out, "Paso 3 — Escribir")).toBe("  ▸ Paso 3 — Escribir el modelo");
     expect(rowWith(out, "Descripción breve")).toBe("  Descripción breve que menciona la Tarea 13 a mitad de línea.");
-    // «Qué falta» y «Próximo paso concreto» no se muestran, ni en la tarea en curso ni en la pausada.
-    for (const hidden of ["Qué falta", "Pasos 3 y 4", "Próximo paso", "Segunda línea", "revisar setup.md", "Plan ["]) expect(out).not.toContain(hidden);
+    // «Qué falta» y «Próximo paso concreto» no se muestran en la tarea en curso; la pausada solo trae «Qué falta».
+    for (const hidden of ["Pasos 3 y 4", "Próximo paso", "Segunda línea", "Plan ["]) expect(out).not.toContain(hidden);
+    expect(out.split("\n").filter((l) => l.includes("Qué falta"))).toHaveLength(1);
     // El fixture trae el modo con texto legado: no se muestra.
     expect(out).not.toContain("Modo");
     expect(rowWith(out, "Tarea 8")).toBe("• Tarea 8 — Migrar la documentación vieja");
     expect(rowWith(out, "Estado: Paso 2 de 3")).toBe("    Estado: Paso 2 de 3 [████░░░░░░░░]");
     expect(rowWith(out, "Copiar el contenido")).toBe("      ✔ Paso 1 — Copiar el contenido viejo");
     expect(rowWith(out, "Revisar los links")).toBe("      ▸ Paso 2 — Revisar los links");
+    expect(rowWith(out, "Qué falta:")).toBe("    Qué falta:");
+    expect(rowWith(out, "revisar setup.md")).toBe("      revisar setup.md.");
     expect(rowWith(out, "Por qué se pausó:")).toBe("    Por qué se pausó:");
     expect(rowWith(out, "surgió una prioridad")).toBe("      surgió una prioridad mayor.");
     expect(rowWith(out, "Qué espera para retomarse:")).toBe("    Qué espera para retomarse:");
@@ -399,18 +402,49 @@ describe("render", () => {
         "      Mover lo viejo.",
         "    Decisiones a medio camino:",
         "      Conservar setup.md.",
+        "    Qué falta:",
+        "      Pasos 2 y 3.",
+        "    Próximo paso concreto:",
+        "      Paso 2.",
         "    Por qué se pausó:",
         "      Surgió una prioridad mayor.",
         "    Qué espera para retomarse:",
         "      Que se cierre la Tarea 12.",
       ]);
-      for (const hidden of ["Qué falta", "Pasos 2 y 3", "Próximo paso"]) expect(out).not.toContain(hidden);
+    });
+
+    test("pausada con «Qué falta» y «Próximo paso concreto» vacíos, «Ninguna»/«None» o placeholder: no se pintan", () => {
+      for (const [missing, next] of [["Ninguna.", "Ninguno"], ["None", "None."], ["", ""], ["[Placeholder: qué falta]", "[Placeholder: paso]"]]) {
+        const paused = `### Tarea 8 — Algo\n\n- **Qué falta:** ${missing}\n- **Próximo paso concreto:** ${next}\n- **Por qué se pausó:** Prioridad.`;
+        expect(rowsOf(screenOf("Sin tarea en curso", paused), "PAUSADAS (1)")).toEqual(["• Tarea 8 — Algo", "    Por qué se pausó:", "      Prioridad."]);
+      }
+    });
+
+    test("pausada en inglés: «What's left» y «Next concrete step» salen como «Qué falta» y «Próximo paso concreto»", () => {
+      const paused = "### Tarea 8 — Algo\n\n- **What's left:** Step 2.\n- **Next concrete step:** Review.\n- **Why it was paused:** Urgent.";
+      expect(rowsOf(screenOf("Sin tarea en curso", paused), "PAUSADAS (1)")).toEqual([
+        "• Tarea 8 — Algo",
+        "    Qué falta:",
+        "      Step 2.",
+        "    Próximo paso concreto:",
+        "      Review.",
+        "    Por qué se pausó:",
+        "      Urgent.",
+      ]);
+    });
+
+    test("la tarea en curso no muestra «Qué falta» ni «Próximo paso concreto» aunque los traiga", () => {
+      // `sections` trae ambas subsecciones.
+      const out = screenOf(`Tarea 7 — Algo\n\n${sections(steps(1, 2), "Usar A.")}`);
+      for (const hidden of HIDDEN) expect(rowsOf(out, "EN PROGRESO").join("\n")).not.toContain(hidden);
     });
 
     test("pausada sin plan, descripción ni decisiones: solo el título y sus campos propios", () => {
       const paused = "### Tarea 8 — Algo\n\n- **Qué falta:** todo.\n- **Decisiones a medio camino:** Ninguna.\n- **Por qué se pausó:** Prioridad.\n- **Qué espera para retomarse:** Nada.";
       expect(rowsOf(screenOf("Sin tarea en curso", paused), "PAUSADAS (1)")).toEqual([
         "• Tarea 8 — Algo",
+        "    Qué falta:",
+        "      todo.",
         "    Por qué se pausó:",
         "      Prioridad.",
         "    Qué espera para retomarse:",

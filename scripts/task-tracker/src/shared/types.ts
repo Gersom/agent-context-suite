@@ -40,7 +40,8 @@ export interface Plan {
 
 /**
  * Lo que la pantalla muestra de una tarea con plan (en progreso o pausada); el resto de sus
- * subsecciones o campos (ej. «Qué falta», «Próximo paso concreto») no se muestra.
+ * subsecciones o campos no se muestra. «Qué falta» y «Próximo paso concreto» no se muestran en la
+ * tarea en curso, pero sí en las pausadas (ver `PausedTask`).
  */
 interface TaskView {
   plan: Plan;
@@ -54,6 +55,10 @@ interface TaskView {
 
 /** Tarea pausada con el avance de su plan (vacío si no traía plan) y sus campos propios. */
 export interface PausedTask extends ParsedPausedTask, TaskView {
+  /** «Qué falta»; `null` si no lo trae, está vacío o dice «Ninguna.»/«None»/«N/A». */
+  missing: string | null;
+  /** «Próximo paso concreto»; `null` si no lo trae, está vacío o dice «Ninguno.»/«None»/«N/A». */
+  next: string | null;
   /** «Por qué se pausó»; `null` si no lo trae. */
   why: string | null;
   /** «Qué espera para retomarse»; `null` si no lo trae. */

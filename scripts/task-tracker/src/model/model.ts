@@ -121,7 +121,8 @@ export function buildModel({
 /**
  * Tarea en progreso con el avance de su plan, su modo de ejecución, su descripción (el texto entre
  * la línea `Tarea N — título` y la primera subsección, sin sus campos `- **Campo:** valor`) y sus
- * decisiones. Las demás subsecciones («Qué falta», «Próximo paso concreto»...) no se exponen.
+ * decisiones. Las demás subsecciones («Qué falta», «Próximo paso concreto»...) no se exponen en la tarea en curso
+ * (solo en las pausadas).
  */
 function buildCurrent(task: CurrentTaskLine, { planSteps, subsections }: InProgress, handoffText: string, section: Section | undefined): CurrentTask {
   const decisions = subsections.find((s) => partOf(s.title) === "decisions");
@@ -164,7 +165,8 @@ function cleanText(value: string | null | undefined): string | null {
 
 /**
  * Tarea pausada con el avance de su plan y los campos que se muestran: modo, descripción,
- * decisiones, «Por qué se pausó» y «Qué espera para retomarse» (los demás, como «Qué falta», no).
+ * decisiones, «Qué falta», «Próximo paso concreto», «Por qué se pausó» y «Qué espera para retomarse».
+ * «Qué falta» y «Próximo paso concreto» van `null` también si dicen «Ninguna.»/«Ninguno.»/«None» (como las decisiones).
  */
 function buildPaused(task: ParsedPausedTask): PausedTask {
   const { fields } = task;
@@ -175,6 +177,8 @@ function buildPaused(task: ParsedPausedTask): PausedTask {
     mode: mode != null && isExecutionMode(mode) ? mode : null,
     description: cleanText(fields.filter((f) => DESCRIPTION_LABEL_RE.test(f.label)).at(-1)?.value),
     decisions: decisionsText(pausedField(fields, "decisions")),
+    missing: decisionsText(pausedField(fields, "missing")),
+    next: decisionsText(pausedField(fields, "next")),
     why: pausedField(fields, "why"),
     waits: pausedField(fields, "waits"),
   };

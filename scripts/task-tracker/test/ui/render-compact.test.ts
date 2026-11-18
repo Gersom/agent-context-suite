@@ -48,9 +48,30 @@ describe("modo compacto del panel", () => {
     expect(rowsOf(expanded, "TAREAS COMPLETADAS (últimas 5)")[0]).toContain("T-11");
   });
 
-  test("en progreso y pausadas no se compactan", () => {
+  test("en progreso y pausadas no se compactan, salvo que las pausadas ocultan «Qué falta» y «Próximo paso concreto»", () => {
     expect(rowsOf(compact, "EN PROGRESO")).toEqual(rowsOf(expanded, "EN PROGRESO"));
-    expect(rowsOf(compact, "PAUSADAS (1)")).toEqual(rowsOf(expanded, "PAUSADAS (1)"));
+    const shown = rowsOf(expanded, "PAUSADAS (1)");
+    const at = shown.indexOf("    Qué falta:");
+    expect(at).toBeGreaterThan(0);
+    // Las filas de «Qué falta» (etiqueta y su texto) son las únicas que cambian.
+    expect(rowsOf(compact, "PAUSADAS (1)")).toEqual([...shown.slice(0, at), ...shown.slice(at + 2)]);
+  });
+
+  test("pausada con «Qué falta» y «Próximo paso concreto»: se pintan expandido y se ocultan en compacto", () => {
+    const paused = buildModel({
+      handoffText: "# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Qué falta:** Pasos 2 y 3.\n- **Próximo paso concreto:** Paso 2.\n- **Por qué se pausó:** Prioridad.\n",
+      backlogText: null,
+    });
+    expect(rowsOf(render(paused, meta), "PAUSADAS (1)")).toEqual([
+      "• Tarea 8 — Algo",
+      "    Qué falta:",
+      "      Pasos 2 y 3.",
+      "    Próximo paso concreto:",
+      "      Paso 2.",
+      "    Por qué se pausó:",
+      "      Prioridad.",
+    ]);
+    expect(rowsOf(render(paused, { ...meta, compact: true }), "PAUSADAS (1)")).toEqual(["• Tarea 8 — Algo", "    Por qué se pausó:", "      Prioridad."]);
   });
 
   test("en progreso muestra el modo de ejecución también en compacto, antes del estado", () => {

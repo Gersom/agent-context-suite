@@ -274,7 +274,9 @@ export function render(model: Model, meta: RenderMeta): string {
           for (const task of model.paused) {
             row(0, { paint: pc.yellow, text: `• ${fullTaskName(task)}` });
             taskRows(task, 4, row, pc, width);
-            // Sus campos propios, al final.
+            // Sus campos propios, al final; «Qué falta» y «Próximo paso concreto» no van en compacto.
+            if (task.missing && !meta.compact) textRows("Qué falta", task.missing, 4, row, secondary, width);
+            if (task.next && !meta.compact) textRows("Próximo paso concreto", task.next, 4, row, secondary, width);
             if (task.why) textRows("Por qué se pausó", task.why, 4, row, secondary, width);
             if (task.waits) textRows("Qué espera para retomarse", task.waits, 4, row, secondary, width);
           }

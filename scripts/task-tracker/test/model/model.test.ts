@@ -169,10 +169,10 @@ describe("buildModel", () => {
 
     test("el fixture: por qué se pausó y qué espera; sin descripción, decisiones ni modo", () => {
       const [paused] = load("es-anchors").paused;
-      expect(paused).toMatchObject({ why: "surgió una prioridad mayor.", waits: "que se cierre la Tarea 12.", description: null, decisions: null, mode: null });
+      expect(paused).toMatchObject({ missing: "revisar `setup.md`.", next: null, why: "surgió una prioridad mayor.", waits: "que se cierre la Tarea 12.", description: null, decisions: null, mode: null });
     });
 
-    test("descripción, decisiones, modo, por qué y qué espera; «Qué falta» y «Próximo paso concreto» no se exponen", () => {
+    test("descripción, decisiones, modo, qué falta, próximo paso, por qué y qué espera", () => {
       const paused = pausedOf([
         "- **Descripción:** De qué trata.",
         "  Segunda línea.",
@@ -182,7 +182,7 @@ describe("buildModel", () => {
         "- **Modo de ejecución acordado:** step-by-step",
         "- **Qué falta:** Paso 2.",
         "- **Decisiones a medio camino:** Usar A.",
-        "- **Próximo paso concreto:** Paso 2.",
+        "- **Próximo paso concreto:** Paso 2 — revisar.",
         "- **Por qué se pausó:** Llegó algo urgente.",
         "- **Qué espera para retomarse:** Que se cierre la Tarea 3.",
       ]);
@@ -190,17 +190,27 @@ describe("buildModel", () => {
         description: "De qué trata.\nSegunda línea.",
         mode: "step-by-step",
         decisions: "Usar A.",
+        missing: "Paso 2.",
+        next: "Paso 2 — revisar.",
         why: "Llegó algo urgente.",
         waits: "Que se cierre la Tarea 3.",
       });
       expect(paused.plan).toMatchObject({ done: 1, total: 2 });
     });
 
+    test("«Qué falta» y «Próximo paso concreto» ausentes, vacíos o «Ninguna»/«Ninguno»/«None»: null", () => {
+      expect(pausedOf(["- **Descripción:** Algo."])).toMatchObject({ missing: null, next: null });
+      expect(pausedOf(["- **Qué falta:**", "- **Próximo paso concreto:**"])).toMatchObject({ missing: null, next: null });
+      expect(pausedOf(["- **Qué falta:** Ninguna.", "- **Próximo paso concreto:** Ninguno"])).toMatchObject({ missing: null, next: null });
+      expect(pausedOf(["- **What's left:** None", "- **Next concrete step:** None."])).toMatchObject({ missing: null, next: null });
+      expect(pausedOf(["- **Qué falta:** N/A", "- **Próximo paso concreto:** N/A"])).toMatchObject({ missing: null, next: null });
+    });
+
     test("decisiones «Ninguna.», modo legado, etiquetas en inglés y campos ausentes", () => {
       expect(pausedOf(["- **Decisiones a medio camino:** Ninguna.", "- **Modo de ejecución acordado:** todos los pasos seguidos."])).toMatchObject({ decisions: null, mode: null, why: null, waits: null });
       expect(
-        pausedOf(["- **Description:** About it.", "- **Agreed execution mode:** auto", "- **Decisions along the way:** None", "- **Why it was paused:** Urgent.", "- **What it is waiting for:** Task 3."]),
-      ).toMatchObject({ description: "About it.", mode: "auto", decisions: null, why: "Urgent.", waits: "Task 3." });
+        pausedOf(["- **Description:** About it.", "- **Agreed execution mode:** auto", "- **Decisions along the way:** None", "- **Why it was paused:** Urgent.", "- **What it is waiting for:** Task 3.", "- **What's left:** Step 2.", "- **Next concrete step:** Review."]),
+      ).toMatchObject({ description: "About it.", mode: "auto", decisions: null, missing: "Step 2.", next: "Review.", why: "Urgent.", waits: "Task 3." });
     });
   });
 
@@ -214,10 +224,10 @@ describe("buildModel", () => {
 
   test("pausadas: los placeholders y las reglas `---` de sus campos no se muestran", () => {
     const [paused] = buildModel({
-      handoffText: `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Descripción:** [Placeholder: qué es]\n- **Decisiones a medio camino:** Usar A.\n  ---\n- **Por qué se pausó:** [Placeholder: motivo]\n- **Qué espera para retomarse:** N/A\n`,
+      handoffText: `# H\n\n<!-- agent-context-skill:section=in-progress -->\n## Tarea en progreso\n\nSin tarea en curso\n\n<!-- agent-context-skill:section=paused -->\n## Tareas pausadas\n\n### Tarea 8 — Algo\n\n- **Descripción:** [Placeholder: qué es]\n- **Qué falta:** [Placeholder: qué falta]\n- **Decisiones a medio camino:** Usar A.\n  ---\n- **Próximo paso concreto:** [Placeholder: paso]\n- **Por qué se pausó:** [Placeholder: motivo]\n- **Qué espera para retomarse:** N/A\n`,
       backlogText: null,
     }).paused;
-    expect(paused).toMatchObject({ description: null, decisions: "Usar A.", why: null, waits: "N/A" });
+    expect(paused).toMatchObject({ description: null, decisions: "Usar A.", missing: null, next: null, why: null, waits: "N/A" });
   });
 
   test("completadas: las 5 primeras entradas de history.md", () => {
