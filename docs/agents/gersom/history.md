@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ✅ Tarea 165 — check: quitar avisos que no aplican a proyectos sin código
+
+- acsuite check ya no avisa de tarea en curso sin plan (la Regla 2 permite tareas pequeñas sin plan) y trata CLAUDE.md como opcional: solo avisa si falta AGENTS.md. Se conservan los avisos de AGENTS.md ausente, placeholders del backlog y sección de la suite en rules.md.
+- Cómo: se quitó current-no-plan de checks/handoff.ts y CLAUDE.md ausente de checks/files.ts, con tests y README de docs-check ajustados. bun test 2063 pass, typecheck sin errores; sin revisión independiente por ser un cambio pequeño. Los enlaces a project/ de la plantilla de rules.md quedan para la T-162.
+- Commit: a4a7c27.
+
 ## 2026-11-17 — ✅ Tarea 164 — Board: mostrar Qué falta y Próximo paso en las tareas pausadas
 
 - El board muestra «Qué falta» y «Próximo paso concreto» en las tareas pausadas, antes de «Por qué se pausó»; sin contenido (vacío, Ninguna, None, N/A, placeholders) no se pinta la fila, en compacto se ocultan y la tarea en curso no cambia.
