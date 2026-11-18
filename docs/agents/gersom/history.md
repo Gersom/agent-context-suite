@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 167 — Etiquetas: campo Etiquetas en add, edit y close del task-manager
+
+- El task-manager soporta el campo opcional Etiquetas (Tags en inglés): --labels en add (backlog y --team) y en edit, validación de solo letras y números (con # inicial y comas aceptados y quitados al guardar), duplicados sin distinguir mayúsculas, y close las pasa a history.md. start, pause, resume, block y los group-* las conservan.
+- Cómo: nuevo write/labels.ts, kind labels en language.ts, y cambios en add, edit, close, new-task, task-edit e history. bun test 2117 pass, typecheck sin errores, revisión independiente con comandos reales. Pendiente menor: edit --labels - con stdin vacío borra el campo sin avisar.
+- Commit: 5097ccb.
+
 ## 2026-11-18 — ✅ Tarea 161 — Investigación: etiquetas en las tareas
 
 - Investigación terminada: el campo opcional Etiquetas (0 o más, solo letras y números, sin # en el archivo y con # en el board) es viable y se divide en cinco tareas: T-167 task-manager (add, edit, close), T-168 board, T-169 check, T-170 plantillas de la skill y T-171 filtros.
