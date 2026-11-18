@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ✅ Tarea 160 — Evaluar la viabilidad de usar la suite en trabajo no técnico (oficina) con Codex
+
+- Veredicto: viable usar la suite en trabajo no técnico (oficina) con Codex. El núcleo (en curso, pausadas, backlog, historial, pausar y retomar) funciona sin project/, sin plan y sin correo de git; lo probado en dos proyectos temporales.
+- Cómo: lectura de la skill y las herramientas por exploradores, simulación de una jornada con dos empresas y revisión independiente de las conclusiones.
+- Cambios derivados: T-161 etiquetas, T-162 flujo no técnico de la skill, T-163 board con ruta sin skill, T-164 Qué falta en pausadas, T-165 avisos de check, T-166 instalación global y .bat.
+- Riesgos y decisiones de diseño quedaron en T-161 y T-162.
+
 ## 2026-11-17 — ✅ Tarea 159 — task list: listar y buscar tareas por estado, palabra y cantidad
 
 - Nuevo comando de solo lectura `acsuite task list [--status <s>] [--search <texto>] [--last <N>] [--group <nombre>] [--json]`: lista y busca tareas en todos los lugares (en curso, pausadas, libres, agrupadas, bloqueadas, cerradas y team-backlog), de la más reciente a la más antigua; evita que el agente lea history.md entero o recurra a grep. Responde «las últimas 10», «las 20 últimas descartadas» y «las 15 últimas con <palabra>».

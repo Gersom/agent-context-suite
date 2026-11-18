@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 160
+**Próximo número de tarea:** 167
 
 ---
 
@@ -47,6 +47,42 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera hacer pública la skill, o priorice esta tarea explícitamente.
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
+
+### Tarea 161 — Etiquetas en las tareas (campo opcional, 0 o más)
+
+- **Descripción:** Agregar un campo opcional «Etiquetas» a las tareas (0 o más), que el agente decide poner según haga falta. Se guardan en el .md sin «#», separadas por espacio, y el board las muestra con «#» (#empresa1 #trabajo #ideasBrillantes).
+- **Decisiones/temas a definir antes de empezar:** Normalización tipo hashtag (decidida): solo letras y números, sin tildes ni caracteres especiales ni espacios; sin «#» en el archivo; comparación sin distinguir mayúsculas conservando la forma escrita (ideasBrillantes). Nombre del flag en inglés (--label) y del campo (Etiquetas), distinto del «tag» de bloqueo [dependencia]/[postergada]. Alcance: formato en backlog, handoff, history y team-backlog; add/edit/status con filtro por etiqueta; board que las muestre y filtre; acsuite check que valide el formato; plantillas de la skill. Cambia skill y suite, así que cada repo con su commit y versión.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; la necesita el flujo no técnico de la T-160 para separar tareas por empresa.
+- **Detalles:** Origen: T-160 (suite en trabajo de oficina). Una persona que trabaja con varias empresas necesita separar tareas por empresa sin carpetas distintas, para conservar una sola tarea en curso. Útil también en proyectos de código (área, tipo, cliente). Notas de la revisión: el parser ya acepta un campo genérico y start y pause lo arrastran, pero add y edit no tienen flag para escribirlo; falta la etiqueta del campo en inglés (Tags) en language.ts; un valor que empieza con corchete se lee como bloqueo, por eso las etiquetas no llevan símbolos; un valor Ninguna se descarta al arrastrar; verificar que close pase las etiquetas a history.md, o se pierden al cerrar.
+- **Agregada:** 2026-11-17.
+
+### Tarea 163 — Board: ruta explícita sin la skill debe abrir la lista de proyectos
+
+- **Descripción:** Hoy acsuite board con una ruta que no tiene documentación de la skill sale con error (código 1); debería abrir la vista de proyectos, igual que cuando se lanza sin ruta en una carpeta sin la skill.
+- **Decisiones/temas a definir antes de empezar:** Qué hacer con una ruta que no existe (error o lista con aviso); si la lista ofrece agregar esa carpeta como proyecto nuevo; qué pasa con --once (sin pantalla interactiva: error o mensaje) y con una carpeta de agentes existente pero mal formada (sigue siendo error, como sin ruta).
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; la necesita el flujo no técnico (T-162), cuyo ejecutable lanza el board desde la carpeta del proyecto.
+- **Detalles:** Origen: T-160. Código: resolveFromArg en scripts/task-tracker/src/main.ts hace process.exit(1) si resolveAgentsDir falla; resolveFromCwd ya devuelve null (lista de proyectos) cuando no hay docs de la skill. Actualizar tests y el README del task-tracker.
+- **Agregada:** 2026-11-17.
+
+### Tarea 164 — Board: mostrar Qué falta y Próximo paso en las tareas pausadas
+
+- **Descripción:** El board muestra en las pausadas solo Descripción, Por qué se pausó y Qué espera para retomarse; falta Qué falta y Próximo paso concreto, que es lo que más sirve al retomar.
+- **Decisiones/temas a definir antes de empezar:** Si se muestran también en la tarea en curso (hoy solo muestra la descripción); cómo se ve en modo compacto y en pantallas angostas.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; útil para el flujo no técnico (T-162).
+- **Detalles:** Origen: T-160 (simulación de oficina con dos pausadas). Código en scripts/task-tracker/src/model y ui. Actualizar tests y el README del task-tracker.
+- **Agregada:** 2026-11-17.
+
+### Tarea 165 — check: quitar avisos que no aplican a proyectos sin código
+
+- **Descripción:** acsuite check avisa de cosas que no aplican a un proyecto no técnico o contradicen las reglas: falta de AGENTS.md y CLAUDE.md, tarea en curso sin plan (la Regla 2 dice que las pequeñas van sin plan), placeholders sobrantes en el backlog y enlaces rotos hacia project/ en la plantilla de rules.md.
+- **Decisiones/temas a definir antes de empezar:** Qué avisos pasan a opcionales y cuáles se quitan; si el aviso de tarea sin plan se elimina o se limita a tareas medianas; cómo se arreglan los enlaces de la plantilla de rules.md (en el repo de la skill) cuando no existe project/.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; la necesita el flujo no técnico (T-162).
+- **Detalles:** Origen: T-160. Código: scripts/docs-check/src/checks (files.ts, handoff.ts, placeholders.ts); la plantilla vive en skill/template/agents/rules.md (otro repo, otro commit).
+- **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
@@ -76,6 +112,24 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando el operador quiera distribuir el mod por separado.
 - **Detalles:** Surgida al planear la Tarea 104. Pasos probables: crear el repo, mover la carpeta con su historial si conviene, mover el marketplace.json, ajustar el README y la ruta en ~/.claude/settings.json.
 - **Agregada:** 2026-10-27.
+
+### Tarea 162 — Flujo de la skill para trabajo no técnico
+
+- **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
+- **Decisiones/temas a definir antes de empezar:** Hipótesis de la T-160, a confirmar con su veredicto: sin carpeta project/; sin multi-operador; git automático (el agente crea rama y commits, la persona no los ve); se conserva el T-N; sin plan ni modo de ejecución (ejecuta casi todo la persona); el agente registra un T-N solo si la petición toca un archivo y no es de un paso, o si la persona cambia de tarea; frases normales (pausa esto, sigamos con X, ya terminé) traducidas a pause/resume/close; varias empresas con una sola carpeta y etiquetas (T-161). Qué plantillas se adaptan o se omiten y cómo se elige el flujo al empezar (pregunta inicial o variante de SKILL.md); cómo funciona con Codex (AGENTS.md, preguntas en texto con opciones numeradas).
+- **Bloqueos:** [dependencia] Depende de la Tarea 160 (veredicto de viabilidad y lista de cambios) y de la Tarea 161 (etiquetas, para separar empresas).
+- **Disparador:** cuando se cierre la Tarea 160 con veredicto viable.
+- **Detalles:** Origen: T-160. Cambia principalmente la skill (SKILL.md, questions-flow, rules y plantillas); puede tocar la suite si check o el task-manager exigen campos de código. Cada repo con su commit y versión. Riesgos de la revisión de la T-160: (1) git automático choca con la Regla 5 (los commits de otros cambios solo a pedido) y la Regla 6 (cierre solo a pedido): hay que cambiar esas reglas para el perfil, subir versión y changelog, y regenerar el fixture scripts/docs-check/test/fixtures/template (snapshot.test.ts). (2) close --commits auto falla si no hay commits con scope (T-N); step --commit auto toma HEAD: los commits automáticos deben llevar el scope. (3) .gitignore total: usar lista blanca con !docs/** (no basta !docs/) más AGENTS.md, CLAUDE.md y agent-context/; el flujo working-branch usa git add con rutas y falla en rutas ignoradas. (4) Si la carpeta cuelga de otro repo, las herramientas usan la raíz de ese repo; antes de git init el agente debe detectarlo. (5) SKILL.md pesa 4434 de 4500 bytes (reading-policy.test.ts): el texto nuevo va en docs/. (6) start y add exigen backlog.md aunque el board lo tolere. (7) Una tarea sin plan sigue dando aviso en check (T-165).
+- **Agregada:** 2026-11-17.
+
+### Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
+
+- **Descripción:** Dejar documentado cómo instalar acsuite de forma global (npm o dist/cli.js) y un .bat de arranque que haga cd a su carpeta y ejecute acsuite board, para que una persona no técnica abra el tablero con doble clic.
+- **Decisiones/temas a definir antes de empezar:** Cómo se distribuye el CLI (npm global tras publicar, o copiar dist/cli.js); dónde vive el .bat (plantilla en la suite o en la skill); si el instalador lo crea; comprobar el modo interactivo del board en una ventana real.
+- **Bloqueos:** [dependencia] Depende de la Tarea 163 (ruta sin la skill abre la lista de proyectos) y de publicar el CLI en npm (Tarea 78).
+- **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
+- **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
+- **Agregada:** 2026-11-17.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
