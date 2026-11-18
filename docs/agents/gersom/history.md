@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
+
+- Tests del perfil no técnico en scripts/skill-checks: office-profile.test.ts (29 tests) fija la estructura de template/office y de office-profile.md y office-git.md, sus tamaños (office-git 1500, office-profile 2000, AGENTS.md 1500, rules.md 5000 bytes), la ausencia de enlaces a project/ y de jerga de plan, el contenido imprescindible de rules.md y AGENTS.md, la Ronda 0 y la lista blanca del .gitignore con git real; version.test.ts exige además que template/office/rules.md lleve la versión de plugin.json.
+- Cómo: tests nuevos más uno en version.test.ts; verificados rompiendo a propósito una copia de la skill de seis maneras (cada una falla un test claro). bun test 2344 pass, typecheck y check sin avisos; sin revisión independiente por ser solo tests.
+- Commit: 1dc3068.
+
 ## 2026-11-18 — ✅ Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
 
 - La skill pregunta al empezar el perfil (Ronda 0, en texto con opciones numeradas, tras el idioma): programación sigue el flujo de siempre y trabajo del día a día sigue docs/office-profile.md, el flujo de instalación del perfil no técnico: rechazos de carpetas, una sola confirmación (sin seguimiento de cambios si no hay git), creación de docs/agents con las plantillas, rules.md y AGENTS.md de office, .gitignore, git init y primer commit, check y mensaje de cierre sin jerga. Sin rondas de proyecto, project/, docs/README.md ni rama de trabajo.

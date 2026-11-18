@@ -48,13 +48,13 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
+### Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
 
-- **Descripción:** Agregar tests en scripts/skill-checks para el perfil no técnico: estructura de template/office, tamaños, marca de versión de su rules.md, ausencia de enlaces a project/, que la lista blanca del .gitignore deje pasar docs/ y archivos de la skill y ignore el resto, y que el snapshot de docs-check siga coincidiendo.
-- **Decisiones/temas a definir antes de empezar:** Cómo se prueba la lista blanca (git check-ignore sobre una carpeta temporal); qué límites de tamaño aplican a los archivos nuevos; si hay que extender reading-policy.test.ts y version.test.ts, que hoy solo leen template/agents/rules.md.
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas T-172, T-173 y T-174, que crean lo que se prueba.
-- **Disparador:** cuando se cierren la T-172, la T-173 y la T-174.
-- **Detalles:** Origen: T-162. Suite, scripts/skill-checks (se saltan si la skill no está clonada) y fixtures de scripts/docs-check/test/fixtures/template.
+- **Descripción:** Probar el perfil completo: un agente instala el perfil en una carpeta temporal sin git, atiende dos empresas con tareas que se pausan y se retoman, y se comprueba git, commits, .gitignore, task-manager, check y board.
+- **Decisiones/temas a definir antes de empezar:** Qué agente corre la prueba (un subagente que solo sigue las instrucciones de la skill); casos: carpeta sin git, dentro de otro repo, con archivos Excel e imágenes de prueba; si se prueba también con Codex real por el operador.
+- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de la tarea de tests del perfil (T-175).
+- **Disparador:** cuando se cierre la T-175.
+- **Detalles:** Origen: T-162. No cambia código: encuentra fallos de redacción de las reglas, de git o de las herramientas, que se registran como tareas nuevas.
 - **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
@@ -94,15 +94,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
-
-### Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
-
-- **Descripción:** Probar el perfil completo: un agente instala el perfil en una carpeta temporal sin git, atiende dos empresas con tareas que se pausan y se retoman, y se comprueba git, commits, .gitignore, task-manager, check y board.
-- **Decisiones/temas a definir antes de empezar:** Qué agente corre la prueba (un subagente que solo sigue las instrucciones de la skill); casos: carpeta sin git, dentro de otro repo, con archivos Excel e imágenes de prueba; si se prueba también con Codex real por el operador.
-- **Bloqueos:** [dependencia] Depende de la tarea de tests del perfil (T-175).
-- **Disparador:** cuando se cierre la T-175.
-- **Detalles:** Origen: T-162. No cambia código: encuentra fallos de redacción de las reglas, de git o de las herramientas, que se registran como tareas nuevas.
-- **Agregada:** 2026-11-18.
 
 ### Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
 
