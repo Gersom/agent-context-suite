@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Origen: T-160 (suite en trabajo de oficina). Una persona que trabaja con varias empresas necesita separar tareas por empresa sin carpetas distintas, para conservar una sola tarea en curso. Útil también en proyectos de código (área, tipo, cliente). Notas de la revisión: el parser ya acepta un campo genérico y start y pause lo arrastran, pero add y edit no tienen flag para escribirlo; falta la etiqueta del campo en inglés (Tags) en language.ts; un valor que empieza con corchete se lee como bloqueo, por eso las etiquetas no llevan símbolos; un valor Ninguna se descarta al arrastrar; verificar que close pase las etiquetas a history.md, o se pierden al cerrar.
 - **Agregada:** 2026-11-17.
 
-### Tarea 164 — Board: mostrar Qué falta y Próximo paso en las tareas pausadas
-
-- **Descripción:** El board muestra en las pausadas solo Descripción, Por qué se pausó y Qué espera para retomarse; falta Qué falta y Próximo paso concreto, que es lo que más sirve al retomar.
-- **Decisiones/temas a definir antes de empezar:** Si se muestran también en la tarea en curso (hoy solo muestra la descripción); cómo se ve en modo compacto y en pantallas angostas.
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; útil para el flujo no técnico (T-162).
-- **Detalles:** Origen: T-160 (simulación de oficina con dos pausadas). Código en scripts/task-tracker/src/model y ui. Actualizar tests y el README del task-tracker.
-- **Agregada:** 2026-11-17.
-
 ### Tarea 165 — check: quitar avisos que no aplican a proyectos sin código
 
 - **Descripción:** acsuite check avisa de cosas que no aplican a un proyecto no técnico o contradicen las reglas: falta de AGENTS.md y CLAUDE.md, tarea en curso sin plan (la Regla 2 dice que las pequeñas van sin plan), placeholders sobrantes en el backlog y enlaces rotos hacia project/ en la plantilla de rules.md.

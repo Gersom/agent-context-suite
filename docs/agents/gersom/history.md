@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ✅ Tarea 164 — Board: mostrar Qué falta y Próximo paso en las tareas pausadas
+
+- El board muestra «Qué falta» y «Próximo paso concreto» en las tareas pausadas, antes de «Por qué se pausó»; sin contenido (vacío, Ninguna, None, N/A, placeholders) no se pinta la fila, en compacto se ocultan y la tarea en curso no cambia.
+- Cómo: PausedTask suma missing y next (buildPaused) y render.ts los pinta con textRows. bun test 2057 pass, typecheck sin errores, revisión independiente con un board real. Sin caso e2e: el e2e no cubre pausadas.
+- Commit: 399956a.
+
 ## 2026-11-17 — ✅ Tarea 163 — Board: ruta explícita sin la skill debe abrir la lista de proyectos
 
 - acsuite board con una ruta a una carpeta que existe pero no tiene la skill abre la lista de proyectos con un aviso, en vez de salir con error. Ruta inexistente o documentación mal formada siguen dando código 1 sin abrir el board; sin ruta no cambió.
