@@ -11,6 +11,11 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 162 — Investigación: flujo de la skill para trabajo no técnico
+
+- Investigación terminada: el perfil no técnico de la skill es viable y se divide en seis tareas: T-172 git automático (init, repo padre, .gitignore), T-173 plantillas template/office, T-174 pregunta de perfil y flujo de instalación, T-175 tests, T-176 prueba de punta a punta y T-177 versión 2.5.0.
+- Cómo: mapeo de la skill, sus tests y la suite por un explorador, sin cambios de código. Hallazgos clave: SKILL.md no se toca, hace falta un rules.md propio con el bloque de la suite, y la lista blanca del .gitignore necesita !*/ o !docs/.
+
 ## 2026-11-18 — ✅ Tarea 171 — Etiquetas: filtrar por etiqueta en el task-manager y el board
 
 - El task-manager filtra por etiqueta con list --label y next --label (varias con comas o repetido, todas a la vez, sin distinguir mayúsculas; inválida es error de uso código 2; list muestra las etiquetas y su JSON suma labels; status no lleva el flag). El board suma la tecla t que recorre todas y cada etiqueta del panel y filtra libres, bloqueadas, pausadas, completadas y SIN DUEÑO, con la tarea en curso siempre visible, contadores acordes y Filtro #x en el encabezado, solo durante la sesión.

@@ -23,7 +23,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 
 > Numeración iniciada el 2026-09-24. Las tareas cerradas antes de esa fecha (ver `history.md`) no tienen número asignado retroactivamente.
 
-**Próximo número de tarea:** 172
+**Próximo número de tarea:** 178
 
 ---
 
@@ -48,14 +48,14 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** ninguno.
 - **Agregada:** 2026-09-24.
 
-### Tarea 162 — Flujo de la skill para trabajo no técnico
+### Tarea 172 — Perfil no técnico: git automático de la skill (init, repo padre, .gitignore)
 
-- **Descripción:** Implementar en la skill un flujo nuevo para personas no técnicas (trabajo de oficina: Excel, imágenes, varias empresas) que genere la documentación de contexto sin jerga de código, con git automático del agente y sin plan ni pregunta de modo.
-- **Decisiones/temas a definir antes de empezar:** Hipótesis de la T-160, a confirmar con su veredicto: sin carpeta project/; sin multi-operador; git automático (el agente crea rama y commits, la persona no los ve); se conserva el T-N; sin plan ni modo de ejecución (ejecuta casi todo la persona); el agente registra un T-N solo si la petición toca un archivo y no es de un paso, o si la persona cambia de tarea; frases normales (pausa esto, sigamos con X, ya terminé) traducidas a pause/resume/close; varias empresas con una sola carpeta y etiquetas (T-161). Qué plantillas se adaptan o se omiten y cómo se elige el flujo al empezar (pregunta inicial o variante de SKILL.md); cómo funciona con Codex (AGENTS.md, preguntas en texto con opciones numeradas).
-- **Bloqueos:** `[Resuelto el 2026-11-18]` — era `[dependencia]` Depende de las tareas de etiquetas: T-167 (task-manager), T-168 (board) y T-170 (plantillas de la skill), para separar empresas dentro de una sola carpeta.
-- **Disparador:** cuando se cierre la Tarea 160 con veredicto viable.
-- **Detalles:** Origen: T-160. Cambia principalmente la skill (SKILL.md, questions-flow, rules y plantillas); puede tocar la suite si check o el task-manager exigen campos de código. Cada repo con su commit y versión. Riesgos de la revisión de la T-160: (1) git automático choca con la Regla 5 (los commits de otros cambios solo a pedido) y la Regla 6 (cierre solo a pedido): hay que cambiar esas reglas para el perfil, subir versión y changelog, y regenerar el fixture scripts/docs-check/test/fixtures/template (snapshot.test.ts). (2) close --commits auto falla si no hay commits con scope (T-N); step --commit auto toma HEAD: los commits automáticos deben llevar el scope. (3) .gitignore total: usar lista blanca con !docs/** (no basta !docs/) más AGENTS.md, CLAUDE.md y agent-context/; el flujo working-branch usa git add con rutas y falla en rutas ignoradas. (4) Si la carpeta cuelga de otro repo, las herramientas usan la raíz de ese repo; antes de git init el agente debe detectarlo. (5) SKILL.md pesa 4434 de 4500 bytes (reading-policy.test.ts): el texto nuevo va en docs/. (6) start y add exigen backlog.md aunque el board lo tolere. (7) Una tarea sin plan sigue dando aviso en check (T-165).
-- **Agregada:** 2026-11-17.
+- **Descripción:** Definir en la skill cómo el agente prepara git para una persona no técnica: pide una sola confirmación con la ruta de la carpeta, inicia git si falta, avisa si la carpeta ya está dentro de otro repositorio, escribe un .gitignore con lista blanca y hace commits automáticos solo de docs/ y de los archivos de la skill y configuración.
+- **Decisiones/temas a definir antes de empezar:** Texto exacto de la confirmación; cómo se detecta el repo padre con git rev-parse --show-toplevel y qué carpetas se rechazan (el home, la raíz de una unidad); lista blanca del .gitignore: la regla con asterisco y !docs/** no re-incluye docs/ porque git no recupera archivos bajo una carpeta excluida, hay que usar !*/ o !docs/ y validar con git check-ignore -v; cuándo comitea el agente (al pausar, al cerrar, al cambiar de tarea); mensajes de commit en inglés con el scope (T-N); excepción a la Regla 5.
+- **Bloqueos:** Ninguno.
+- **Disparador:** cuando el operador pregunte por tareas pendientes; es la primera de las tareas del perfil no técnico.
+- **Detalles:** Origen: T-162 (investigación). Repo de la skill, commit propio con git -C. Archivos probables: skill/docs/working-branch.md (hoy rama, git add por rutas y merge; sin precedente de git init ni de auto-commit) y un documento nuevo del perfil. Probar con carpetas temporales: sin git, con git propio y dentro de otro repo.
+- **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=blocked -->
 ## Tareas bloqueadas / pospuestas
@@ -94,6 +94,51 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Disparador:** cuando se cierre la Tarea 163 y exista el paquete publicado.
 - **Detalles:** Origen: T-160. Contenido del .bat: cd /d con la carpeta del propio .bat y luego acsuite board, sin ruta. Verificado que dist/cli.js corre con Node 24 (board --once).
 - **Agregada:** 2026-11-17.
+
+### Tarea 173 — Perfil no técnico: plantillas de oficina en la skill (template/office)
+
+- **Descripción:** Crear template/office/ con AGENTS.md, rules.md completo y corto sin jerga de código, y la plantilla del .gitignore, para proyectos de personas no técnicas (Excel, imágenes, varias empresas) que usan Codex u otro agente.
+- **Decisiones/temas a definir antes de empezar:** Qué Reglas se conservan, se reescriben o se quitan (Regla 2 sin plan ni modo, Regla 5 con commits automáticos, Regla 7 y 9 sin evidencia ni checks técnicos); registro de T-N solo si la petición toca un archivo y no es de un paso o si la persona cambia de tarea; frases normales traducidas a pause, resume y close; etiquetas por empresa; el bloque de la suite en rules.md va incluido porque Codex usa acsuite task; marca de versión en la línea 1; el nombre de la plantilla del .gitignore (gitignore.txt) y los enlaces sin project/.
+- **Bloqueos:** [dependencia] Depende de la tarea del git automático del perfil (T-172), porque las reglas describen cómo se hacen los commits.
+- **Disparador:** cuando se cierre la T-172.
+- **Detalles:** Origen: T-162. Repo de la skill. handoff, backlog e history se reutilizan de template/agents. Tests de skill-checks leen hoy solo template/agents/rules.md (reading-policy y version): hay que cubrir también la variante.
+- **Agregada:** 2026-11-18.
+
+### Tarea 174 — Perfil no técnico: pregunta de perfil y flujo de instalación en la skill
+
+- **Descripción:** Agregar a questions-flow.md una pregunta de perfil antes de la Ronda 1 y un documento docs/office-profile.md con el flujo de instalación del perfil no técnico: qué rondas se saltan, qué se copia, la confirmación previa y las preguntas en texto con opciones numeradas.
+- **Decisiones/temas a definir antes de empezar:** Redacción de la pregunta de perfil; qué rondas se saltan (1 a 4); qué se conserva (idioma, scaffolding de AGENTS.md); sin tocar SKILL.md, que está a 66 bytes de su tope de 4500; límite de 1500 bytes por flujo en reading-policy.test.ts; cómo se pregunta el nombre de las empresas.
+- **Bloqueos:** [dependencia] Depende de las plantillas del perfil (T-173), que son lo que el flujo copia.
+- **Disparador:** cuando se cierre la T-173.
+- **Detalles:** Origen: T-162. Repo de la skill. Archivos: skill/docs/questions-flow.md (Ronda 1 en 48-57, sets en 228-262, scaffolding de la Ronda final), skill/docs/asking-questions.md (respaldo de texto numerado) y el flujo nuevo.
+- **Agregada:** 2026-11-18.
+
+### Tarea 175 — Perfil no técnico: tests del perfil en skill-checks
+
+- **Descripción:** Agregar tests en scripts/skill-checks para el perfil no técnico: estructura de template/office, tamaños, marca de versión de su rules.md, ausencia de enlaces a project/, que la lista blanca del .gitignore deje pasar docs/ y archivos de la skill y ignore el resto, y que el snapshot de docs-check siga coincidiendo.
+- **Decisiones/temas a definir antes de empezar:** Cómo se prueba la lista blanca (git check-ignore sobre una carpeta temporal); qué límites de tamaño aplican a los archivos nuevos; si hay que extender reading-policy.test.ts y version.test.ts, que hoy solo leen template/agents/rules.md.
+- **Bloqueos:** [dependencia] Depende de las tareas T-172, T-173 y T-174, que crean lo que se prueba.
+- **Disparador:** cuando se cierren la T-172, la T-173 y la T-174.
+- **Detalles:** Origen: T-162. Suite, scripts/skill-checks (se saltan si la skill no está clonada) y fixtures de scripts/docs-check/test/fixtures/template.
+- **Agregada:** 2026-11-18.
+
+### Tarea 176 — Perfil no técnico: prueba de punta a punta con un agente
+
+- **Descripción:** Probar el perfil completo: un agente instala el perfil en una carpeta temporal sin git, atiende dos empresas con tareas que se pausan y se retoman, y se comprueba git, commits, .gitignore, task-manager, check y board.
+- **Decisiones/temas a definir antes de empezar:** Qué agente corre la prueba (un subagente que solo sigue las instrucciones de la skill); casos: carpeta sin git, dentro de otro repo, con archivos Excel e imágenes de prueba; si se prueba también con Codex real por el operador.
+- **Bloqueos:** [dependencia] Depende de la tarea de tests del perfil (T-175).
+- **Disparador:** cuando se cierre la T-175.
+- **Detalles:** Origen: T-162. No cambia código: encuentra fallos de redacción de las reglas, de git o de las herramientas, que se registran como tareas nuevas.
+- **Agregada:** 2026-11-18.
+
+### Tarea 177 — Skill 2.5.0: versión y changelog del perfil no técnico
+
+- **Descripción:** Subir la versión de la skill a 2.5.0 (minor: nuevo flujo en el árbol de preguntas, más el campo Etiquetas de las plantillas) y escribir su changelog y el tag anotado, según docs/releasing.md.
+- **Decisiones/temas a definir antes de empezar:** Si se publica en el momento o se deja listo; si el campo Etiquetas ya documentado en las plantillas entra en este mismo 2.5.0.
+- **Bloqueos:** [dependencia] Depende de la prueba de punta a punta del perfil (T-176).
+- **Disparador:** cuando se cierre la T-176.
+- **Detalles:** Origen: T-162. Archivos de la skill: .claude-plugin/plugin.json, SKILL.md línea 8, template/agents/rules.md línea 1 y la de template/office/rules.md, docs/changelog/2.5.md y docs/changelog/README.md; tag anotado v2.5.0 (git push --follow-tags lo hace el operador).
+- **Agregada:** 2026-11-18.
 
 <!-- agent-context-skill:section=grouped -->
 ## Tareas agrupadas
