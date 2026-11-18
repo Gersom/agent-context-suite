@@ -14,6 +14,7 @@ Tareas **sin dueño** del proyecto, visibles para todos los operadores. Las tare
 - **Descripción:** de qué trata (1–3 líneas).
 - **Decisiones/temas a definir antes de empezar:** qué resolver o preguntarle al operador antes de arrancar; "Ninguno" si está todo definido.
 - **Bloqueos:** "Ninguno", o un valor que **empieza** con `[dependencia]` (no se puede empezar técnicamente) o `[postergada]` (conviene esperar) y el motivo. Con bloqueo va en "bloqueadas / pospuestas"; si no, en "libres".
+- **Etiquetas:** (opcional) mismo formato que en `backlog.md`: `Etiquetas: empresa1 trabajo`.
 - **Agregada:** fecha y operador.
 
 **Anclas de sección:** no borres ni muevas los comentarios `<!-- agent-context-skill:section=... -->` (`free`, `blocked`) que preceden a cada sección: los usa el script de seguimiento de tareas.

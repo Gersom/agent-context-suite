@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { checkBlockTags, checkLabels } from "../../src/checks/tasks.ts";
-import { BACKLOG, BACKLOG_WITH_GROUP, HANDOFF, HANDOFF_IDLE, HISTORY, IN_PROGRESS_TASK, lineOf, TEAM_BACKLOG, TEMPLATE_BACKLOG } from "../fixtures.ts";
+import { BACKLOG, BACKLOG_WITH_GROUP, HANDOFF, HANDOFF_IDLE, HISTORY, IN_PROGRESS_TASK, TEAM_BACKLOG, TEMPLATE_BACKLOG } from "../fixtures.ts";
 import { brief, makeCtx, PATHS } from "../helpers.ts";
+
+/** Línea de la ÚLTIMA coincidencia de `needle`: las plantillas explican el campo en su texto de formato, y el que se valida es el de la tarea, que va después. */
+function lineOf(text: string, needle: string): number {
+  const at = text.lastIndexOf(needle);
+  if (at < 0) throw new Error(`No se encontró «${needle}» en el texto.`);
+  return text.slice(0, at).split("\n").length;
+}
 
 const BACKLOG_FILE = `${PATHS.flat}/backlog.md`;
 const HANDOFF_FILE = `${PATHS.flat}/handoff.md`;

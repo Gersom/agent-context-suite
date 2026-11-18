@@ -14,6 +14,7 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Bloqueos:** "Ninguno", o un valor que **empieza** con `[dependencia]` (no se puede empezar técnicamente) o `[postergada]` (conviene esperar) y el motivo. Con bloqueo va en "bloqueadas / pospuestas"; si no, en "libres". Si una tarea ya desbloqueada (`[Resuelto el <fecha>] — …`) se vuelve a bloquear, el bloqueo vigente va **primero** y el historial resuelto después, porque el script de seguimiento toma el tag con el que empieza el campo.
 - **Desbloquea:** (opcional) qué tareas quedan libres al cerrar esta.
 - **Disparador:** cuándo corresponde tomarla; por defecto "cuando el operador pregunte por tareas pendientes".
+- **Etiquetas:** (opcional) 0 o más, las pone el agente si ayudan a agrupar o filtrar (ej. empresa, área). Solo letras y números, sin tildes ni símbolos, separadas por un espacio y sin `#` (el tablero lo agrega): `Etiquetas: empresa1 trabajo ideasBrillantes`.
 - **Detalles:** contexto extendido, solo si hace falta.
 - **Agregada:** fecha.
 
