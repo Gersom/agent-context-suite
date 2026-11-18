@@ -112,7 +112,7 @@ function addToBacklog(ctx: CommandContext, input: AddInput): void {
   const reserved = reserveNextNumber(docs);
 
   // Idioma y etiquetas: las de las tareas que el archivo ya tiene; si no hay, la tabla mínima.
-  const { lang, notice } = detectLanguage(headerLabels(docs));
+  const { lang, notice } = detectLanguage(headerLabels(docs), docs.rulesText);
   const S = STRINGS[lang];
   const kind = classifyBlocker(input.blocker ?? "", notice ? undefined : S.tags);
   const sectionId = kind.blocked ? "blocked" : "free";
@@ -171,7 +171,7 @@ function addToTeam(ctx: CommandContext, input: AddInput): void {
   const detected = detectLanguage([
     ...fieldLists.flat().map((field) => field.label),
     ...headerLabels(docs),
-  ]);
+  ], docs.rulesText);
   const S = STRINGS[detected.lang];
   const kind = classifyBlocker(input.blocker ?? "", detected.notice ? undefined : S.tags);
   const sectionId = kind.blocked ? "blocked" : "free";

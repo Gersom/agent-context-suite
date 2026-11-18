@@ -45,7 +45,7 @@ export const groupCreate: Command = {
     const docs = ctx.docs();
     const backlog = requireDoc(docs.backlog, "backlog.md");
 
-    const { lang, notice } = detectLanguage(headerLabels(docs));
+    const { lang, notice } = detectLanguage(headerLabels(docs), docs.rulesText);
     const edits = createGroup(backlog, numbers, title, summary, STRINGS[lang]);
     const result = ctx.commit([{ doc: backlog, edits }], { quiet: flags.json === true });
 

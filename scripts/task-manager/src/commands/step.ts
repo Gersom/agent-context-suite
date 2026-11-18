@@ -69,7 +69,7 @@ export const step: Command = {
     const proof = { evidence: proofArgs.evidence, commit: proofArgs.commit === AUTO ? headCommit(ws.projectDir) : proofArgs.commit };
     const hasProof = proof.evidence !== undefined || proof.commit !== undefined;
     // Textos que dependen del avance. Con labels de la tarea se elige el idioma de los que se generan.
-    const lang = detectLanguage([task.label, ...headerLabels(docs)]).lang;
+    const lang = detectLanguage([task.label, ...headerLabels(docs)], docs.rulesText).lang;
     const S = STRINGS[lang];
 
     // El texto nuevo de cada paso. Al marcar: se quita el sufijo de reabierto y se ponen la evidencia y el commit (en un

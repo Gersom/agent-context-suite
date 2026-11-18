@@ -49,7 +49,7 @@ export const pause: Command = {
       throw new CliError(`La Tarea ${current.number} ya figura en «Tareas pausadas»: una tarea vive en un solo lugar; corrígelo a mano. No se escribió nada.`);
     }
 
-    const { lang, notice } = detectLanguage([current.label, ...headerLabels(docs)]);
+    const { lang, notice } = detectLanguage([current.label, ...headerLabels(docs)], docs.rulesText);
     const S = STRINGS[lang];
     const override = (flag: string, kept: string | null) => {
       const given = textFlag(flags, flag);

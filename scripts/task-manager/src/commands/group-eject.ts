@@ -42,7 +42,7 @@ export const groupEject: Command = {
     const rest = container.tasks.filter((task) => task.number !== target.number).map((task) => task.number);
     const dissolved = rest.length < MIN_GROUP_TASKS;
 
-    const { lang, notice } = detectLanguage(headerLabels(docs));
+    const { lang, notice } = detectLanguage(headerLabels(docs), docs.rulesText);
     const edits = ejectTask(backlog, target.number, STRINGS[lang]);
     const result = ctx.commit([{ doc: backlog, edits }], { quiet: flags.json === true });
 

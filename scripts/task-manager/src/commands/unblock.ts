@@ -58,7 +58,7 @@ export const unblock: Command = {
 
     let result: ChangeResult | null = null;
     if (chosen.length) {
-      const { lang, notice } = detectLanguage([backlog.parsed.blocked[0]?.label, ...headerLabels(docs)].filter((label): label is string => !!label));
+      const { lang, notice } = detectLanguage([backlog.parsed.blocked[0]?.label, ...headerLabels(docs)].filter((label): label is string => !!label), docs.rulesText);
       const plan = planUnblock(backlog, chosen, formatLocalDate(ctx.now()), STRINGS[lang]);
       result = ctx.commit([{ doc: backlog, edits: [...plan.removals, insertIntoFree(backlog, plan.blocks)] }], { quiet: flags.json === true });
       if (notice && flags.json !== true) io.out(`Aviso: ${notice}`);

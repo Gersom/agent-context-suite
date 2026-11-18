@@ -38,7 +38,7 @@ export const groupDissolve: Command = {
     const { container } = findGroupOf(backlog, target.number)!;
     const returned = container.tasks.map((task) => task.number);
 
-    const { lang, notice } = detectLanguage(headerLabels(docs));
+    const { lang, notice } = detectLanguage(headerLabels(docs), docs.rulesText);
     const edits = dissolveGroup(backlog, target.number, STRINGS[lang]);
     const result = ctx.commit([{ doc: backlog, edits }], { quiet: flags.json === true });
 

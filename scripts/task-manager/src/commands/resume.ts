@@ -49,7 +49,7 @@ export const resume: Command = {
     const task = matches[0];
     const text = handoff.text;
 
-    const { lang, notice } = detectLanguage([task.label, ...headerLabels(docs)]);
+    const { lang, notice } = detectLanguage([task.label, ...headerLabels(docs)], docs.rulesText);
     const S = STRINGS[lang];
     const description = findFieldOfKind(task.fields, "description");
     const field = (part: "mode" | "missing" | "decisions" | "next") => {

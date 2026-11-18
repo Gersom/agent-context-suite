@@ -337,6 +337,43 @@ describe("add — backlog propio", () => {
       expect(out).toContain("Aviso: No pude determinar el idioma");
       expect(read(p, "gersom", "backlog.md")).toContain("### Tarea 5 — T");
     });
+
+    describe("sin tareas que lo indiquen: el idioma registrado en rules.md", () => {
+      const rules = (value: string) => `# Reglas\n\n3. **Idioma de la documentación:** todo va en el idioma registrado abajo.\n\n   **Idioma de la documentación:** ${value}\n`;
+      const add = (rulesText: string, ...extra: string[]) => {
+        const p = project({ ...own(BACKLOG_EMPTY), rules: rulesText });
+        return exec(["add", "--title", "T", "--description", "D", ...extra, "--apply"], p).then((result) => ({ ...result, p }));
+      };
+
+      test("Español: etiquetas en español y sin aviso", async () => {
+        const { out, p } = await add(rules("Español"), "--labels", "uno");
+        expect(out).not.toContain("Aviso");
+        expect(read(p, "gersom", "backlog.md")).toContain("### Tarea 5 — T\n\n- **Descripción:** D\n");
+        expect(read(p, "gersom", "backlog.md")).toContain("- **Etiquetas:** uno");
+      });
+
+      test("English (también con CRLF): etiquetas en inglés y sin aviso", async () => {
+        for (const text of [rules("English"), rules("English").replace(/\n/g, "\r\n")]) {
+          const { out, p } = await add(text, "--labels", "uno");
+          expect(out).not.toContain("Aviso");
+          expect(read(p, "gersom", "backlog.md")).toContain("### Task 5 — T\n\n- **Description:** D\n");
+          expect(read(p, "gersom", "backlog.md")).toContain("- **Tags:** uno");
+        }
+      });
+
+      test("placeholder: español y el aviso de siempre", async () => {
+        const { out, p } = await add(rules("[Placeholder — se completa la primera vez que se genera esta documentación]"));
+        expect(out).toContain("Aviso: No pude determinar el idioma");
+        expect(read(p, "gersom", "backlog.md")).toContain("### Tarea 5 — T");
+      });
+
+      test("con tareas, mandan sus palabras y no rules.md", async () => {
+        const p = project({ ...own(BACKLOG_ONE), rules: rules("English") });
+        const { out } = await exec(["add", "--title", "T", "--description", "D", "--apply"], p);
+        expect(out).not.toContain("Aviso");
+        expect(read(p, "gersom", "backlog.md")).toContain("### Tarea 8 — T");
+      });
+    });
   });
 
   test("repo plano: agrega a su backlog.md", async () => {

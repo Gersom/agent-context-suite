@@ -149,10 +149,10 @@ function rejectFlags(given: Given, names: TextFlag[], why: string): void {
 }
 
 /** La etiqueta de un campo que haya que agregar: la de las tareas del archivo, o la del idioma detectado (con su aviso). */
-function labelFor(fieldLists: Field[][], labels: string[]): { label: (kind: FieldKind) => string; notice: () => string | null } {
+function labelFor(fieldLists: Field[][], labels: string[], rulesText: string): { label: (kind: FieldKind) => string; notice: () => string | null } {
   let notice: string | null = null;
   const detected = () => {
-    const found = detectLanguage(labels);
+    const found = detectLanguage(labels, rulesText);
     notice = found.notice;
     return STRINGS[found.lang];
   };
@@ -228,7 +228,7 @@ function planNumbered(ctx: CommandContext, number: number, given: Given): Plan {
   const text = backlog.text;
   const block = location.range;
   const values = backlogValues(text, task, location.place, given, false);
-  const names = labelFor(backlogTasks(docs).map((candidate) => candidate.fields), [task.label, ...headerLabels(docs)]);
+  const names = labelFor(backlogTasks(docs).map((candidate) => candidate.fields), [task.label, ...headerLabels(docs)], docs.rulesText);
   const edits = fieldEdits(text, task.fields, values, names.label, backlogPlacement(text, block, task.fields));
   if (given.title !== undefined) edits.unshift(titleEdit(text, block, "numbered", task.title, given.title));
   return { doc: backlog, edits, task: { number, title: given.title ?? task.title }, place: location.place, notices: names.notice() === null ? [] : [names.notice()!] };
@@ -249,7 +249,7 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
     const section = handoff.parsed.sections["in-progress"];
     if (!task?.range || !section) throw new CliError(`No pude ubicar la Tarea ${location.number} en «Tarea en progreso». No se escribió nada.`);
     title = task.title;
-    names = labelFor(fieldLists, [task.label, ...headerLabels(docs)]);
+    names = labelFor(fieldLists, [task.label, ...headerLabels(docs)], docs.rulesText);
     if (given.title !== undefined) edits.push(titleEdit(text, task.range, "current", task.title, given.title));
     // Estos textos se escriben tal cual bajo «Tarea en progreso»: una línea con `#` o checkbox cambiaría su estructura.
     for (const name of ["description", "missing", "decisions", "next"] as const) {
@@ -281,7 +281,7 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
     const task = handoff.parsed.paused.find((candidate) => candidate.number === location.number);
     if (!task?.range) throw new CliError(`No pude ubicar la Tarea ${location.number} en «Tareas pausadas». No se escribió nada.`);
     title = task.title;
-    names = labelFor(fieldLists, [task.label, ...headerLabels(docs)]);
+    names = labelFor(fieldLists, [task.label, ...headerLabels(docs)], docs.rulesText);
     const block = location.range;
     const newline = text.indexOf("\n", block.start);
     const headerEnd = newline === -1 || newline > block.end ? block.end : newline;
@@ -311,7 +311,7 @@ function planHandoff(ctx: CommandContext, location: TaskLocation, given: Given):
   let planNotices: string[] = [];
   if (location.place === "in-progress") {
     const reparsed = parseHandoff(edited);
-    const lang = detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)]).lang;
+    const lang = detectLanguage([handoff.parsed.inProgress.task!.label, ...headerLabels(docs)], docs.rulesText).lang;
     planNotices = [
       ...invalidPlanLineMessages(invalidPlanLines(edited, reparsed.inProgress.subsections), lang),
       ...structureProblems(edited, reparsed, lang).map(structureProblemMessage),
@@ -356,7 +356,7 @@ function planTeam(ctx: CommandContext, query: string, given: Given): Plan {
   const text = team.text;
   const block = location.range;
   const values = backlogValues(text, task, location.place, given, true);
-  const names = labelFor(all.map((candidate) => candidate.fields), [...all.flatMap((candidate) => candidate.fields.map((field) => field.label)), ...headerLabels(docs)]);
+  const names = labelFor(all.map((candidate) => candidate.fields), [...all.flatMap((candidate) => candidate.fields.map((field) => field.label)), ...headerLabels(docs)], docs.rulesText);
   const edits = fieldEdits(text, task.fields, values, names.label, backlogPlacement(text, block, task.fields));
   if (given.title !== undefined) edits.unshift(titleEdit(text, block, "team", task.title, given.title));
   // El título es la identidad de la tarea del team-backlog: lo que la nombre por título queda huérfano.

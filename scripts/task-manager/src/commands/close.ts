@@ -172,7 +172,7 @@ export const close: Command = {
     const leftoverFree = closing.kind === "backlog" ? (source!.place === "free" ? source! : undefined) : elsewhere.find((place) => place.place === "free");
     const leftoverBlocked = closing.kind === "backlog" ? source!.place === "blocked" : elsewhere.some((place) => place.place === "blocked");
 
-    const { lang, notice } = detectLanguage([closing.label, ...headerLabels(docs)]);
+    const { lang, notice } = detectLanguage([closing.label, ...headerLabels(docs)], docs.rulesText);
     const S = STRINGS[lang];
     const date = formatLocalDate(ctx.now());
 

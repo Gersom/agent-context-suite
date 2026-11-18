@@ -4,7 +4,7 @@
 // se traducen al crudo con `EolInfo` (ver `scripts/_shared/parse/positions.ts`).
 
 import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, join } from "node:path";
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
 import { parseHandoff } from "../../../_shared/parse/handoff.ts";
 import { parseHistory } from "../../../_shared/parse/history.ts";
@@ -49,6 +49,18 @@ export interface Docs {
   history: Doc<ParsedHistory>;
   /** `null` en el repo plano (no hay equipo); en modo multi puede no existir (`exists: false`). */
   teamBacklog: Doc<ParsedTeamBacklog> | null;
+  /** Texto de `rules.md` (de la carpeta de agentes, con LF) para saber el idioma de la documentación; `""` si falta o no se pudo leer. */
+  rulesText: string;
+}
+
+/** `rules.md` solo informa el idioma: si falta o no se puede leer no es un error, queda vacío. */
+function readRulesText(agentsRoot: string | undefined): string {
+  if (!agentsRoot) return "";
+  try {
+    return normalizeEol(readRaw(join(agentsRoot, "rules.md")) ?? "").text;
+  } catch {
+    return "";
+  }
 }
 
 /**
@@ -73,9 +85,10 @@ export function readDoc<P>(kind: DocKind, path: string, parse: (text: string) =>
 }
 
 /** Lee los archivos del espacio de trabajo. Los ausentes quedan con `exists: false` (no es un error). */
-export function readDocs(workspace: Pick<Workspace, "files">): Docs {
+export function readDocs(workspace: Pick<Workspace, "files"> & Partial<Pick<Workspace, "agentsRoot">>): Docs {
   const { files } = workspace;
   return {
+    rulesText: readRulesText(workspace.agentsRoot),
     handoff: readDoc("handoff", files.handoff, parseHandoff),
     backlog: readDoc("backlog", files.backlog, parseBacklog),
     history: readDoc("history", files.history, parseHistory),

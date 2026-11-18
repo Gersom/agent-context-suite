@@ -5,7 +5,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { parseFields } from "../../../_shared/parse/blocks.ts";
 import { parseBacklog } from "../../../_shared/parse/backlog.ts";
 import { CliError } from "../../src/cli/errors.ts";
-import { detectLanguage, findFieldOfKind, isFieldKind, STRINGS } from "../../src/write/language.ts";
+import { detectLanguage, findFieldOfKind, isFieldKind, languageFromRules, STRINGS } from "../../src/write/language.ts";
 import { renderBacklogTask } from "../../src/write/new-task.ts";
 import { reserveNextNumber, reserveNextNumbers } from "../../src/write/numbering.ts";
 import {
@@ -47,6 +47,72 @@ describe("idioma", () => {
   test("idioma desconocido o sin pistas: español y un aviso que lo dice", () => {
     expect(detectLanguage(["Ticket"])).toEqual({ lang: "es", notice: expect.stringContaining("«Ticket»") });
     expect(detectLanguage([])).toEqual({ lang: "es", notice: expect.stringContaining("No pude determinar") });
+  });
+
+  describe("idioma registrado en rules.md", () => {
+    const rules = (value: string, label = "Idioma de la documentación") =>
+      `# Reglas\n\n3. **${label}:** todo lo que un agente redacte acá va en el idioma registrado abajo.\n\n   **${label}:** ${value}\n\n4. Otra regla.\n`;
+
+    test("languageFromRules: español e inglés, sin distinguir mayúsculas, tildes ni negritas", () => {
+      expect(languageFromRules(rules("Español"))).toBe("es");
+      expect(languageFromRules(rules("español"))).toBe("es");
+      expect(languageFromRules(rules("ESPAÑOL."))).toBe("es");
+      expect(languageFromRules(rules("Spanish"))).toBe("es");
+      expect(languageFromRules(rules("es"))).toBe("es");
+      expect(languageFromRules(rules("English"))).toBe("en");
+      expect(languageFromRules(rules("Inglés"))).toBe("en");
+      expect(languageFromRules(rules("INGLES"))).toBe("en");
+      expect(languageFromRules(rules("en"))).toBe("en");
+      expect(languageFromRules(rules("**Español**"))).toBe("es");
+      expect(languageFromRules(rules("   English   "))).toBe("en");
+    });
+
+    test("languageFromRules: la línea en inglés de un proyecto en inglés", () => {
+      expect(languageFromRules(rules("English", "Documentation language"))).toBe("en");
+      expect(languageFromRules(rules("Spanish", "Documentation language"))).toBe("es");
+      expect(languageFromRules("**Documentation language**: English\n")).toBe("en");
+    });
+
+    test("languageFromRules: placeholder, valor desconocido o sin línea no deciden", () => {
+      expect(languageFromRules(rules("[Placeholder — se completa la primera vez que se genera esta documentación]"))).toBeNull();
+      expect(languageFromRules(rules("Français"))).toBeNull();
+      expect(languageFromRules(rules(""))).toBeNull();
+      expect(languageFromRules("# Reglas\n\nNada de idioma acá.\n")).toBeNull();
+      expect(languageFromRules("")).toBeNull();
+      // la regla que explica el registro no es el registro
+      expect(languageFromRules("3. **Idioma de la documentación:** Español\n")).toBeNull();
+    });
+
+    test("languageFromRules: acepta CRLF", () => {
+      expect(languageFromRules(rules("English").replace(/\n/g, "\r\n"))).toBe("en");
+      expect(languageFromRules(rules("Español").replace(/\n/g, "\r\n"))).toBe("es");
+    });
+
+    test("detectLanguage: sin etiquetas decide rules.md, y sin aviso", () => {
+      expect(detectLanguage([], rules("Español"))).toEqual({ lang: "es", notice: null });
+      expect(detectLanguage([], rules("English"))).toEqual({ lang: "en", notice: null });
+    });
+
+    test("detectLanguage: sin etiquetas y con un placeholder o sin rules sigue el aviso de siempre", () => {
+      expect(detectLanguage([], rules("[Placeholder]"))).toEqual({ lang: "es", notice: expect.stringContaining("No pude determinar") });
+      expect(detectLanguage([], "")).toEqual({ lang: "es", notice: expect.stringContaining("No pude determinar") });
+      expect(detectLanguage([])).toEqual({ lang: "es", notice: expect.stringContaining("No pude determinar") });
+    });
+
+    test("detectLanguage: las palabras de las tareas mandan sobre rules.md", () => {
+      expect(detectLanguage(["Task"], rules("Español"))).toEqual({ lang: "en", notice: null });
+      expect(detectLanguage(["Tarea"], rules("English"))).toEqual({ lang: "es", notice: null });
+    });
+
+    test("detectLanguage: una etiqueta desconocida mantiene su aviso aunque rules.md diga el idioma", () => {
+      expect(detectLanguage(["Ticket"], rules("English"))).toEqual({ lang: "es", notice: expect.stringContaining("«Ticket»") });
+    });
+
+    test("readDocs: lee rules.md de la carpeta de agentes (con CRLF normalizado) y, si falta, queda vacío", () => {
+      const withRules = tempProject({ folders: ["gersom"], rules: rules("English").replace(/\n/g, "\r\n") });
+      expect(loadDocs(withRules, "gersom").rulesText).toBe(rules("English"));
+      expect(loadDocs(tempProject({ folders: ["gersom"] }), "gersom").rulesText).toBe("");
+    });
   });
 
   test("reconoce el tipo de un campo en los dos idiomas", () => {

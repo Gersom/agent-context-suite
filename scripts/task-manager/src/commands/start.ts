@@ -108,7 +108,7 @@ export const start: Command = {
 
     // Idioma: el de la tarea o, si no lo dice, el de los archivos.
     const labels = [...(source.label ? [source.label] : []), ...headerLabels(docs), ...source.fields.map((field) => field.label)];
-    const { lang, notice } = detectLanguage(labels);
+    const { lang, notice } = detectLanguage(labels, docs.rulesText);
     const S = STRINGS[lang];
 
     const text = source.doc.text;

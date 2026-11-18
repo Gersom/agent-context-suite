@@ -530,7 +530,7 @@ Campo **opcional** de una tarea (libre, bloqueada, agrupada, en curso, pausada o
 ### Dónde y cómo escriben
 
 - **Ubicación:** al final de la sección, justo tras el último contenido y antes de las líneas en blanco que la separan de la siguiente. **Espaciado:** el que ya usa el archivo (lo que separa a sus dos últimas tareas; una línea en blanco si no hay dos). Si la sección solo tenía el texto de vacío («Ninguna.»), un placeholder de la plantilla o la tarea anterior, el bloque lo **reemplaza**; los comentarios HTML del principio de la sección se conservan. Las tareas agrupadas no se tocan: `add` siempre deja la tarea nueva en «libres»; para meterla en un grupo, `group-add`.
-- **Idioma:** el header usa la palabra que ya usan las tareas del archivo (`Tarea`, `Task`...) y las etiquetas de campo salen de una tarea existente; si no hay de dónde copiar, una tabla mínima en **español** (por defecto) o **inglés** (si la palabra de header o las etiquetas lo son). No se inventan traducciones a otros idiomas: ante un idioma desconocido, o sin ninguna pista, escribe en español y lo avisa en la salida. Los títulos de subsección del handoff (Plan, Qué falta...) salen de la misma tabla.
+- **Idioma:** el header usa la palabra que ya usan las tareas del archivo (`Tarea`, `Task`...) y las etiquetas de campo salen de una tarea existente; si no hay de dónde copiar, una tabla mínima en **español** (por defecto) o **inglés** (si la palabra de header o las etiquetas lo son). Si el proyecto aún no tiene tareas que lo indiquen (recién instalado), usa el idioma que registra la línea `**Idioma de la documentación:**` (`**Documentation language:**`) de `rules.md` (`Español`/`Spanish`/`es` o `English`/`Inglés`/`en`), sin aviso; un `[Placeholder …]`, un valor desconocido o sin `rules.md` no deciden. No se inventan traducciones a otros idiomas: ante un idioma desconocido, o sin ninguna pista, escribe en español y lo avisa en la salida. Los títulos de subsección del handoff (Plan, Qué falta...) salen de la misma tabla.
 - **Finales de línea:** un archivo CRLF sigue siendo CRLF y uno LF, LF; lo escrito no reformatea nada de lo que no toca.
 
 ## Consulta reutilizable (`src/query/`)
@@ -565,7 +565,7 @@ Sigue `docs/multi-operator.md` de la skill y nunca escribe al resolver:
 
 ## Archivos que lee
 
-Lee `handoff.md`, `backlog.md` e `history.md` de la carpeta del operador y `team-backlog.md` de la raíz de agentes (solo en modo multi-operador). Los parsea con los parsers de [`scripts/_shared/`](../_shared/) (los mismos del task-tracker), que devuelven la posición exacta de cada sección, tarea, campo y paso del plan.
+Lee `handoff.md`, `backlog.md` e `history.md` de la carpeta del operador y `team-backlog.md` de la raíz de agentes (solo en modo multi-operador). Los parsea con los parsers de [`scripts/_shared/`](../_shared/) (los mismos del task-tracker), que devuelven la posición exacta de cada sección, tarea, campo y paso del plan. También lee `rules.md` de la raíz de agentes, solo para saber el idioma de la documentación cuando no hay tareas que lo indiquen (si falta o no se puede leer, se ignora sin error).
 
 - **Archivo ausente** (el set mínimo de la skill solo genera `handoff.md`; `team-backlog.md` puede no existir): no es un error al leer; queda marcado como inexistente y cada comando decide si lo necesita. Este script no crea archivos que faltan.
 - **Archivo que no se puede leer** (permisos, trabado, es una carpeta): sí es un error, con su ruta.

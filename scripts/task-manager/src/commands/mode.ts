@@ -47,7 +47,7 @@ export const mode: Command = {
       throw new CliError(`La Tarea ${current.number} no tiene plan (checkboxes) en «Tarea en progreso»: el modo de ejecución es del plan; agrega primero sus pasos. No se escribió nada.`);
     }
 
-    const { lang, notice } = detectLanguage([current.label, ...headerLabels(docs)]);
+    const { lang, notice } = detectLanguage([current.label, ...headerLabels(docs)], docs.rulesText);
     const S = STRINGS[lang];
     const line = `**${S.mode}:** ${value}`;
     const all = modeLines(handoff.text, handoff.parsed.inProgress.subsections);

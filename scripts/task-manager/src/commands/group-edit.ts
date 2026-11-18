@@ -59,7 +59,7 @@ export const groupEdit: Command = {
     // Lo que había antes, para decir qué cambió. Solo se detecta el idioma si hay que escribir una línea de `Resumen` nueva.
     const at = findGroupOf(backlog, target.number)!;
     const before = { title: at.reference.title, summary: groupSummary(backlog, at, STRINGS.es) };
-    const { lang, notice } = summary !== undefined && before.summary === null ? detectLanguage(headerLabels(docs)) : { lang: "es" as const, notice: null };
+    const { lang, notice } = summary !== undefined && before.summary === null ? detectLanguage(headerLabels(docs), docs.rulesText) : { lang: "es" as const, notice: null };
     const edits = editGroup(backlog, target.number, { title, summary }, STRINGS[lang]);
     const changed = [...(title !== undefined && (title !== before.title || title !== at.container.title) ? ["title"] : []), ...(summary !== undefined && summary !== before.summary ? ["summary"] : [])];
 

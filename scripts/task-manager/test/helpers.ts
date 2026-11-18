@@ -74,6 +74,8 @@ export interface ProjectOptions {
   folderContents?: Record<string, Contents>;
   /** Contenido de team-backlog.md (implica crearlo); por defecto, `TEAM_BACKLOG_MD`. */
   teamBacklogText?: string;
+  /** Contenido de rules.md en la carpeta de agentes; sin él no se crea. */
+  rules?: string;
 }
 
 /** Archivos con contenido propio. */
@@ -101,6 +103,7 @@ export function makeProject(options: ProjectOptions = {}): Project {
   if (options.teamBacklog || options.teamBacklogText !== undefined) {
     writeFileSync(join(agents, "team-backlog.md"), options.teamBacklogText ?? TEAM_BACKLOG_MD);
   }
+  if (options.rules !== undefined) writeFileSync(join(agents, "rules.md"), options.rules);
   return { root, agents, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
 
@@ -108,6 +111,7 @@ export function makeProject(options: ProjectOptions = {}): Project {
 export function loadDocs(p: Project, folder?: string, teamBacklog = false): Docs {
   const dir = folder ? join(p.agents, folder) : p.agents;
   return readDocs({
+    agentsRoot: p.agents,
     files: {
       handoff: join(dir, "handoff.md"),
       backlog: join(dir, "backlog.md"),

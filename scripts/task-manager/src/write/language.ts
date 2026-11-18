@@ -201,16 +201,52 @@ export interface DetectedLanguage {
   notice: string | null;
 }
 
+// La línea de registro de rules.md (`**Idioma de la documentación:** Español`, o `**Documentation
+// language:** English` en un proyecto en inglés). Va anclada al inicio de la línea para no confundirla
+// con la regla que la explica, que empieza con el número de la regla (`3. **Idioma…:** todo lo que…`).
+const RULES_LANGUAGE_LINE = /^[ \t]*\*\*(?:idioma de la documentaci[oó]n|documentation language)(?::\*\*|\*\*:)[ \t]*(.*)$/gim;
+
+/** Valor del registro en minúsculas y sin tildes, negritas ni punto final (`**Español.**` → `espanol`). */
+function normalizeLanguageValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[*_`]/g, "")
+    .trim()
+    .replace(/\.$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Idioma que registra `rules.md` en su línea «Idioma de la documentación» (`Español`/`Spanish`/`es`
+ * o `English`/`Inglés`/`en`), o `null` si no hay línea, el valor es un `[Placeholder …]` o es otro
+ * idioma. Acepta el texto con CRLF.
+ */
+export function languageFromRules(rulesText: string): Lang | null {
+  for (const match of rulesText.replace(/\r\n?/g, "\n").matchAll(RULES_LANGUAGE_LINE)) {
+    const value = normalizeLanguageValue(match[1] ?? "");
+    if (value === "espanol" || value === "spanish" || value === "es") return "es";
+    if (value === "english" || value === "ingles" || value === "en") return "en";
+  }
+  return null;
+}
+
 /**
  * Idioma según las palabras que ya usa el archivo: la de los headers de tarea (`Tarea`/`Task`) o las
- * etiquetas de sus campos, la primera que se reconozca. Sin ninguna, o con una desconocida, es
- * español con un aviso.
+ * etiquetas de sus campos, la primera que se reconozca. Sin ninguna etiqueta (no hay tareas que lo
+ * indiquen) y con `rulesText`, el que registra rules.md (`languageFromRules`), sin aviso. Si no, o con
+ * una etiqueta desconocida, es español con un aviso.
  */
-export function detectLanguage(labels: string[]): DetectedLanguage {
+export function detectLanguage(labels: string[], rulesText?: string): DetectedLanguage {
   for (const label of labels) {
     const word = firstWord(label);
     if (ES_WORDS.test(word)) return { lang: "es", notice: null };
     if (EN_WORDS.test(word)) return { lang: "en", notice: null };
+  }
+  if (!labels.length && rulesText) {
+    const lang = languageFromRules(rulesText);
+    if (lang) return { lang, notice: null };
   }
   return {
     lang: "es",

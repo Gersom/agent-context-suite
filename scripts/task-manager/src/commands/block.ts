@@ -93,7 +93,7 @@ export const block: Command = {
       );
     }
     const kept = existing && !NONE_RE.test(existing) ? existing : null;
-    const { lang, notice } = detectLanguage([task.label, ...headerLabels(docs)]);
+    const { lang, notice } = detectLanguage([task.label, ...headerLabels(docs)], docs.rulesText);
     const text = backlog.text;
     const range = trimRange(text, location.range);
     const written = STRINGS[lang].tags[tag];

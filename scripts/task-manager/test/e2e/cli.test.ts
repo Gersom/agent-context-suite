@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { BACKLOG_EMPTY, HANDOFF_EMPTY } from "../fixtures.ts";
 import { makeProject, type Project } from "../helpers.ts";
 
 const INDEX = join(import.meta.dir, "..", "..", "index.ts");
@@ -166,5 +167,34 @@ describe("index.ts", () => {
     const { stderr, code } = await runCli(["whoami", "--operator", "nadie"]);
     expect(code).toBe(1);
     expect(stderr).toContain("«nadie» no figura en operators.md");
+  });
+
+  test("add en un proyecto sin tareas: el idioma sale de la línea de rules.md", async () => {
+    const rules = (value: string) => `# Reglas\n\n   **Idioma de la documentación:** ${value}\n`;
+    const fresh = (value: string) =>
+      makeProject({ flat: true, rules: rules(value), contents: { "handoff.md": HANDOFF_EMPTY, "backlog.md": BACKLOG_EMPTY, "history.md": "# History\n" } });
+    const english = fresh("English");
+    const spanish = fresh("Español");
+    try {
+      const args = (p: Project) => ["add", "--title", "Primera", "--description", "Desde el proceso", "--labels", "uno", "--agents", p.agents, "--apply"];
+      const en = await runCli(args(english), { cwd: english.root });
+      expect(en.code).toBe(0);
+      expect(en.stdout).not.toContain("Aviso");
+      const enText = readFileSync(join(english.agents, "backlog.md"), "utf8");
+      expect(enText).toContain("### Task 5 — Primera");
+      expect(enText).toContain("- **Description:** Desde el proceso");
+      expect(enText).toContain("- **Tags:** uno");
+
+      const es = await runCli(args(spanish), { cwd: spanish.root });
+      expect(es.code).toBe(0);
+      expect(es.stdout).not.toContain("Aviso");
+      const esText = readFileSync(join(spanish.agents, "backlog.md"), "utf8");
+      expect(esText).toContain("### Tarea 5 — Primera");
+      expect(esText).toContain("- **Descripción:** Desde el proceso");
+      expect(esText).toContain("- **Etiquetas:** uno");
+    } finally {
+      english.cleanup();
+      spanish.cleanup();
+    }
   });
 });

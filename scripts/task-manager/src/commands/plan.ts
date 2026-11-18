@@ -92,7 +92,7 @@ export const plan: Command = {
     }
     if (!steps.length) throw new CliError(`La Tarea ${task.number} no tiene plan (checkboxes) en «Tarea en progreso»: no hay pasos que modificar. No se escribió nada.`);
 
-    const lang = detectLanguage([task.label, ...headerLabels(docs)]).lang;
+    const lang = detectLanguage([task.label, ...headerLabels(docs)], docs.rulesText).lang;
     const S = STRINGS[lang];
     const ctxPlan: Context = { text: handoff.text, steps, S, closing: steps.findLastIndex((step) => closingStepRe(S).test(step.text)) };
     const outcome =
