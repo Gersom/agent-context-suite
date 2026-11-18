@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-18 — ✅ Tarea 168 — Etiquetas: mostrarlas con # en el board
+
+- El board muestra las etiquetas de las tareas con #: al final de la línea del título (libres, bloqueadas, completadas, team-backlog y SIN DUEÑO, en gris, recortando el título y no las etiquetas) y en una fila propia en las tareas en curso y pausadas; también en compacto y con Tags en inglés. Sin etiquetas el board queda idéntico.
+- Cómo: helper compartido _shared/tasks/labels.ts, HistoryEntry.labels leyendo solo el primer bloque de campos de cada entrada, labels en el modelo y render.ts. bun test 2166 pass, typecheck sin errores, revisión independiente con un board real. Pendientes menores: contador +N más con etiquetas anchísimas, etiquetas recortadas en completadas con poco ancho y la vista EQUIPO sin etiquetas en las filas de operador.
+- Commit: 43d1082.
+
 ## 2026-11-18 — ✅ Tarea 167 — Etiquetas: campo Etiquetas en add, edit y close del task-manager
 
 - El task-manager soporta el campo opcional Etiquetas (Tags en inglés): --labels en add (backlog y --team) y en edit, validación de solo letras y números (con # inicial y comas aceptados y quitados al guardar), duplicados sin distinguir mayúsculas, y close las pasa a history.md. start, pause, resume, block y los group-* las conservan.
