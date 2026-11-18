@@ -11,6 +11,12 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-17 — ✅ Tarea 163 — Board: ruta explícita sin la skill debe abrir la lista de proyectos
+
+- acsuite board con una ruta a una carpeta que existe pero no tiene la skill abre la lista de proyectos con un aviso, en vez de salir con error. Ruta inexistente o documentación mal formada siguen dando código 1 sin abrir el board; sin ruta no cambió.
+- Cómo: resolveFromArg devuelve target null y un aviso (nuevo parámetro projectsNotice en startApp); la detección comparte la función lacksSkill. bun test 2052 pass, typecheck sin errores, revisión independiente.
+- Commit: 14687f9.
+
 ## 2026-11-17 — ✅ Tarea 160 — Evaluar la viabilidad de usar la suite en trabajo no técnico (oficina) con Codex
 
 - Veredicto: viable usar la suite en trabajo no técnico (oficina) con Codex. El núcleo (en curso, pausadas, backlog, historial, pausar y retomar) funciona sin project/, sin plan y sin correo de git; lo probado en dos proyectos temporales.

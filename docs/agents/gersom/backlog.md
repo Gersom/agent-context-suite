@@ -57,15 +57,6 @@ Cola de tareas pendientes: el "qué falta" a nivel proyecto. No es la tarea en c
 - **Detalles:** Origen: T-160 (suite en trabajo de oficina). Una persona que trabaja con varias empresas necesita separar tareas por empresa sin carpetas distintas, para conservar una sola tarea en curso. Útil también en proyectos de código (área, tipo, cliente). Notas de la revisión: el parser ya acepta un campo genérico y start y pause lo arrastran, pero add y edit no tienen flag para escribirlo; falta la etiqueta del campo en inglés (Tags) en language.ts; un valor que empieza con corchete se lee como bloqueo, por eso las etiquetas no llevan símbolos; un valor Ninguna se descarta al arrastrar; verificar que close pase las etiquetas a history.md, o se pierden al cerrar.
 - **Agregada:** 2026-11-17.
 
-### Tarea 163 — Board: ruta explícita sin la skill debe abrir la lista de proyectos
-
-- **Descripción:** Hoy acsuite board con una ruta que no tiene documentación de la skill sale con error (código 1); debería abrir la vista de proyectos, igual que cuando se lanza sin ruta en una carpeta sin la skill.
-- **Decisiones/temas a definir antes de empezar:** Qué hacer con una ruta que no existe (error o lista con aviso); si la lista ofrece agregar esa carpeta como proyecto nuevo; qué pasa con --once (sin pantalla interactiva: error o mensaje) y con una carpeta de agentes existente pero mal formada (sigue siendo error, como sin ruta).
-- **Bloqueos:** Ninguno.
-- **Disparador:** cuando el operador pregunte por tareas pendientes; la necesita el flujo no técnico (T-162), cuyo ejecutable lanza el board desde la carpeta del proyecto.
-- **Detalles:** Origen: T-160. Código: resolveFromArg en scripts/task-tracker/src/main.ts hace process.exit(1) si resolveAgentsDir falla; resolveFromCwd ya devuelve null (lista de proyectos) cuando no hay docs de la skill. Actualizar tests y el README del task-tracker.
-- **Agregada:** 2026-11-17.
-
 ### Tarea 164 — Board: mostrar Qué falta y Próximo paso en las tareas pausadas
 
 - **Descripción:** El board muestra en las pausadas solo Descripción, Por qué se pausó y Qué espera para retomarse; falta Qué falta y Próximo paso concreto, que es lo que más sirve al retomar.
