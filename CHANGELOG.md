@@ -2,6 +2,20 @@
 
 Qué cambia en cada versión de `agent-context-suite` y qué hacer para pasar de una a la siguiente. La skill (`agent-context-skill`) tiene su propio changelog en `docs/changelog/` de su repo.
 
+## 2.5.1
+
+El bloque que `acsuite init` escribe en `rules.md` ahora le dice al agente cómo fijar el modo del plan y cómo usar las etiquetas, sin que tenga que descubrirlo con `--help`. No cambia ningún comando ni el formato de los archivos.
+
+### Cómo pasar de la 2.5.0 a la 2.5.1
+
+1. Actualiza el paquete: `npm install -g agent-context-suite@latest`.
+2. En cada proyecto, vuelve a ejecutar `acsuite init --apply`: reemplaza solo la sección delimitada de la suite en `rules.md` y no toca nada más (si ya está al día, dice «Ya está al día»).
+
+### Lo nuevo
+
+- **Modo del plan:** el bloque indica `acsuite task start <N> --plan - --mode <modo>` para fijarlo al empezar y `acsuite task mode <modo>` para cambiarlo.
+- **Etiquetas:** `--labels` en `add` y `edit`, y `--label` en `list` y `next`.
+
 ## 2.5.0
 
 Etiquetas en las tareas, para llevar varios contextos (empresas, proyectos, clientes) en una sola carpeta y filtrarlos, y mejoras del tablero y de `check` pensadas para quien no programa. No rompe nada y no cambia el formato de los archivos: el campo nuevo es opcional.
