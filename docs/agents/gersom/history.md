@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-19 — ✅ Tarea 184 — Bloque de la suite: pistas sobre el modo del plan y las etiquetas
+
+- **Etiquetas:** suite
+- El bloque de la suite que acsuite init escribe en rules.md ahora le dice al agente cómo fijar el modo del plan (acsuite task start <N> --plan - --mode <modo> y acsuite task mode <modo>) y cómo usar las etiquetas (--labels en add y edit, de 1 a 3 cortas por tema o repo, y --label en list y next). Los proyectos que ya tienen el bloque lo reciben al volver a ejecutar acsuite init --apply, que reemplaza solo esa sección; este repo ya lo tiene. Suite 2.5.1 (patch) con su sección en el CHANGELOG y tag anotado v2.5.1.
+- Cómo: texto en scripts/_shared/rules-block.ts, tests del bloque viejo y nuevo (updated y unchanged), README y CHANGELOG; la plantilla de oficina de la skill no se toca. bun test 2376 pass, typecheck y check sin avisos; sin revisión independiente por ser un texto con tests.
+- Commits: 686c4f2, 2a8f3a6, 26727ef.
+
 ## 2026-11-19 — ✅ Tarea 183 — Actualizar la documentación de la suite a la skill 2.5.0
 
 - **Etiquetas:** suite
