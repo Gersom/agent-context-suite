@@ -14,7 +14,7 @@ El bloque que `acsuite init` escribe en `rules.md` ahora le dice al agente cómo
 ### Lo nuevo
 
 - **Modo del plan:** el bloque indica `acsuite task start <N> --plan - --mode <modo>` para fijarlo al empezar y `acsuite task mode <modo>` para cambiarlo.
-- **Etiquetas:** `--labels` en `add` y `edit`, y `--label` en `list` y `next`.
+- **Etiquetas:** `--labels` en `add` y `edit` (de 1 a 3, cortas, por tema o repo), y `--label` en `list` y `next`.
 
 ## 2.5.0
 
