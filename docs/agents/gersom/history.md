@@ -11,6 +11,13 @@ Historial de tareas resueltas — hechas o descartadas: el "qué pasó y por qu�
 
 ---
 
+## 2026-11-19 — ✅ Tarea 183 — Actualizar la documentación de la suite a la skill 2.5.0
+
+- **Etiquetas:** suite
+- La documentación de la suite se actualizó de la skill 2.3.1 a la 2.5.0: marcador de rules.md en 2.5.0 y Regla 2 fusionada (se conserva el texto del proyecto, que remite a Modos de ejecución del plan y a acsuite task mode, y se añade la explicación entre paréntesis a las letras A a D). Las etiquetas se usan desde ahora: suite para las tareas del repo de la suite (T-34, T-38, T-108 y esta) y skill para las del repo de la skill (T-4).
+- Cómo: flujo de actualizar de la skill en la rama agent-context-update-2.5.0, con el resumen de cambios del changelog (2.4.0 y 2.4.1 en conflicto resueltos fusionando; la línea de modo del handoff y el cambio manual sin plan no aplicaban). acsuite check 0 errores y 0 avisos; bun test 2373 pass.
+- Commit: b2bcf55.
+
 ## 2026-11-18 — ✅ Tarea 166 — Instalación global de acsuite y .bat de arranque para el board
 
 - El perfil no técnico trae un lanzador de doble clic para Windows: template/office/open-board.bat (solo ASCII y CRLF) hace cd a su propia carpeta y ejecuta acsuite board sin ruta; si acsuite no está instalado muestra un mensaje en llano y espera una tecla. El flujo de instalación lo copia a la raíz y avisa en llano si falta acsuite (lo instala el operador con npm install -g agent-context-suite); el README de la suite documenta la instalación global y el lanzador. Entra en la skill 2.5.0, aún no publicada: línea en el changelog 2.5.md y tag local v2.5.0 movido.
