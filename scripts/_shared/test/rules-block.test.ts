@@ -39,6 +39,10 @@ describe("SUITE_BLOCK", () => {
     expect(lines.filter((line) => line.startsWith("## "))).toEqual([]);
   });
 
+  test("menciona el modo del plan y las etiquetas", () => {
+    for (const piece of ["--mode", "task mode", "--labels", "--label"]) expect(SUITE_BLOCK).toContain(piece);
+  });
+
   test("no depende de «Al cerrar una tarea»", () => {
     expect(SUITE_BLOCK).not.toContain("Al cerrar");
     expect(SUITE_BLOCK).not.toContain("Con una herramienta de tareas");
@@ -118,6 +122,16 @@ describe("upsertSuiteBlock: idempotencia y actualización", () => {
     const { text, action } = upsertSuiteBlock(stale);
     expect(action).toBe("updated");
     expect(text).toBe(upsertSuiteBlock(SPANISH).text);
+    expect(upsertSuiteBlock(text).action).toBe("unchanged");
+  });
+
+  test("el bloque de la versión anterior (sin modo ni etiquetas) se reconoce y se reemplaza por el nuevo", () => {
+    const old = `${SUITE_BLOCK_START}\n### Herramientas de la suite\n\nEste proyecto usa [agent-context-suite](https://github.com/Gersom/agent-context-suite). No edites a mano \`handoff.md\`, \`backlog.md\` ni \`history.md\`: usa \`acsuite task\` (el detalle: \`acsuite task --help\`). Para verificar la documentación, \`acsuite check\`; para ver el tablero, \`acsuite board\`.\n${SUITE_BLOCK_END}`;
+    const source = SPANISH.replace("## Reglas por defecto", `${old}\n\n## Reglas por defecto`);
+    expect(hasSuiteBlock(source)).toBe(true);
+    const { text, action } = upsertSuiteBlock(source);
+    expect(action).toBe("updated");
+    expect(text).toBe(source.replace(old, SUITE_BLOCK));
     expect(upsertSuiteBlock(text).action).toBe("unchanged");
   });
 

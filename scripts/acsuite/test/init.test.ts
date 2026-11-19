@@ -108,6 +108,18 @@ describe("acsuite init", () => {
     expect(rulesOf(p)).toBe(INSERTED);
   });
 
+  test("un bloque de la versión anterior (sin modo ni etiquetas) da «updated» y luego «unchanged»", async () => {
+    const old = `<!-- agent-context-suite:start -->\n### Herramientas de la suite\n\nEste proyecto usa [agent-context-suite](https://github.com/Gersom/agent-context-suite). No edites a mano \`handoff.md\`, \`backlog.md\` ni \`history.md\`: usa \`acsuite task\` (el detalle: \`acsuite task --help\`). Para verificar la documentación, \`acsuite check\`; para ver el tablero, \`acsuite board\`.\n<!-- agent-context-suite:end -->`;
+    const p = project({ rules: INSERTED.replace(SUITE_BLOCK, old) });
+    const first = await exec(["--apply"], p.root);
+    expect(first.code).toBe(0);
+    expect(first.out).toContain("se actualizó la sección de la suite");
+    expect(rulesOf(p)).toBe(INSERTED);
+    const second = await exec(["--apply"], p.root);
+    expect(second.out).toBe("Ya está al día: no hay cambios.");
+    expect(rulesOf(p)).toBe(INSERTED);
+  });
+
   test("conserva el fin de línea CRLF del archivo", async () => {
     const p = project({ rules: toEol(TEMPLATE_RULES, "\r\n") });
     const { code } = await exec(["--apply"], p.root);

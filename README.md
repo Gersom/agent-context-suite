@@ -105,7 +105,7 @@ Usage and finding codes: [`check` README](./scripts/docs-check/README.md).
 
 ### `acsuite init`
 
-Adds to the project's `rules.md` the section that teaches the agent to use the suite: not to hand-edit `handoff.md`, `backlog.md` or `history.md`, and to use `acsuite task`, `acsuite check` and `acsuite board`. It puts it at the start of `rules.md`, after the title, and only touches that section, between its markers; it does not change the fixed rules. Without `--apply` it shows the diff and writes nothing; if the section is already up to date, it does nothing. In a project with several operators, `rules.md` belongs to everyone, so the change applies to the whole project. If you do not add it, `acsuite check` warns about it.
+Adds to the project's `rules.md` the section that teaches the agent to use the suite: not to hand-edit `handoff.md`, `backlog.md` or `history.md`, and to use `acsuite task`, `acsuite check` and `acsuite board`; it also tells how to set a task's plan mode (`--mode`, `task mode`) and its labels (`--labels`, `--label`). It puts it at the start of `rules.md`, after the title, and only touches that section, between its markers; it does not change the fixed rules. Without `--apply` it shows the diff and writes nothing; if the section is already up to date, it does nothing. In a project with several operators, `rules.md` belongs to everyone, so the change applies to the whole project. If you do not add it, `acsuite check` warns about it.
 
 ```sh
 acsuite init

@@ -14,7 +14,7 @@ export const SUITE_BLOCK_END = "<!-- agent-context-suite:end -->";
 export const SUITE_BLOCK = `${SUITE_BLOCK_START}
 ### Herramientas de la suite
 
-Este proyecto usa [agent-context-suite](https://github.com/Gersom/agent-context-suite). No edites a mano \`handoff.md\`, \`backlog.md\` ni \`history.md\`: usa \`acsuite task\` (el detalle: \`acsuite task --help\`). Para verificar la documentación, \`acsuite check\`; para ver el tablero, \`acsuite board\`.
+Este proyecto usa [agent-context-suite](https://github.com/Gersom/agent-context-suite). No edites a mano \`handoff.md\`, \`backlog.md\` ni \`history.md\`: usa \`acsuite task\` (el detalle: \`acsuite task --help\`). El modo del plan se fija al empezar la tarea con \`acsuite task start <N> --plan - --mode <guided|step-by-step|auto|extreme>\` y se cambia con \`acsuite task mode <modo>\`. Las etiquetas de una tarea van con \`--labels\` en \`add\` y \`edit\`, y se filtran con \`--label\` en \`list\` y \`next\`. Para verificar la documentación, \`acsuite check\`; para ver el tablero, \`acsuite board\`.
 ${SUITE_BLOCK_END}`;
 
 export type RulesBlockAction = "inserted" | "updated" | "unchanged";
