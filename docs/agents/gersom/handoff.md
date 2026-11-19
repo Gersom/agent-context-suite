@@ -14,7 +14,24 @@ Estado "en caliente": en qué se está ahora. **Se actualiza editando solo lo qu
 <!-- agent-context-skill:section=in-progress -->
 ## Tarea en progreso
 
-Sin tarea en curso
+Tarea 183 — Actualizar la documentación de la suite a la skill 2.5.0
+
+Aplicar al propio repo de la suite (docs/agents) el flujo de actualizar de la skill, de la 2.3.1 a la 2.5.0: fusionar la Regla 2 (conservar el texto del proyecto y añadir la explicación entre paréntesis a las cuatro letras de los modos), subir el marcador de rules.md a 2.5.0 y empezar a usar etiquetas (skill para las tareas del repo de la skill y suite para las de la suite), también en las tareas del backlog.
+
+- **Etiquetas:** suite
+- **Detalles:** Origen: la skill 2.5.0 se publicó el 2026-11-18 y docs/agents/rules.md seguía en la 2.3.1. Flujo: skill/docs/update-flow.md. Commit con el formato del proyecto, docs(T-N): update the agent-context documentation from skill 2.3.1 to 2.5.0.
+
+### Qué falta
+
+Toda la tarea.
+
+### Decisiones a medio camino
+
+Decidido: Regla 2 fusionada (se conserva el texto del proyecto, que remite a Modos de ejecución del plan y a acsuite task mode, y se añade la explicación entre paréntesis a las letras A a D); el campo Etiquetas del changelog 2.5.0 se aplica: etiquetas skill y suite desde ahora y en las tareas del backlog; el cambio manual de la línea de modo no aplica (sin plan en curso ni pausadas); el flujo se hace en la rama agent-context-update-2.5.0 y se pregunta el merge a main al terminar.
+
+### Próximo paso concreto
+
+Empezar la tarea.
 
 <!-- agent-context-skill:section=paused -->
 ## Tareas pausadas
