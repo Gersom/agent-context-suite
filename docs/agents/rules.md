@@ -1,4 +1,4 @@
-<!-- agent-context-skill:version 2.3.1 — versión de la skill con la que se generaron las Reglas por defecto de este archivo; ignorar al leer, no es contenido. Lo usa la skill para detectar versiones más nuevas (ver docs/version-check.md de la skill). -->
+<!-- agent-context-skill:version 2.5.0 — versión de la skill con la que se generaron las Reglas por defecto de este archivo; ignorar al leer, no es contenido. Lo usa la skill para detectar versiones más nuevas (ver docs/version-check.md de la skill). -->
 # Reglas del proyecto
 
 <!-- agent-context-suite:start -->
@@ -18,10 +18,10 @@ Vienen con la skill y aplican a cualquier proyecto; las reglas de proceso adicio
    - **Mediana a grande** → primero un plan con los pasos, escrito completo en el chat; después, en ese mismo mensaje, que cierra el turno, y en texto (no con el recuadro de preguntas, para que el plan se vea), preguntarle al operador si el plan está bien y en qué modo de ejecución prefiere trabajar (ver «Modos de ejecución del plan» en las reglas específicas de este proyecto), con las alternativas como letras en el idioma del operador, **una por línea** (con salto de línea entre opciones, nunca en un párrafo corrido ni separadas por «·»), p. ej.:
      > Este es el plan; si te parece bien, dime qué modo prefieres:
      >
-     > A) guiado
-     > B) paso a paso
-     > C) automático
-     > D) extremo
+     > A) guiado (tú ejecutas y yo te guío)
+     > B) paso a paso (ejecuto un paso y espero tu confirmación)
+     > C) automático (ejecuto los pasos seguidos y me detengo ante lo irreversible, lo externo o lo que el plan no resolvió)
+     > D) extremo (hago todo y espero solo al final)
 
      Una letra acepta el plan y fija el modo; un texto libre se toma como cambios al plan, que se vuelve a presentar. Los ids de los modos son siempre `guided`, `step-by-step`, `auto` y `extreme` (en los comandos y en el plan), aunque las alternativas se traduzcan. El modo acordado queda registrado con `acsuite task mode <guided|step-by-step|auto|extreme>` (o, sin la herramienta, en la línea `**Modo de ejecución acordado:** <valor>` del plan). `extreme` es peligroso: aunque el operador haya elegido su letra, el agente le pide una confirmación explícita aparte antes de continuar, y solo entonces lo registra (`--confirm`).
    - **Antes de actuar, de cualquier tamaño:** (a) *pedir no es autorizar*: una pregunta, investigación, explicación, revisión, comparación o proponer una solución es solo lectura, y no se edita ni se ejecuta ningún cambio hasta que el operador pida implementar; si la intención es ambigua, una sola aclaración y seguir en solo lectura. (b) *Explorar primero*: mirar el código y los requisitos relevantes, en proporción a la tarea, antes de proponer o escribir. (c) *Ante una duda real de producto*, una sola pregunta concreta y esperar la respuesta; no asumir.
